@@ -118,7 +118,7 @@ protected:
 	static void _bind_methods();
 
 	void _edit_option(int p_op);
-	void _make_context_menu(bool p_selection, bool p_color);
+	void _make_context_menu(bool p_selection, bool p_color, bool p_over_word);
 	void _text_edit_gui_input(const Ref<InputEvent> &ev);
 	void _color_changed(const Color &p_color);
 

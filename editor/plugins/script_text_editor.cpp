@@ -1397,6 +1397,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 			tx->_get_mouse_pos(mb->get_global_position() - tx->get_global_position(), row, col);
 			Vector2 mpos = mb->get_global_position() - tx->get_global_position();
 			bool have_selection = (tx->get_selection_text().length() > 0);
+			bool over_word = have_selection || code_editor->get_text_edit()->get_word_under_cursor() != "";
 			bool have_color = (tx->get_word_at_pos(mpos) == "Color");
 			if (have_color) {
 
@@ -1428,7 +1429,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 					have_color = false;
 				}
 			}
-			_make_context_menu(have_selection, have_color);
+			_make_context_menu(have_selection, have_color, over_word);
 		}
 	}
 }
@@ -1447,7 +1448,7 @@ void ScriptTextEditor::_color_changed(const Color &p_color) {
 	code_editor->get_text_edit()->set_line(color_line, new_line);
 }
 
-void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color) {
+void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p_over_word) {
 
 	context_menu->clear();
 	if (p_selection) {
@@ -1470,6 +1471,9 @@ void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color) {
 	if (p_color) {
 		context_menu->add_separator();
 		context_menu->add_item(TTR("Pick Color"), EDIT_PICK_COLOR);
+	}
+	if (p_over_word) {
+		context_menu->add_shortcut(ED_GET_SHORTCUT("script_text_editor/contextual_help"), HELP_CONTEXTUAL);
 	}
 	context_menu->set_position(get_global_transform().xform(get_local_mouse_position()));
 	context_menu->set_size(Vector2(1, 1));
