@@ -246,7 +246,8 @@ class TextEdit : public Control {
 	bool block_caret;
 
 	bool setting_row;
-	bool wrap;
+	bool wrap_enabled;
+	int wrap_at;
 	bool draw_tabs;
 	bool override_selected_font_color;
 	bool cursor_changed_dirty;
@@ -312,6 +313,8 @@ class TextEdit : public Control {
 	double get_line_scroll_pos(bool p_recalculate = false) const;
 	void update_line_scroll_pos();
 
+	void update_wrap_at();
+	
 	int get_char_count();
 
 	int get_char_pos_for(int p_px, String p_str) const;
@@ -479,7 +482,7 @@ public:
 	bool is_readonly() const;
 
 	void set_max_chars(int p_max_chars);
-	void set_wrap(bool p_wrap);
+	void set_wrap_enabled(bool p_wrap_enabled);
 
 	void clear();
 

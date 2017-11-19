@@ -154,7 +154,7 @@ EditorAbout::EditorAbout() {
 	license->set_name(TTR("License"));
 	license->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	license->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	license->set_wrap(true);
+	license->set_wrap_enabled(true);
 	license->set_readonly(true);
 	license->set_text(String::utf8(about_license));
 	tc->add_child(license);
@@ -227,7 +227,7 @@ EditorAbout::EditorAbout() {
 	_tpl_text = memnew(TextEdit);
 	_tpl_text->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	_tpl_text->set_v_size_flags(Control::SIZE_EXPAND_FILL);
-	_tpl_text->set_wrap(true);
+	_tpl_text->set_wrap_enabled(true);
 	_tpl_text->set_readonly(true);
 	tpl_hbc->add_child(_tpl_text);
 

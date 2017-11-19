@@ -362,7 +362,7 @@ void TextEdit::_update_scrollbars() {
 		v_scroll->hide();
 	}
 
-	if (use_hscroll) {
+	if (use_hscroll && !wrap_enabled) {
 
 		h_scroll->show();
 		h_scroll->set_max(total_width);
@@ -510,6 +510,7 @@ void TextEdit::_notification(int p_what) {
 
 			cache.size = get_size();
 			adjust_viewport_to_cursor();
+			update_wrap_at();
 
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
@@ -795,6 +796,8 @@ void TextEdit::_notification(int p_what) {
 			String line_num_padding = line_numbers_zero_padded ? "0" : " ";
 			update_line_scroll_pos();
 
+			bool last_line_wrapped = false;
+
 			int line = cursor.line_ofs - 1;
 			for (int i = 0; i < visible_rows; i++) {
 
@@ -814,6 +817,18 @@ void TextEdit::_notification(int p_what) {
 					continue;
 
 				const String &str = text[line];
+
+				if (wrap_enabled) {
+					if (text[line].size() > wrap_at) {
+						str = str->substr(0, wrap_at);
+					}
+					if (!last_line_wrapped && line > 1 && !is_line_hidden(line - 1) && text[line - 1].size() > wrap_at) {
+						line--;
+						str = str->substr(wrap_at, text[line].size() - wrap_at);
+						last_line_wrapped = true;
+					}
+				}
+				last_line_wrapped = false;
 
 				int char_margin = xmargin_beg - cursor.x_ofs;
 				int char_ofs = 0;
@@ -1721,9 +1736,10 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 		row = text.size() - 1;
 		col = text[row].size();
 	} else {
-
 		col = p_mouse.x - (cache.style_normal->get_margin(MARGIN_LEFT) + cache.line_number_w + cache.breakpoint_gutter_width + cache.fold_gutter_width);
 		col += cursor.x_ofs;
+		if (row > 0 && line[row - 1].size() > wrap_at)
+			col -= wrap_at;
 		col = get_char_pos_for(col, get_line(row));
 	}
 
@@ -3405,6 +3421,8 @@ double TextEdit::get_line_scroll_pos(bool p_recalculate) const {
 	for (int i = 0; i < to; i++) {
 		if (!text.is_hidden(i))
 			new_line_scroll_pos++;
+		if (wrap_enabled && text[i].size() < wrap_at)
+			new_line_scroll_pos++;
 	}
 	return new_line_scroll_pos;
 }
@@ -3422,8 +3440,14 @@ void TextEdit::update_line_scroll_pos() {
 	for (int i = 0; i < to; i++) {
 		if (!text.is_hidden(i))
 			new_line_scroll_pos++;
+		if (wrap_enabled && text[i].size() < wrap_at)
+			new_line_scroll_pos++;
 	}
 	line_scroll_pos = new_line_scroll_pos;
+}
+
+void TextEdit::update_wrap_at() {
+	wrap_at = cache.size.width - cache.style_normal->get_minimum_size().width - cache.line_number_w - cache.breakpoint_gutter_width - cache.fold_gutter_width;
 }
 
 void TextEdit::adjust_viewport_to_cursor() {
@@ -3877,9 +3901,9 @@ bool TextEdit::is_readonly() const {
 	return readonly;
 }
 
-void TextEdit::set_wrap(bool p_wrap) {
+void TextEdit::set_wrap_enabled(bool p_wrap_enabled) {
 
-	wrap = p_wrap;
+	wrap_enabled = p_wrap_enabled;
 }
 
 void TextEdit::set_max_chars(int p_max_chars) {
@@ -4430,6 +4454,8 @@ int TextEdit::num_lines_from(int p_line_from, int unhidden_amount) const {
 			num_total++;
 			if (!is_line_hidden(i))
 				num_visible++;
+			if (wrap_enabled && text[i].size() > wrap_at)
+				num_total--;
 			if (num_visible >= unhidden_amount)
 				break;
 		}
@@ -4439,6 +4465,8 @@ int TextEdit::num_lines_from(int p_line_from, int unhidden_amount) const {
 			num_total++;
 			if (!is_line_hidden(i))
 				num_visible++;
+			if (wrap_enabled && text[i].size() > wrap_at)
+				num_total--;
 			if (num_visible >= unhidden_amount)
 				break;
 		}
@@ -5356,7 +5384,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_readonly", "enable"), &TextEdit::set_readonly);
 	ClassDB::bind_method(D_METHOD("is_readonly"), &TextEdit::is_readonly);
 
-	ClassDB::bind_method(D_METHOD("set_wrap", "enable"), &TextEdit::set_wrap);
+	ClassDB::bind_method(D_METHOD("set_wrap_enabled", "enable"), &TextEdit::set_wrap_enabled);
 	ClassDB::bind_method(D_METHOD("set_max_chars", "amount"), &TextEdit::set_max_chars);
 	ClassDB::bind_method(D_METHOD("set_context_menu_enabled", "enable"), &TextEdit::set_context_menu_enabled);
 	ClassDB::bind_method(D_METHOD("is_context_menu_enabled"), &TextEdit::is_context_menu_enabled);
@@ -5460,7 +5488,7 @@ TextEdit::TextEdit() {
 	draw_caret = true;
 	max_chars = 0;
 	clear();
-	wrap = false;
+	wrap_enabled = false;
 	set_focus_mode(FOCUS_ALL);
 	_update_caches();
 	cache.size = Size2(1, 1);
@@ -5530,6 +5558,8 @@ TextEdit::TextEdit() {
 	current_op.version = 0;
 	version = 0;
 	saved_version = 0;
+
+	update_wrap_at();
 
 	completion_enabled = false;
 	completion_active = false;
