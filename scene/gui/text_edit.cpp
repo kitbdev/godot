@@ -372,7 +372,7 @@ void TextEdit::_update_scrollbars() {
 		}
 
 	} else {
-
+		cursor.x_ofs = 0;
 		h_scroll->hide();
 	}
 
@@ -796,9 +796,10 @@ void TextEdit::_notification(int p_what) {
 			String line_num_padding = line_numbers_zero_padded ? "0" : " ";
 			update_line_scroll_pos();
 
-			bool last_line_wrapped = false;
+			// for wrapping
+			int last_line_text_width_left = 0;
 
-			int line = cursor.line_ofs - 1;
+			int line = cursor.line_ofs - 1;// todo start earlier for wrapped text
 			for (int i = 0; i < visible_rows; i++) {
 
 				line++;
@@ -816,19 +817,28 @@ void TextEdit::_notification(int p_what) {
 				if (line < 0 || line >= (int)text.size())
 					continue;
 
-				const String &str = text[line];
+				String str_temp = text[line];
 
 				if (wrap_enabled) {
-					if (text[line].size() > wrap_at) {
-						str = str->substr(0, wrap_at);
-					}
-					if (!last_line_wrapped && line > 1 && !is_line_hidden(line - 1) && text[line - 1].size() > wrap_at) {
+					if (last_line_text_width_left > 0) {
+						// wrapping continues
 						line--;
-						str = str->substr(wrap_at, text[line].size() - wrap_at);
-						last_line_wrapped = true;
+						int cutoff = get_char_pos_for(text.get_line_width(line) - last_line_text_width_left + wrap_at, text[line]);
+						str_temp = text[line].substr(get_char_pos_for(text.get_line_width(line) - last_line_text_width_left, text[line]), cutoff);
+						last_line_text_width_left = MAX(last_line_text_width_left - wrap_at, 0);
+						WARN_PRINTS("wrapping line continue " + itos(line)+" "+itos(last_line_text_width_left));
+					} else if (line_wraps(line)) {
+						// start wrapping
+						int cutoff = get_char_pos_for(wrap_at, text[line]);
+						str_temp = text[line].substr(0, cutoff);
+						WARN_PRINTS("wrapping line " + itos(line));
+						last_line_text_width_left = MAX(text.get_line_width(line) - wrap_at, 0);
+					}else {
+						last_line_text_width_left = 0;
 					}
 				}
-				last_line_wrapped = false;
+
+				const String &str = str_temp;
 
 				int char_margin = xmargin_beg - cursor.x_ofs;
 				int char_ofs = 0;
@@ -885,36 +895,39 @@ void TextEdit::_notification(int p_what) {
 #endif
 				}
 
-				// draw breakpoint marker
-				if (text.is_breakpoint(line)) {
-					if (draw_breakpoint_gutter) {
-						int vertical_gap = (get_row_height() * 40) / 100;
-						int horizontal_gap = (cache.breakpoint_gutter_width * 30) / 100;
-						int marker_height = get_row_height() - (vertical_gap * 2);
-						int marker_width = cache.breakpoint_gutter_width - (horizontal_gap * 2);
-						// no transparency on marker
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cache.style_normal->get_margin(MARGIN_LEFT) + horizontal_gap - 2, ofs_y + vertical_gap, marker_width, marker_height), Color(cache.breakpoint_color.r, cache.breakpoint_color.g, cache.breakpoint_color.b));
+				if (last_line_text_width_left == 0) {
+					// dont draw if being wrapped
+					// draw breakpoint marker
+					if (text.is_breakpoint(line)) {
+						if (draw_breakpoint_gutter) {
+							int vertical_gap = (get_row_height() * 40) / 100;
+							int horizontal_gap = (cache.breakpoint_gutter_width * 30) / 100;
+							int marker_height = get_row_height() - (vertical_gap * 2);
+							int marker_width = cache.breakpoint_gutter_width - (horizontal_gap * 2);
+							// no transparency on marker
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cache.style_normal->get_margin(MARGIN_LEFT) + horizontal_gap - 2, ofs_y + vertical_gap, marker_width, marker_height), Color(cache.breakpoint_color.r, cache.breakpoint_color.g, cache.breakpoint_color.b));
+						}
 					}
-				}
 
-				// draw fold markers
-				if (draw_fold_gutter) {
-					int horizontal_gap = (cache.fold_gutter_width * 30) / 100;
-					int gutter_left = cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + cache.line_number_w;
-					if (is_folded(line)) {
-						int xofs = horizontal_gap - (cache.can_fold_icon->get_width()) / 2;
-						int yofs = (get_row_height() - cache.folded_icon->get_height()) / 2;
-						cache.folded_icon->draw(ci, Point2(gutter_left + xofs, ofs_y + yofs), Color(0.8f, 0.8f, 0.8f, 0.8f));
-					} else if (can_fold(line)) {
-						int xofs = -cache.can_fold_icon->get_width() / 2 - horizontal_gap + 3;
-						int yofs = (get_row_height() - cache.can_fold_icon->get_height()) / 2;
-						cache.can_fold_icon->draw(ci, Point2(gutter_left + xofs, ofs_y + yofs), Color(0.8f, 0.8f, 0.8f, 0.8f));
+					// draw fold markers
+					if (draw_fold_gutter) {
+						int horizontal_gap = (cache.fold_gutter_width * 30) / 100;
+						int gutter_left = cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + cache.line_number_w;
+						if (is_folded(line)) {
+							int xofs = horizontal_gap - (cache.can_fold_icon->get_width()) / 2;
+							int yofs = (get_row_height() - cache.folded_icon->get_height()) / 2;
+							cache.folded_icon->draw(ci, Point2(gutter_left + xofs, ofs_y + yofs), Color(0.8f, 0.8f, 0.8f, 0.8f));
+						} else if (can_fold(line)) {
+							int xofs = -cache.can_fold_icon->get_width() / 2 - horizontal_gap + 3;
+							int yofs = (get_row_height() - cache.can_fold_icon->get_height()) / 2;
+							cache.can_fold_icon->draw(ci, Point2(gutter_left + xofs, ofs_y + yofs), Color(0.8f, 0.8f, 0.8f, 0.8f));
+						}
 					}
 				}
 
 				if (cache.line_number_w) {
 					String fc = String::num(line + 1);
-					while (fc.length() < line_number_char_count) {
+					while (fc.length() < line_number_char_count) {//todo check
 						fc = line_num_padding + fc;
 					}
 
@@ -1251,8 +1264,7 @@ void TextEdit::_notification(int p_what) {
 					}
 
 					char_ofs += char_w;
-
-					if (j == str.length() - 1 && is_folded(line)) {
+					if (last_line_text_width_left <= wrap_at && j == str.length() - 1 && is_folded(line)) {
 						cache.folded_eol_icon->draw(ci, Point2(char_ofs + char_margin, ofs_y), Color(1, 1, 1, 1), true);
 					}
 				}
@@ -1738,8 +1750,8 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 	} else {
 		col = p_mouse.x - (cache.style_normal->get_margin(MARGIN_LEFT) + cache.line_number_w + cache.breakpoint_gutter_width + cache.fold_gutter_width);
 		col += cursor.x_ofs;
-		if (row > 0 && line[row - 1].size() > wrap_at)
-			col -= wrap_at;
+		if (line_wraps(row))
+			col -= wrap_at * (int)floor((double)text.get_line_width(row) / wrap_at - 1);
 		col = get_char_pos_for(col, get_line(row));
 	}
 
@@ -3421,7 +3433,7 @@ double TextEdit::get_line_scroll_pos(bool p_recalculate) const {
 	for (int i = 0; i < to; i++) {
 		if (!text.is_hidden(i))
 			new_line_scroll_pos++;
-		if (wrap_enabled && text[i].size() < wrap_at)
+		if (wrap_enabled && line_wraps(i))
 			new_line_scroll_pos++;
 	}
 	return new_line_scroll_pos;
@@ -3440,13 +3452,14 @@ void TextEdit::update_line_scroll_pos() {
 	for (int i = 0; i < to; i++) {
 		if (!text.is_hidden(i))
 			new_line_scroll_pos++;
-		if (wrap_enabled && text[i].size() < wrap_at)
+		if (wrap_enabled && line_wraps(i))
 			new_line_scroll_pos++;
 	}
 	line_scroll_pos = new_line_scroll_pos;
 }
 
 void TextEdit::update_wrap_at() {
+
 	wrap_at = cache.size.width - cache.style_normal->get_minimum_size().width - cache.line_number_w - cache.breakpoint_gutter_width - cache.fold_gutter_width;
 }
 
@@ -3480,13 +3493,15 @@ void TextEdit::adjust_viewport_to_cursor() {
 		cursor.line_ofs = text.size() - 1 - (num_lines_from(text.size() - 1, -visible_rows) - 1);
 	}
 
-	int cursor_x = get_column_x_offset(cursor.column, text[cursor.line]);
+	if (!wrap_enabled) {
+		int cursor_x = get_column_x_offset(cursor.column, text[cursor.line]);
 
-	if (cursor_x > (cursor.x_ofs + visible_width))
-		cursor.x_ofs = cursor_x - visible_width + 1;
+		if (cursor_x > (cursor.x_ofs + visible_width))
+			cursor.x_ofs = cursor_x - visible_width + 1;
 
-	if (cursor_x < cursor.x_ofs)
-		cursor.x_ofs = cursor_x;
+		if (cursor_x < cursor.x_ofs)
+			cursor.x_ofs = cursor_x;
+	}
 
 	update_line_scroll_pos();
 	v_scroll->set_value(get_line_scroll_pos() + 1);
@@ -3498,6 +3513,11 @@ void TextEdit::adjust_viewport_to_cursor() {
 
 	get_range()->set((int)cursor.line_ofs);
 */
+}
+
+bool TextEdit::line_wraps(int line) const {
+
+	return text.get_line_width(line) > wrap_at;
 }
 
 void TextEdit::center_viewport_to_cursor() {
@@ -3697,7 +3717,7 @@ int TextEdit::get_char_pos_for(int p_px, String p_str) const {
 	return c;
 }
 
-int TextEdit::get_column_x_offset(int p_char, String p_str) {
+int TextEdit::get_column_x_offset(int p_char, String p_str) const {
 
 	int px = 0;
 
@@ -3904,6 +3924,11 @@ bool TextEdit::is_readonly() const {
 void TextEdit::set_wrap_enabled(bool p_wrap_enabled) {
 
 	wrap_enabled = p_wrap_enabled;
+}
+
+bool TextEdit::is_wrap_enabled() const {
+
+	return wrap_enabled;
 }
 
 void TextEdit::set_max_chars(int p_max_chars) {
@@ -4454,7 +4479,7 @@ int TextEdit::num_lines_from(int p_line_from, int unhidden_amount) const {
 			num_total++;
 			if (!is_line_hidden(i))
 				num_visible++;
-			if (wrap_enabled && text[i].size() > wrap_at)
+			if (wrap_enabled && line_wraps(i))
 				num_total--;
 			if (num_visible >= unhidden_amount)
 				break;
@@ -4465,7 +4490,7 @@ int TextEdit::num_lines_from(int p_line_from, int unhidden_amount) const {
 			num_total++;
 			if (!is_line_hidden(i))
 				num_visible++;
-			if (wrap_enabled && text[i].size() > wrap_at)
+			if (wrap_enabled && line_wraps(i))
 				num_total--;
 			if (num_visible >= unhidden_amount)
 				break;
@@ -5385,6 +5410,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_readonly"), &TextEdit::is_readonly);
 
 	ClassDB::bind_method(D_METHOD("set_wrap_enabled", "enable"), &TextEdit::set_wrap_enabled);
+	ClassDB::bind_method(D_METHOD("is_wrap_enabled"), &TextEdit::is_wrap_enabled);
 	ClassDB::bind_method(D_METHOD("set_max_chars", "amount"), &TextEdit::set_max_chars);
 	ClassDB::bind_method(D_METHOD("set_context_menu_enabled", "enable"), &TextEdit::set_context_menu_enabled);
 	ClassDB::bind_method(D_METHOD("is_context_menu_enabled"), &TextEdit::is_context_menu_enabled);
@@ -5456,6 +5482,7 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "smooth_scrolling"), "set_smooth_scroll_enable", "is_smooth_scroll_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "v_scroll_speed"), "set_v_scroll_speed", "get_v_scroll_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hiding_enabled"), "set_hiding_enabled", "is_hiding_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "wrap_enabled"), "set_wrap_enabled", "is_wrap_enabled");
 
 	ADD_GROUP("Caret", "caret_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_block_mode"), "cursor_set_block_mode", "cursor_is_block_mode");

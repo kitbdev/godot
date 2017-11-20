@@ -314,11 +314,12 @@ class TextEdit : public Control {
 	void update_line_scroll_pos();
 
 	void update_wrap_at();
-	
+	bool line_wraps(int line) const;
+
 	int get_char_count();
 
 	int get_char_pos_for(int p_px, String p_str) const;
-	int get_column_x_offset(int p_char, String p_str);
+	int get_column_x_offset(int p_char, String p_str) const;
 
 	void adjust_viewport_to_cursor();
 	double get_scroll_line_diff() const;
@@ -483,6 +484,7 @@ public:
 
 	void set_max_chars(int p_max_chars);
 	void set_wrap_enabled(bool p_wrap_enabled);
+	bool is_wrap_enabled() const;
 
 	void clear();
 
