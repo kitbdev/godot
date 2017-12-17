@@ -128,8 +128,7 @@ void TextEdit::Text::_update_line_cache(int p_line) const {
 
 	text[p_line].width_cache = w;
 
-	// update wrap amount
-	text[p_line].line_wrap_cache = -1; //todo
+	text[p_line].wrap_amount_cache = -1;
 
 	//update regions
 
@@ -232,23 +231,23 @@ int TextEdit::Text::get_line_width(int p_line) const {
 
 void TextEdit::Text::set_line_wrap_amount(int p_line, int p_wrap_amount) const {
 
-	ERR_FAIL_INDEX_V(p_line, text.size(), -1);
+	ERR_FAIL_INDEX(p_line, text.size());
 
-	text[p_line].line_wrap_cache = p_wrap_amount;
+	text[p_line].wrap_amount_cache = p_wrap_amount;
 }
 
 int TextEdit::Text::get_line_wrap_amount(int p_line) const {
 
 	ERR_FAIL_INDEX_V(p_line, text.size(), -1);
 
-	return text[p_line].line_wrap_cache;
+	return text[p_line].wrap_amount_cache;
 }
 
 void TextEdit::Text::clear_caches() {
 
 	for (int i = 0; i < text.size(); i++) {
 		text[i].width_cache = -1;
-		text[p_line].line_wrap_cache = -1;
+		text[i].wrap_amount_cache = -1;
 	}
 }
 
@@ -274,7 +273,7 @@ void TextEdit::Text::set(int p_line, const String &p_text) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
 	text[p_line].width_cache = -1;
-	text[p_line].line_wrap_cache = -1;
+	text[p_line].wrap_amount_cache = -1;
 	text[p_line].data = p_text;
 }
 
@@ -285,7 +284,7 @@ void TextEdit::Text::insert(int p_at, const String &p_text) {
 	line.breakpoint = false;
 	line.hidden = false;
 	line.width_cache = -1;
-	line.line_wrap_cache = -1;
+	line.wrap_amount_cache = -1;
 	line.data = p_text;
 	text.insert(p_at, line);
 }
@@ -867,12 +866,10 @@ void TextEdit::_notification(int p_what) {
 					if (line_wrap_index != 0)
 						i++;
 
-					int cursor_wrap_index = 0; //get_wrap_col_index(cursor.line, cursor.column);
 					const String &str = get_wrap_line_text(line, line_wrap_index, true);
-					int cursor_wrap_index = get_wrap_col_index(cursor.line, cursor.column);
+					int cursor_wrap_index = get_line_wrap_index_at_col(cursor.line, cursor.column);
 					if (line_wrap_amount > 0)
-						WARN_PRINTS("wrapping line " + itos(line) + " w" + itos(line_wrap_index) + "/" + itos(line_wrap_amount) + " at " + str_temp.substr(0, 1) + ":" + str_temp.substr(str_temp.size() - 2, 1) + " curswi:" + itos(cursor_wrap_index));
-
+						WARN_PRINTS("wrapping line " + itos(line) + " w" + itos(line_wrap_index) + "/" + itos(line_wrap_amount) + " at " + str.substr(0, 1) + ":" + str.substr(str.size() - 2, 1) + " curswi:" + itos(cursor_wrap_index));
 
 					int char_margin = xmargin_beg - cursor.x_ofs;
 					int char_ofs = 0;
@@ -1815,7 +1812,7 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 		col += cursor.x_ofs;
 		int wrap_index = 0;
 		if (line_wraps(row)) {
-			wrap_index = num_lines_from_remainder(CLAMP(cursor.line_ofs, 0, text.size() - 1), MIN(rows + 1, text.size() - cursor.line_ofs))
+			wrap_index = num_lines_from_remainder(CLAMP(cursor.line_ofs, 0, text.size() - 1), MIN(rows + 1, text.size() - cursor.line_ofs));
 			WARN_PRINTS("mclick ind = " + itos(wrap_index));
 		}
 		col = get_char_pos_for_line(col, row, wrap_index);
@@ -2708,16 +2705,18 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					cursor_set_line(0);
 				else
 #endif
-				int cur_wrap_index = get_line_wrap_index_at_col(cursor.col);
-				if (cur_wrap_index > 0)) {
-					cursor_set_line(cursor.line, true, true, cur_wrap_index - 1);
-				} else {
-					int new_line = cursor_get_line() - num_lines_from(CLAMP(cursor.line - 1, 0, text.size() - 1), -1);
-					if (cursor.line > 0 && line_wraps(new_line)){
-						int prev_line_wrap_index = get_line_wrap_index_at_col(new_line, 9999);
-						cursor_set_line(new_line, true, true, prev_line_wrap_index);
+				{
+					int cur_wrap_index = get_line_wrap_index_at_col(cursor.line, cursor.column);
+					if (cur_wrap_index > 0) {
+						cursor_set_line(cursor.line, true, true, cur_wrap_index - 1);
 					} else {
-						cursor_set_line(new_line);
+						int new_line = cursor_get_line() - num_lines_from(CLAMP(cursor.line - 1, 0, text.size() - 1), -1);
+						if (cursor.line > 0 && line_wraps(new_line)) {
+							int prev_line_wrap_index = get_line_wrap_index_at_col(new_line, 9999);
+							cursor_set_line(new_line, true, true, prev_line_wrap_index);
+						} else {
+							cursor_set_line(new_line);
+						}
 					}
 				}
 
@@ -2756,12 +2755,14 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					cursor_set_line(text.size() - 1, true, false, times_line_wraps(text[text.size() - 1]);
 				else
 #endif
-				int cur_wrap_index = get_line_wrap_index_at_col(cursor.col);
-				if (cur_wrap_index < times_line_wraps(cursor.line))) {
-					cursor_set_line(cursor.line, true, false, cur_wrap_index + 1);
-				} else {
-					int new_line = cursor_get_line() + num_lines_from(CLAMP(cursor.line + 1, 0, text.size() - 1), 1);
-					cursor_set_line(new_line, true, false, 0);
+				{
+					int cur_wrap_index = get_line_wrap_index_at_col(cursor.line, cursor.column);
+					if (cur_wrap_index < times_line_wraps(cursor.line)) {
+						cursor_set_line(cursor.line, true, false, cur_wrap_index + 1);
+					} else {
+						int new_line = cursor_get_line() + num_lines_from(CLAMP(cursor.line + 1, 0, text.size() - 1), 1);
+						cursor_set_line(new_line, true, false, 0);
+					}
 				}
 
 				if (k->get_shift())
@@ -2949,7 +2950,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (k->get_shift())
 					_pre_shift_selection();
 
-				cursor_set_line(cursor_get_line() - num_lines_from(cursor.line, -get_visible_rows()), true, false);//todo
+				cursor_set_line(cursor_get_line() - num_lines_from(cursor.line, -get_visible_rows()), true, false); //todo
 
 				if (k->get_shift())
 					_post_shift_selection();
@@ -3650,7 +3651,7 @@ int TextEdit::times_line_wraps(int line) const {
 		int max_wraps = 99;
 		int wrap_index = 0;
 		for (wrap_index = 0; wrap_index < max_wraps; wrap_index++) {
-			String s = get_wrap_line_text(p_line, wrap_index, false);
+			String s = get_wrap_line_text(line, wrap_index, false);
 			if (s == "")
 				break;
 		}
@@ -3716,7 +3717,7 @@ String TextEdit::get_wrap_line_text(int p_line, int wrap_index, bool include_tab
 			tab_offset_ended = true;
 		} else if (c == ' ') {
 			// end of a word; add this word to the substring
-			wrap_substring += word_str + c;
+			wrap_substring += word_str + (c + "");
 			px += word_px + w;
 			word_str = "";
 			word_px = 0;
@@ -3744,7 +3745,7 @@ int TextEdit::get_line_wrap_index_at_col(int p_line, int p_column) const {
 	// loop through wraps in the line text until we get to the column
 	int wrap_index = 0;
 	int col = 0;
-	int max_wraps = text.get_line_wrap_amount(line);
+	int max_wraps = text.get_line_wrap_amount(p_line);
 	if (max_wraps == -1)
 		max_wraps = 99;
 	for (int i = 0; i < max_wraps; i++) {
@@ -3941,7 +3942,7 @@ int TextEdit::get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) cons
 		// for (int i = 0; i < p_wrap_index; i++) {
 		// 	String s = get_wrap_line_text(p_line, i, false);
 		// 	p_px += get_column_x_offset(s.length(), s);
-		// }
+		// } todo
 		String s = get_wrap_line_text(p_line, p_wrap_index, true);
 		return get_char_pos_for(p_px, s);
 	} else {
@@ -3956,14 +3957,14 @@ int TextEdit::get_column_x_offset_for_line(int p_char, int p_line) const {
 
 	if (line_wraps(p_line)) {
 
-		// int px = get_column_x_offset(p_char, text[p_line]);
-		int wrap_index = get_line_wrap_index_at_col(p_line, p_char);
-		for (int i=0; i< wrap_index; i++) {
-			String s = get_wrap_line_text(p_line, wrap_index, false);
-			p_char -= s.length();	
-		}
-		String s = get_wrap_line_text(p_line, wrap_index, false);
-		int px = get_column_x_offset(p_char, s);
+		int px = get_column_x_offset(p_char, text[p_line]);
+		// int wrap_index = get_line_wrap_index_at_col(p_line, p_char);
+		// for (int i = 0; i < wrap_index; i++) {
+		// 	String s = get_wrap_line_text(p_line, wrap_index, false);
+		// 	p_char -= s.length();
+		// }
+		// String s = get_wrap_line_text(p_line, wrap_index, false);
+		// int px = get_column_x_offset(p_char, s); todo
 
 		return px;
 	} else {
@@ -3990,7 +3991,7 @@ int TextEdit::get_char_pos_for(int p_px, String p_str) const {
 	return c;
 }
 
-int TextEdit::get_column_x_offset(int p_char, String p_str) {
+int TextEdit::get_column_x_offset(int p_char, String p_str) const {
 
 	int px = 0;
 
@@ -4772,9 +4773,9 @@ int TextEdit::num_lines_from_remainder(int p_line_from, int visible_amount) cons
 	ERR_FAIL_INDEX_V(p_line_from, text.size(), 0);
 
 	if (!is_hiding_enabled() && !is_wrap_enabled())
-		return 0
+		return 0;
 
-			   int num_visible = 0;
+	int num_visible = 0;
 	int rem = 0;
 	if (visible_amount >= 0) {
 		for (int i = p_line_from; i < text.size(); i++) {

@@ -161,6 +161,8 @@ class TextEdit : public Control {
 		void set_font(const Ref<Font> &p_font);
 		void set_color_regions(const Vector<ColorRegion> *p_regions) { color_regions = p_regions; }
 		int get_line_width(int p_line) const;
+		void set_line_wrap_amount(int p_line, int p_wrap_amount) const;
+		int get_line_wrap_amount(int p_line) const;
 		int get_max_width(bool p_exclude_hidden = false) const;
 		int get_char_width(char c, char next_c, int px) const;
 		const Map<int, ColorRegionInfo> &get_color_region_info(int p_line);
@@ -444,6 +446,7 @@ public:
 	void fold_all_lines();
 	void unhide_all_lines();
 	int num_lines_from(int p_line_from, int visible_amount) const;
+	int num_lines_from_remainder(int p_line_from, int visible_amount) const;
 	bool can_fold(int p_line) const;
 	bool is_folded(int p_line) const;
 	void fold_line(int p_line);
