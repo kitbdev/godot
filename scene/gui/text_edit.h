@@ -42,7 +42,7 @@ class TextEdit : public Control {
 	struct Cursor {
 		int last_fit_x;
 		int line, column; ///< cursor
-		int x_ofs, line_ofs;
+		int x_ofs, line_ofs, wrap_ofs;
 	} cursor;
 
 	struct Selection {
@@ -143,6 +143,7 @@ class TextEdit : public Control {
 			bool marked : 1;
 			bool breakpoint : 1;
 			bool hidden : 1;
+			int wrap_amount_cache : 24;
 			Map<int, ColorRegionInfo> region_info;
 			String data;
 		};
@@ -161,6 +162,7 @@ class TextEdit : public Control {
 		void set_color_regions(const Vector<ColorRegion> *p_regions) { color_regions = p_regions; }
 		int get_line_width(int p_line) const;
 		int get_max_width(bool p_exclude_hidden = false) const;
+		int get_char_width(char c, char next_c, int px) const;
 		const Map<int, ColorRegionInfo> &get_color_region_info(int p_line);
 		void set(int p_line, const String &p_text);
 		void set_marked(int p_line, bool p_marked) { text[p_line].marked = p_marked; }
@@ -247,8 +249,10 @@ class TextEdit : public Control {
 	bool window_has_focus;
 	bool block_caret;
 
+	bool wrap_enabled;
+	int wrap_at;
+
 	bool setting_row;
-	bool wrap;
 	bool draw_tabs;
 	bool override_selected_font_color;
 	bool cursor_changed_dirty;
@@ -310,14 +314,22 @@ class TextEdit : public Control {
 	bool context_menu_enabled;
 
 	int get_visible_rows() const;
-	int get_total_unhidden_rows() const;
+	int get_total_visible_rows() const;
 	double get_line_scroll_pos(bool p_recalculate = false) const;
 	void update_line_scroll_pos();
 
+	void update_cursor_wrap_offset();
+	void update_wrap_at();
+	bool line_wraps(int line) const;
+	int times_line_wraps(int line) const;
+	String get_wrap_line_text(int p_line, int wrap_index, bool include_tab_offset) const;
+	int get_line_wrap_index_at_col(int p_line, int p_column) const;
 	int get_char_count();
 
+	int get_char_pos_for_line(int p_px, int p_line, int p_wrap_index = 0) const;
+	int get_column_x_offset_for_line(int p_char, int p_line) const;
 	int get_char_pos_for(int p_px, String p_str) const;
-	int get_column_x_offset(int p_char, String p_str);
+	int get_column_x_offset(int p_char, String p_str) const;
 
 	void adjust_viewport_to_cursor();
 	double get_scroll_line_diff() const;
@@ -431,7 +443,7 @@ public:
 	bool is_line_hidden(int p_line) const;
 	void fold_all_lines();
 	void unhide_all_lines();
-	int num_lines_from(int p_line_from, int unhidden_amount) const;
+	int num_lines_from(int p_line_from, int visible_amount) const;
 	bool can_fold(int p_line) const;
 	bool is_folded(int p_line) const;
 	void fold_line(int p_line);
@@ -467,7 +479,7 @@ public:
 	void center_viewport_to_cursor();
 
 	void cursor_set_column(int p_col, bool p_adjust_viewport = true);
-	void cursor_set_line(int p_row, bool p_adjust_viewport = true, bool p_can_be_hidden = true);
+	void cursor_set_line(int p_row, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0);
 
 	int cursor_get_column() const;
 	int cursor_get_line() const;
@@ -485,7 +497,8 @@ public:
 	bool is_readonly() const;
 
 	void set_max_chars(int p_max_chars);
-	void set_wrap(bool p_wrap);
+	void set_wrap_enabled(bool p_wrap_enabled);
+	bool is_wrap_enabled() const;
 
 	void clear();
 

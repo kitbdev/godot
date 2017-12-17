@@ -116,7 +116,6 @@ void TextEdit::Text::set_indent_size(int p_indent_size) {
 void TextEdit::Text::_update_line_cache(int p_line) const {
 
 	int w = 0;
-	int tab_w = font->get_char_size(' ').width * indent_size;
 
 	int len = text[p_line].data.length();
 	const CharType *str = text[p_line].data.c_str();
@@ -124,21 +123,13 @@ void TextEdit::Text::_update_line_cache(int p_line) const {
 	//update width
 
 	for (int i = 0; i < len; i++) {
-		if (str[i] == '\t') {
-
-			int left = w % tab_w;
-			if (left == 0)
-				w += tab_w;
-			else
-				w += tab_w - w % tab_w; // is right...
-
-		} else {
-
-			w += font->get_char_size(str[i], str[i + 1]).width;
-		}
+		w += get_char_width(str[i], str[i + 1], w);
 	}
 
 	text[p_line].width_cache = w;
+
+	// update wrap amount
+	text[p_line].line_wrap_cache = -1; //todo
 
 	//update regions
 
@@ -239,10 +230,26 @@ int TextEdit::Text::get_line_width(int p_line) const {
 	return text[p_line].width_cache;
 }
 
+void TextEdit::Text::set_line_wrap_amount(int p_line, int p_wrap_amount) const {
+
+	ERR_FAIL_INDEX_V(p_line, text.size(), -1);
+
+	text[p_line].line_wrap_cache = p_wrap_amount;
+}
+
+int TextEdit::Text::get_line_wrap_amount(int p_line) const {
+
+	ERR_FAIL_INDEX_V(p_line, text.size(), -1);
+
+	return text[p_line].line_wrap_cache;
+}
+
 void TextEdit::Text::clear_caches() {
 
-	for (int i = 0; i < text.size(); i++)
+	for (int i = 0; i < text.size(); i++) {
 		text[i].width_cache = -1;
+		text[p_line].line_wrap_cache = -1;
+	}
 }
 
 void TextEdit::Text::clear() {
@@ -267,6 +274,7 @@ void TextEdit::Text::set(int p_line, const String &p_text) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
 	text[p_line].width_cache = -1;
+	text[p_line].line_wrap_cache = -1;
 	text[p_line].data = p_text;
 }
 
@@ -277,12 +285,32 @@ void TextEdit::Text::insert(int p_at, const String &p_text) {
 	line.breakpoint = false;
 	line.hidden = false;
 	line.width_cache = -1;
+	line.line_wrap_cache = -1;
 	line.data = p_text;
 	text.insert(p_at, line);
 }
 void TextEdit::Text::remove(int p_at) {
 
 	text.remove(p_at);
+}
+
+int TextEdit::Text::get_char_width(char c, char next_c, int px) const {
+
+	int tab_w = font->get_char_size(' ').width * indent_size;
+	int w = 0;
+
+	if (c == '\t') {
+
+		int left = px % tab_w;
+		if (left == 0)
+			w = tab_w;
+		else
+			w = tab_w - px % tab_w; // is right...
+	} else {
+
+		w = font->get_char_size(c, next_c).width;
+	}
+	return w;
 }
 
 void TextEdit::_update_scrollbars() {
@@ -301,7 +329,7 @@ void TextEdit::_update_scrollbars() {
 	int visible_rows = get_visible_rows();
 	int num_rows = MAX(visible_rows, num_lines_from(CLAMP(cursor.line_ofs, 0, text.size() - 1), MIN(visible_rows, text.size() - 1 - cursor.line_ofs)));
 
-	int total_rows = (is_hiding_enabled() ? get_total_unhidden_rows() : text.size());
+	int total_rows = (is_hiding_enabled() || is_wrap_enabled() ? get_total_visible_rows() : text.size());
 	if (scroll_past_end_of_file_enabled) {
 		total_rows += visible_rows - 1;
 	}
@@ -363,12 +391,13 @@ void TextEdit::_update_scrollbars() {
 	} else {
 
 		cursor.line_ofs = 0;
+		cursor.wrap_ofs = 0;
 		line_scroll_pos = 0;
 		v_scroll->set_value(0);
 		v_scroll->hide();
 	}
 
-	if (use_hscroll) {
+	if (use_hscroll && !wrap_enabled) {
 
 		h_scroll->show();
 		h_scroll->set_max(total_width);
@@ -520,6 +549,7 @@ void TextEdit::_notification(int p_what) {
 
 			cache.size = get_size();
 			adjust_viewport_to_cursor();
+			update_wrap_at();
 
 		} break;
 		case NOTIFICATION_THEME_CHANGED: {
@@ -612,8 +642,6 @@ void TextEdit::_notification(int p_what) {
 			int ascent = cache.font->get_ascent();
 
 			int visible_rows = get_visible_rows() + 1;
-
-			int tab_w = cache.font->get_char_size(' ').width * indent_size;
 
 			Color color = cache.font_color;
 			color.a *= readonly_alpha;
@@ -833,379 +861,462 @@ void TextEdit::_notification(int p_what) {
 				if (line < 0 || line >= (int)text.size())
 					continue;
 
-				const String &str = text[line];
+				int last_line_text_width_left = 0;
+				int line_wrap_amount = times_line_wraps(line);
+				for (int line_wrap_index = 0; line_wrap_index < line_wrap_amount + 1; line_wrap_index++) {
+					if (line_wrap_index != 0)
+						i++;
 
-				int char_margin = xmargin_beg - cursor.x_ofs;
-				int char_ofs = 0;
+					int cursor_wrap_index = 0; //get_wrap_col_index(cursor.line, cursor.column);
+					const String &str = get_wrap_line_text(line, line_wrap_index, true);
+					int cursor_wrap_index = get_wrap_col_index(cursor.line, cursor.column);
+					if (line_wrap_amount > 0)
+						WARN_PRINTS("wrapping line " + itos(line) + " w" + itos(line_wrap_index) + "/" + itos(line_wrap_amount) + " at " + str_temp.substr(0, 1) + ":" + str_temp.substr(str_temp.size() - 2, 1) + " curswi:" + itos(cursor_wrap_index));
 
-				int ofs_readonly = 0;
-				int ofs_x = 0;
-				if (readonly) {
-					ofs_readonly = cache.style_readonly->get_offset().y / 2;
-					ofs_x = cache.style_readonly->get_offset().x / 2;
-				}
-				int ofs_y = (i * get_row_height() + cache.line_spacing / 2) + ofs_readonly;
-				if (smooth_scroll_enabled)
-					ofs_y -= ((v_scroll->get_value() - get_line_scroll_pos()) * get_row_height());
 
-				bool prev_is_char = false;
-				bool prev_is_number = false;
-				bool in_keyword = false;
-				bool underlined = false;
-				bool in_word = false;
-				bool in_function_name = false;
-				bool in_member_variable = false;
-				bool is_hex_notation = false;
-				Color keyword_color;
+					int char_margin = xmargin_beg - cursor.x_ofs;
+					int char_ofs = 0;
 
-				// check if line contains highlighted word
-				int highlighted_text_col = -1;
-				int search_text_col = -1;
+					int ofs_readonly = 0;
+					int ofs_x = 0;
+					if (readonly) {
+						ofs_readonly = cache.style_readonly->get_offset().y / 2;
+						ofs_x = cache.style_readonly->get_offset().x / 2;
+					}
+					int ofs_y = (i * get_row_height() + cache.line_spacing / 2) + ofs_readonly;
+					if (smooth_scroll_enabled)
+						ofs_y -= ((v_scroll->get_value() - get_line_scroll_pos()) * get_row_height());
 
-				if (!search_text.empty())
-					search_text_col = _get_column_pos_of_word(search_text, str, search_flags, 0);
+					bool prev_is_char = false;
+					bool prev_is_number = false;
+					bool in_keyword = false;
+					bool underlined = false;
+					bool in_word = false;
+					bool in_function_name = false;
+					bool in_member_variable = false;
+					bool is_hex_notation = false;
+					Color keyword_color;
 
-				if (highlighted_text.length() != 0 && highlighted_text != search_text)
-					highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
+					// check if line contains highlighted word
+					int highlighted_text_col = -1;
+					int search_text_col = -1;
 
-				const Map<int, Text::ColorRegionInfo> &cri_map = text.get_color_region_info(line);
+					if (!search_text.empty())
+						search_text_col = _get_column_pos_of_word(search_text, str, search_flags, 0);
 
-				if (text.is_marked(line)) {
+					if (highlighted_text.length() != 0 && highlighted_text != search_text)
+						highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
 
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, xmargin_end - xmargin_beg, get_row_height()), cache.mark_color);
-				}
+					const Map<int, Text::ColorRegionInfo> &cri_map = text.get_color_region_info(line);
 
-				if (str.length() == 0) {
-					// draw line background if empty as we won't loop at at all
-					if (line == cursor.line && highlight_current_line) {
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(ofs_x, ofs_y, xmargin_end, get_row_height()), cache.current_line_color);
+					if (text.is_marked(line)) {
+
+						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, xmargin_end - xmargin_beg, get_row_height()), cache.mark_color);
 					}
 
-					// give visual indication of empty selected line
-					if (selection.active && line >= selection.from_line && line <= selection.to_line) {
-						int char_w = cache.font->get_char_size(' ').width;
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, char_w, get_row_height()), cache.selection_color);
-					}
-				} else {
-					// if it has text, then draw current line marker in the margin, as line number ect will draw over it, draw the rest of line marker later.
-					if (line == cursor.line && highlight_current_line) {
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(0, ofs_y, xmargin_beg, get_row_height()), cache.current_line_color);
-					}
-				}
-
-				if (text.is_breakpoint(line) && !draw_breakpoint_gutter) {
-#ifdef TOOLS_ENABLED
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y + get_row_height() - EDSCALE, xmargin_end - xmargin_beg, EDSCALE), cache.breakpoint_color);
-#else
-					VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, xmargin_end - xmargin_beg, get_row_height()), cache.breakpoint_color);
-#endif
-				}
-
-				// draw breakpoint marker
-				if (text.is_breakpoint(line)) {
-					if (draw_breakpoint_gutter) {
-						int vertical_gap = (get_row_height() * 40) / 100;
-						int horizontal_gap = (cache.breakpoint_gutter_width * 30) / 100;
-						int marker_height = get_row_height() - (vertical_gap * 2);
-						int marker_width = cache.breakpoint_gutter_width - (horizontal_gap * 2);
-						// no transparency on marker
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cache.style_normal->get_margin(MARGIN_LEFT) + horizontal_gap - 2, ofs_y + vertical_gap, marker_width, marker_height), Color(cache.breakpoint_color.r, cache.breakpoint_color.g, cache.breakpoint_color.b));
-					}
-				}
-
-				// draw fold markers
-				if (draw_fold_gutter) {
-					int horizontal_gap = (cache.fold_gutter_width * 30) / 100;
-					int gutter_left = cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + cache.line_number_w;
-					if (is_folded(line)) {
-						int xofs = horizontal_gap - (cache.can_fold_icon->get_width()) / 2;
-						int yofs = (get_row_height() - cache.folded_icon->get_height()) / 2;
-						cache.folded_icon->draw(ci, Point2(gutter_left + xofs + ofs_x, ofs_y + yofs), cache.code_folding_color);
-					} else if (can_fold(line)) {
-						int xofs = -cache.can_fold_icon->get_width() / 2 - horizontal_gap + 3;
-						int yofs = (get_row_height() - cache.can_fold_icon->get_height()) / 2;
-						cache.can_fold_icon->draw(ci, Point2(gutter_left + xofs + ofs_x, ofs_y + yofs), cache.code_folding_color);
-					}
-				}
-
-				if (cache.line_number_w) {
-					String fc = String::num(line + 1);
-					while (fc.length() < line_number_char_count) {
-						fc = line_num_padding + fc;
-					}
-
-					cache.font->draw(ci, Point2(cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + ofs_x, ofs_y + cache.font->get_ascent()), fc, cache.line_number_color);
-				}
-				//loop through charcters in one line
-				for (int j = 0; j < str.length(); j++) {
-
-					//look for keyword
-
-					if (deregion > 0) {
-						deregion--;
-						if (deregion == 0)
-							in_region = -1;
-					}
-					if (syntax_coloring && deregion == 0) {
-
-						color = cache.font_color; //reset
-						color.a *= readonly_alpha;
-						//find keyword
-						bool is_char = _is_text_char(str[j]);
-						bool is_symbol = _is_symbol(str[j]);
-						bool is_number = _is_number(str[j]);
-
-						if (j == 0 && in_region >= 0 && color_regions[in_region].line_only) {
-							in_region = -1; //reset regions that end at end of line
+					if (str.length() == 0) {
+						// draw line background if empty as we won't loop at at all
+						if (line == cursor.line && cursor_wrap_index == line_wrap_index && highlight_current_line) {
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(ofs_x, ofs_y, xmargin_end, get_row_height()), cache.current_line_color);
 						}
 
-						// allow ABCDEF in hex notation
-						if (is_hex_notation && (_is_hex_symbol(str[j]) || is_number)) {
-							is_number = true;
-						} else {
-							is_hex_notation = false;
+						// give visual indication of empty selected line
+						if (selection.active && line >= selection.from_line && line <= selection.to_line) {
+							int char_w = cache.font->get_char_size(' ').width;
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, char_w, get_row_height()), cache.selection_color);
 						}
-
-						// check for dot or underscore or 'x' for hex notation in floating point number
-						if ((str[j] == '.' || str[j] == 'x' || str[j] == '_') && !in_word && prev_is_number && !is_number) {
-							is_number = true;
-							is_symbol = false;
-							is_char = false;
-
-							if (str[j] == 'x' && str[j - 1] == '0') {
-								is_hex_notation = true;
-							}
-						}
-
-						if (!in_word && _is_char(str[j]) && !is_number) {
-							in_word = true;
-						}
-
-						if ((in_keyword || in_word) && !is_hex_notation) {
-							is_number = false;
-						}
-
-						if (is_symbol && str[j] != '.' && in_word) {
-							in_word = false;
-						}
-
-						if (is_symbol && cri_map.has(j)) {
-
-							const Text::ColorRegionInfo &cri = cri_map[j];
-
-							if (in_region == -1) {
-
-								if (!cri.end) {
-
-									in_region = cri.region;
-								}
-							} else if (in_region == cri.region && !color_regions[cri.region].line_only) { //ignore otherwise
-
-								if (cri.end || color_regions[cri.region].eq) {
-
-									deregion = color_regions[cri.region].eq ? color_regions[cri.region].begin_key.length() : color_regions[cri.region].end_key.length();
-								}
-							}
-						}
-
-						if (!is_char) {
-							in_keyword = false;
-							underlined = false;
-						}
-
-						if (in_region == -1 && !in_keyword && is_char && !prev_is_char) {
-
-							int to = j;
-							while (to < str.length() && _is_text_char(str[to]))
-								to++;
-
-							uint32_t hash = String::hash(&str[j], to - j);
-							StrRange range(&str[j], to - j);
-
-							const Color *col = keywords.custom_getptr(range, hash);
-
-							if (col) {
-
-								in_keyword = true;
-								keyword_color = *col;
-							}
-
-							if (select_identifiers_enabled && highlighted_word != String()) {
-								if (highlighted_word == range) {
-									underlined = true;
-								}
-							}
-						}
-
-						if (!in_function_name && in_word && !in_keyword) {
-
-							int k = j;
-							while (k < str.length() && !_is_symbol(str[k]) && str[k] != '\t' && str[k] != ' ') {
-								k++;
-							}
-
-							// check for space between name and bracket
-							while (k < str.length() && (str[k] == '\t' || str[k] == ' ')) {
-								k++;
-							}
-
-							if (str[k] == '(') {
-								in_function_name = true;
-							}
-						}
-
-						if (!in_function_name && !in_member_variable && !in_keyword && !is_number && in_word) {
-							int k = j;
-							while (k > 0 && !_is_symbol(str[k]) && str[k] != '\t' && str[k] != ' ') {
-								k--;
-							}
-
-							if (str[k] == '.') {
-								in_member_variable = true;
-							}
-						}
-
-						if (is_symbol) {
-							in_function_name = false;
-							in_member_variable = false;
-						}
-
-						if (in_region >= 0)
-							color = color_regions[in_region].color;
-						else if (in_keyword)
-							color = keyword_color;
-						else if (in_member_variable)
-							color = cache.member_variable_color;
-						else if (in_function_name)
-							color = cache.function_color;
-						else if (is_symbol)
-							color = cache.symbol_color;
-						else if (is_number)
-							color = cache.number_color;
-
-						prev_is_char = is_char;
-						prev_is_number = is_number;
-					}
-					int char_w;
-
-					//handle tabulator
-
-					if (str[j] == '\t') {
-						int left = char_ofs % tab_w;
-						if (left == 0)
-							char_w = tab_w;
-						else
-							char_w = tab_w - char_ofs % tab_w; // is right...
-
 					} else {
-						char_w = cache.font->get_char_size(str[j], str[j + 1]).width;
+						// if it has text, then draw current line marker in the margin, as line number ect will draw over it, draw the rest of line marker later.
+						if (line == cursor.line && cursor_wrap_index == line_wrap_index && highlight_current_line) {
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(0, ofs_y, xmargin_beg, get_row_height()), cache.current_line_color);
+						}
 					}
 
-					if ((char_ofs + char_margin) < xmargin_beg) {
-						char_ofs += char_w;
-						continue;
-					}
+					if (line_wrap_index == 0) {
+						// only do these if we are on not on the wrapped part of a line
 
-					if ((char_ofs + char_margin + char_w) >= xmargin_end) {
-						if (syntax_coloring)
+						if (text.is_breakpoint(line) && !draw_breakpoint_gutter) {
+#ifdef TOOLS_ENABLED
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y + get_row_height() - EDSCALE, xmargin_end - xmargin_beg, EDSCALE), cache.breakpoint_color);
+#else
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(xmargin_beg + ofs_x, ofs_y, xmargin_end - xmargin_beg, get_row_height()), cache.breakpoint_color);
+#endif
+						}
+
+						// draw breakpoint marker
+						if (text.is_breakpoint(line)) {
+							if (draw_breakpoint_gutter) {
+								int vertical_gap = (get_row_height() * 40) / 100;
+								int horizontal_gap = (cache.breakpoint_gutter_width * 30) / 100;
+								int marker_height = get_row_height() - (vertical_gap * 2);
+								int marker_width = cache.breakpoint_gutter_width - (horizontal_gap * 2);
+								// no transparency on marker
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cache.style_normal->get_margin(MARGIN_LEFT) + horizontal_gap - 2, ofs_y + vertical_gap, marker_width, marker_height), Color(cache.breakpoint_color.r, cache.breakpoint_color.g, cache.breakpoint_color.b));
+							}
+						}
+
+						// draw fold markers
+						if (draw_fold_gutter) {
+							int horizontal_gap = (cache.fold_gutter_width * 30) / 100;
+							int gutter_left = cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + cache.line_number_w;
+							if (is_folded(line)) {
+								int xofs = horizontal_gap - (cache.can_fold_icon->get_width()) / 2;
+								int yofs = (get_row_height() - cache.folded_icon->get_height()) / 2;
+								cache.folded_icon->draw(ci, Point2(gutter_left + xofs + ofs_x, ofs_y + yofs), cache.code_folding_color);
+							} else if (can_fold(line)) {
+								int xofs = -cache.can_fold_icon->get_width() / 2 - horizontal_gap + 3;
+								int yofs = (get_row_height() - cache.can_fold_icon->get_height()) / 2;
+								cache.can_fold_icon->draw(ci, Point2(gutter_left + xofs + ofs_x, ofs_y + yofs), cache.code_folding_color);
+							}
+						}
+
+						// draw line numbers
+						if (cache.line_number_w) {
+							String fc = String::num(line + 1);
+							while (fc.length() < line_number_char_count) {
+								fc = line_num_padding + fc;
+							}
+
+							cache.font->draw(ci, Point2(cache.style_normal->get_margin(MARGIN_LEFT) + cache.breakpoint_gutter_width + ofs_x, ofs_y + cache.font->get_ascent()), fc, cache.line_number_color);
+						}
+					}
+					//loop through charcters in one line
+					for (int j = 0; j < str.length(); j++) {
+
+						//look for keyword
+
+						if (deregion > 0) {
+							deregion--;
+							if (deregion == 0)
+								in_region = -1;
+						}
+						if (syntax_coloring && deregion == 0) {
+
+							color = cache.font_color; //reset
+							color.a *= readonly_alpha;
+							//find keyword
+							bool is_char = _is_text_char(str[j]);
+							bool is_symbol = _is_symbol(str[j]);
+							bool is_number = _is_number(str[j]);
+
+							if (j == 0 && in_region >= 0 && color_regions[in_region].line_only) {
+								in_region = -1; //reset regions that end at end of line
+							}
+
+							// allow ABCDEF in hex notation
+							if (is_hex_notation && (_is_hex_symbol(str[j]) || is_number)) {
+								is_number = true;
+							} else {
+								is_hex_notation = false;
+							}
+
+							// check for dot or underscore or 'x' for hex notation in floating point number
+							if ((str[j] == '.' || str[j] == 'x' || str[j] == '_') && !in_word && prev_is_number && !is_number) {
+								is_number = true;
+								is_symbol = false;
+								is_char = false;
+
+								if (str[j] == 'x' && str[j - 1] == '0') {
+									is_hex_notation = true;
+								}
+							}
+
+							if (!in_word && _is_char(str[j]) && !is_number) {
+								in_word = true;
+							}
+
+							if ((in_keyword || in_word) && !is_hex_notation) {
+								is_number = false;
+							}
+
+							if (is_symbol && str[j] != '.' && in_word) {
+								in_word = false;
+							}
+
+							if (is_symbol && cri_map.has(j)) {
+
+								const Text::ColorRegionInfo &cri = cri_map[j];
+
+								if (in_region == -1) {
+
+									if (!cri.end) {
+
+										in_region = cri.region;
+									}
+								} else if (in_region == cri.region && !color_regions[cri.region].line_only) { //ignore otherwise
+
+									if (cri.end || color_regions[cri.region].eq) {
+
+										deregion = color_regions[cri.region].eq ? color_regions[cri.region].begin_key.length() : color_regions[cri.region].end_key.length();
+									}
+								}
+							}
+
+							if (!is_char) {
+								in_keyword = false;
+								underlined = false;
+							}
+
+							if (in_region == -1 && !in_keyword && is_char && !prev_is_char) {
+
+								int to = j;
+								while (to < str.length() && _is_text_char(str[to]))
+									to++;
+
+								uint32_t hash = String::hash(&str[j], to - j);
+								StrRange range(&str[j], to - j);
+
+								const Color *col = keywords.custom_getptr(range, hash);
+
+								if (col) {
+
+									in_keyword = true;
+									keyword_color = *col;
+								}
+
+								if (select_identifiers_enabled && highlighted_word != String()) {
+									if (highlighted_word == range) {
+										underlined = true;
+									}
+								}
+							}
+
+							if (!in_function_name && in_word && !in_keyword) {
+
+								int k = j;
+								while (k < str.length() && !_is_symbol(str[k]) && str[k] != '\t' && str[k] != ' ') {
+									k++;
+								}
+
+								// check for space between name and bracket
+								while (k < str.length() && (str[k] == '\t' || str[k] == ' ')) {
+									k++;
+								}
+
+								if (str[k] == '(') {
+									in_function_name = true;
+								}
+							}
+
+							if (!in_function_name && !in_member_variable && !in_keyword && !is_number && in_word) {
+								int k = j;
+								while (k > 0 && !_is_symbol(str[k]) && str[k] != '\t' && str[k] != ' ') {
+									k--;
+								}
+
+								if (str[k] == '.') {
+									in_member_variable = true;
+								}
+							}
+
+							if (is_symbol) {
+								in_function_name = false;
+								in_member_variable = false;
+							}
+
+							if (in_region >= 0)
+								color = color_regions[in_region].color;
+							else if (in_keyword)
+								color = keyword_color;
+							else if (in_member_variable)
+								color = cache.member_variable_color;
+							else if (in_function_name)
+								color = cache.function_color;
+							else if (is_symbol)
+								color = cache.symbol_color;
+							else if (is_number)
+								color = cache.number_color;
+
+							prev_is_char = is_char;
+							prev_is_number = is_number;
+						}
+						int char_w;
+
+						//handle tabulator
+
+						char_w = text.get_char_width(str[j], str[j + 1], char_ofs);
+
+						if ((char_ofs + char_margin) < xmargin_beg) {
+							char_ofs += char_w;
 							continue;
-						else
-							break;
-					}
+						}
 
-					bool in_search_result = false;
+						if ((char_ofs + char_margin + char_w) >= xmargin_end) {
+							if (syntax_coloring)
+								continue;
+							else
+								break;
+						}
 
-					if (search_text_col != -1) {
-						// if we are at the end check for new search result on same line
-						if (j >= search_text_col + search_text.length())
-							search_text_col = _get_column_pos_of_word(search_text, str, search_flags, j);
+						bool in_search_result = false;
 
-						in_search_result = j >= search_text_col && j < search_text_col + search_text.length();
+						if (search_text_col != -1) {
+							// if we are at the end check for new search result on same line
+							if (j >= search_text_col + search_text.length())
+								search_text_col = _get_column_pos_of_word(search_text, str, search_flags, j);
+
+							in_search_result = j >= search_text_col && j < search_text_col + search_text.length();
+
+							if (in_search_result) {
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin, ofs_y), Size2i(char_w, get_row_height())), cache.search_result_color);
+							}
+						}
+
+						//current line highlighting
+						bool in_selection = (selection.active && line >= selection.from_line && line <= selection.to_line && (line > selection.from_line || j >= selection.from_column) && (line < selection.to_line || j < selection.to_column));
+
+						if (line == cursor.line && cursor_wrap_index == line_wrap_index && highlight_current_line) {
+							// if its the last char draw to end of the line
+							if (j == str.length() - 1) {
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(char_ofs + char_margin + char_w, ofs_y, xmargin_end - (char_ofs + char_margin + char_w), get_row_height()), cache.current_line_color);
+							}
+							// actual text
+							if (!in_selection) {
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.current_line_color);
+							}
+						}
+
+						if (in_selection) {
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.selection_color);
+						}
 
 						if (in_search_result) {
-							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin, ofs_y), Size2i(char_w, get_row_height())), cache.search_result_color);
+							Color border_color = (line == search_result_line && j >= search_result_col && j < search_result_col + search_text.length()) ? cache.font_color : cache.search_result_border_color;
+
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, 1)), border_color);
+							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y + get_row_height() - 1), Size2i(char_w, 1)), border_color);
+
+							if (j == search_text_col)
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(1, get_row_height())), border_color);
+							if (j == search_text_col + search_text.length() - 1)
+								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + char_w + ofs_x - 1, ofs_y), Size2i(1, get_row_height())), border_color);
 						}
-					}
 
-					//current line highlighting
-					bool in_selection = (selection.active && line >= selection.from_line && line <= selection.to_line && (line > selection.from_line || j >= selection.from_column) && (line < selection.to_line || j < selection.to_column));
+						if (highlight_all_occurrences) {
+							if (highlighted_text_col != -1) {
 
-					if (line == cursor.line && highlight_current_line) {
-						// if its the last char draw to end of the line
-						if (j == str.length() - 1) {
-							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(char_ofs + char_margin + char_w, ofs_y, xmargin_end - (char_ofs + char_margin + char_w), get_row_height()), cache.current_line_color);
-						}
-						// actual text
-						if (!in_selection) {
-							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.current_line_color);
-						}
-					}
+								// if we are at the end check for new word on same line
+								if (j > highlighted_text_col + highlighted_text.length()) {
+									highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, j);
+								}
 
-					if (in_selection) {
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.selection_color);
-					}
+								bool in_highlighted_word = (j >= highlighted_text_col && j < highlighted_text_col + highlighted_text.length());
 
-					if (in_search_result) {
-						Color border_color = (line == search_result_line && j >= search_result_col && j < search_result_col + search_text.length()) ? cache.font_color : cache.search_result_border_color;
+								/* if this is the original highlighted text we don't want to highlight it again */
+								if (cursor.line == line && cursor_wrap_index == line_wrap_index && (cursor.column >= highlighted_text_col && cursor.column <= highlighted_text_col + highlighted_text.length())) {
+									in_highlighted_word = false;
+								}
 
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, 1)), border_color);
-						VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y + get_row_height() - 1), Size2i(char_w, 1)), border_color);
-
-						if (j == search_text_col)
-							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(1, get_row_height())), border_color);
-						if (j == search_text_col + search_text.length() - 1)
-							VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + char_w + ofs_x - 1, ofs_y), Size2i(1, get_row_height())), border_color);
-					}
-
-					if (highlight_all_occurrences) {
-						if (highlighted_text_col != -1) {
-
-							// if we are at the end check for new word on same line
-							if (j > highlighted_text_col + highlighted_text.length()) {
-								highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, j);
-							}
-
-							bool in_highlighted_word = (j >= highlighted_text_col && j < highlighted_text_col + highlighted_text.length());
-
-							/* if this is the original highlighted text we don't want to highlight it again */
-							if (cursor.line == line && (cursor.column >= highlighted_text_col && cursor.column <= highlighted_text_col + highlighted_text.length())) {
-								in_highlighted_word = false;
-							}
-
-							if (in_highlighted_word) {
-								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.word_highlighted_color);
+								if (in_highlighted_word) {
+									VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2i(char_ofs + char_margin + ofs_x, ofs_y), Size2i(char_w, get_row_height())), cache.word_highlighted_color);
+								}
 							}
 						}
-					}
 
-					if (brace_matching_enabled) {
-						if ((brace_open_match_line == line && brace_open_match_column == j) ||
-								(cursor.column == j && cursor.line == line && (brace_open_matching || brace_open_mismatch))) {
+						if (brace_matching_enabled) {
+							if ((brace_open_match_line == line && brace_open_match_column == j) ||
+									(cursor.column == j && cursor.line == line && cursor_wrap_index == line_wrap_index && (brace_open_matching || brace_open_mismatch))) {
 
-							if (brace_open_mismatch)
-								color = cache.brace_mismatch_color;
-							cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), '_', str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
+								if (brace_open_mismatch)
+									color = cache.brace_mismatch_color;
+								cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), '_', str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
+							}
+
+							if (
+									(brace_close_match_line == line && brace_close_match_column == j) ||
+									(cursor.column == j + 1 && cursor.line == line && cursor_wrap_index == line_wrap_index && (brace_close_matching || brace_close_mismatch))) {
+
+								if (brace_close_mismatch)
+									color = cache.brace_mismatch_color;
+								cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), '_', str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
+							}
 						}
 
-						if (
-								(brace_close_match_line == line && brace_close_match_column == j) ||
-								(cursor.column == j + 1 && cursor.line == line && (brace_close_matching || brace_close_mismatch))) {
+						if (cursor.column == j && cursor.line == line && cursor_wrap_index == line_wrap_index) {
 
-							if (brace_close_mismatch)
-								color = cache.brace_mismatch_color;
-							cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), '_', str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
+							cursor_pos = Point2i(char_ofs + char_margin + ofs_x, ofs_y);
+
+							if (insert_mode) {
+								cursor_pos.y += (get_row_height() - 3);
+							}
+
+							int caret_w = (str[j] == '\t') ? cache.font->get_char_size(' ').width : char_w;
+							if (ime_text.length() > 0) {
+								int ofs = 0;
+								while (true) {
+									if (ofs >= ime_text.length())
+										break;
+
+									CharType cchar = ime_text[ofs];
+									CharType next = ime_text[ofs + 1];
+									int im_char_width = cache.font->get_char_size(cchar, next).width;
+
+									if ((char_ofs + char_margin + im_char_width) >= xmargin_end)
+										break;
+
+									bool selected = ofs >= ime_selection.x && ofs < ime_selection.x + ime_selection.y;
+									if (selected) {
+										VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(char_ofs + char_margin, ofs_y + get_row_height()), Size2(im_char_width, 3)), color);
+									} else {
+										VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(char_ofs + char_margin, ofs_y + get_row_height()), Size2(im_char_width, 1)), color);
+									}
+
+									cache.font->draw_char(ci, Point2(char_ofs + char_margin + ofs_x, ofs_y + ascent), cchar, next, color);
+
+									char_ofs += im_char_width;
+									ofs++;
+								}
+							}
+							if (ime_text.length() == 0) {
+								if (draw_caret) {
+									if (insert_mode) {
+										int caret_h = (block_caret) ? 4 : 1;
+										VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(caret_w, caret_h)), cache.caret_color);
+									} else {
+										caret_w = (block_caret) ? caret_w : 1;
+										VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(caret_w, get_row_height())), cache.caret_color);
+									}
+								}
+							}
+						}
+
+						if (cursor.column == j && cursor.line == line && cursor_wrap_index == line_wrap_index && block_caret && draw_caret && !insert_mode) {
+							color = cache.caret_background_color;
+						} else if (!syntax_coloring && block_caret) {
+							color = cache.font_color;
+							color.a *= readonly_alpha;
+						}
+
+						if (str[j] >= 32) {
+							int w = cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), str[j], str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
+							if (underlined) {
+								draw_rect(Rect2(char_ofs + char_margin + ofs_x, ofs_y + ascent + 2, w, 1), in_selection && override_selected_font_color ? cache.font_selected_color : color);
+							}
+						}
+
+						else if (draw_tabs && str[j] == '\t') {
+							int yofs = (get_row_height() - cache.tab_icon->get_height()) / 2;
+							cache.tab_icon->draw(ci, Point2(char_ofs + char_margin + ofs_x, ofs_y + yofs), in_selection && override_selected_font_color ? cache.font_selected_color : color);
+						}
+
+						char_ofs += char_w;
+
+						if (line_wrap_index + 1 == line_wrap_amount && j == str.length() - 1 && is_folded(line)) {
+							int yofs = (get_row_height() - cache.folded_eol_icon->get_height()) / 2;
+							int xofs = cache.folded_eol_icon->get_width() / 2;
+							Color eol_color = cache.code_folding_color;
+							eol_color.a = 1;
+							cache.folded_eol_icon->draw(ci, Point2(char_ofs + char_margin + xofs + ofs_x, ofs_y + yofs), eol_color);
 						}
 					}
 
-					if (cursor.column == j && cursor.line == line) {
+					if (cursor.column == str.length() && cursor.line == line && cursor_wrap_index == line_wrap_index && (char_ofs + char_margin) >= xmargin_beg) {
 
 						cursor_pos = Point2i(char_ofs + char_margin + ofs_x, ofs_y);
 
 						if (insert_mode) {
 							cursor_pos.y += (get_row_height() - 3);
 						}
-
-						int caret_w = (str[j] == '\t') ? cache.font->get_char_size(' ').width : char_w;
 						if (ime_text.length() > 0) {
 							int ofs = 0;
 							while (true) {
@@ -1235,89 +1346,14 @@ void TextEdit::_notification(int p_what) {
 						if (ime_text.length() == 0) {
 							if (draw_caret) {
 								if (insert_mode) {
+									int char_w = cache.font->get_char_size(' ').width;
 									int caret_h = (block_caret) ? 4 : 1;
-									VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(caret_w, caret_h)), cache.caret_color);
+									VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(char_w, caret_h)), cache.caret_color);
 								} else {
-									caret_w = (block_caret) ? caret_w : 1;
+									int char_w = cache.font->get_char_size(' ').width;
+									int caret_w = (block_caret) ? char_w : 1;
 									VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(caret_w, get_row_height())), cache.caret_color);
 								}
-							}
-						}
-					}
-
-					if (cursor.column == j && cursor.line == line && block_caret && draw_caret && !insert_mode) {
-						color = cache.caret_background_color;
-					} else if (!syntax_coloring && block_caret) {
-						color = cache.font_color;
-						color.a *= readonly_alpha;
-					}
-
-					if (str[j] >= 32) {
-						int w = cache.font->draw_char(ci, Point2i(char_ofs + char_margin + ofs_x, ofs_y + ascent), str[j], str[j + 1], in_selection && override_selected_font_color ? cache.font_selected_color : color);
-						if (underlined) {
-							draw_rect(Rect2(char_ofs + char_margin + ofs_x, ofs_y + ascent + 2, w, 1), in_selection && override_selected_font_color ? cache.font_selected_color : color);
-						}
-					}
-
-					else if (draw_tabs && str[j] == '\t') {
-						int yofs = (get_row_height() - cache.tab_icon->get_height()) / 2;
-						cache.tab_icon->draw(ci, Point2(char_ofs + char_margin + ofs_x, ofs_y + yofs), in_selection && override_selected_font_color ? cache.font_selected_color : color);
-					}
-
-					char_ofs += char_w;
-
-					if (j == str.length() - 1 && is_folded(line)) {
-						int yofs = (get_row_height() - cache.folded_eol_icon->get_height()) / 2;
-						int xofs = cache.folded_eol_icon->get_width() / 2;
-						Color eol_color = cache.code_folding_color;
-						eol_color.a = 1;
-						cache.folded_eol_icon->draw(ci, Point2(char_ofs + char_margin + xofs + ofs_x, ofs_y + yofs), eol_color);
-					}
-				}
-
-				if (cursor.column == str.length() && cursor.line == line && (char_ofs + char_margin) >= xmargin_beg) {
-
-					cursor_pos = Point2i(char_ofs + char_margin + ofs_x, ofs_y);
-
-					if (insert_mode) {
-						cursor_pos.y += (get_row_height() - 3);
-					}
-					if (ime_text.length() > 0) {
-						int ofs = 0;
-						while (true) {
-							if (ofs >= ime_text.length())
-								break;
-
-							CharType cchar = ime_text[ofs];
-							CharType next = ime_text[ofs + 1];
-							int im_char_width = cache.font->get_char_size(cchar, next).width;
-
-							if ((char_ofs + char_margin + im_char_width) >= xmargin_end)
-								break;
-
-							bool selected = ofs >= ime_selection.x && ofs < ime_selection.x + ime_selection.y;
-							if (selected) {
-								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(char_ofs + char_margin, ofs_y + get_row_height()), Size2(im_char_width, 3)), color);
-							} else {
-								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(Point2(char_ofs + char_margin, ofs_y + get_row_height()), Size2(im_char_width, 1)), color);
-							}
-
-							cache.font->draw_char(ci, Point2(char_ofs + char_margin + ofs_x, ofs_y + ascent), cchar, next, color);
-
-							char_ofs += im_char_width;
-							ofs++;
-						}
-					}
-					if (ime_text.length() == 0) {
-						if (draw_caret) {
-							if (insert_mode) {
-								int char_w = cache.font->get_char_size(' ').width;
-								int caret_h = (block_caret) ? 4 : 1;
-								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(char_w, caret_h)), cache.caret_color);
-							} else {
-								int char_w = cache.font->get_char_size(' ').width;
-								int caret_w = (block_caret) ? char_w : 1;
-								VisualServer::get_singleton()->canvas_item_add_rect(ci, Rect2(cursor_pos, Size2i(caret_w, get_row_height())), cache.caret_color);
 							}
 						}
 					}
@@ -1757,7 +1793,7 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 	int lsp = get_line_scroll_pos(true);
 	int row = cursor.line_ofs + (rows + (round(v_scroll->get_value()) - lsp));
 
-	if (is_hiding_enabled()) {
+	if (is_wrap_enabled() || is_hiding_enabled()) {
 		// row will be offset by the hidden rows
 		int f_ofs = num_lines_from(CLAMP(cursor.line_ofs, 0, text.size() - 1), MIN(rows + 1, text.size() - cursor.line_ofs)) - 1;
 		row = cursor.line_ofs + (f_ofs + (round(v_scroll->get_value()) - lsp));
@@ -1777,7 +1813,12 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 
 		col = p_mouse.x - (cache.style_normal->get_margin(MARGIN_LEFT) + cache.line_number_w + cache.breakpoint_gutter_width + cache.fold_gutter_width);
 		col += cursor.x_ofs;
-		col = get_char_pos_for(col, get_line(row));
+		int wrap_index = 0;
+		if (line_wraps(row)) {
+			wrap_index = num_lines_from_remainder(CLAMP(cursor.line_ofs, 0, text.size() - 1), MIN(rows + 1, text.size() - cursor.line_ofs))
+			WARN_PRINTS("mclick ind = " + itos(wrap_index));
+		}
+		col = get_char_pos_for_line(col, row, wrap_index);
 	}
 
 	r_row = row;
@@ -2667,7 +2708,18 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					cursor_set_line(0);
 				else
 #endif
-				cursor_set_line(cursor_get_line() - num_lines_from(CLAMP(cursor.line - 1, 0, text.size() - 1), -1));
+				int cur_wrap_index = get_line_wrap_index_at_col(cursor.col);
+				if (cur_wrap_index > 0)) {
+					cursor_set_line(cursor.line, true, true, cur_wrap_index - 1);
+				} else {
+					int new_line = cursor_get_line() - num_lines_from(CLAMP(cursor.line - 1, 0, text.size() - 1), -1);
+					if (cursor.line > 0 && line_wraps(new_line)){
+						int prev_line_wrap_index = get_line_wrap_index_at_col(new_line, 9999);
+						cursor_set_line(new_line, true, true, prev_line_wrap_index);
+					} else {
+						cursor_set_line(new_line);
+					}
+				}
 
 				if (k->get_shift())
 					_post_shift_selection();
@@ -2701,10 +2753,16 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				}
 
 				if (k->get_command())
-					cursor_set_line(text.size() - 1, true, false);
+					cursor_set_line(text.size() - 1, true, false, times_line_wraps(text[text.size() - 1]);
 				else
 #endif
-				cursor_set_line(cursor_get_line() + num_lines_from(CLAMP(cursor.line + 1, 0, text.size() - 1), 1), true, false);
+				int cur_wrap_index = get_line_wrap_index_at_col(cursor.col);
+				if (cur_wrap_index < times_line_wraps(cursor.line))) {
+					cursor_set_line(cursor.line, true, false, cur_wrap_index + 1);
+				} else {
+					int new_line = cursor_get_line() + num_lines_from(CLAMP(cursor.line + 1, 0, text.size() - 1), 1);
+					cursor_set_line(new_line, true, false, 0);
+				}
 
 				if (k->get_shift())
 					_post_shift_selection();
@@ -2851,7 +2909,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (k->get_shift())
 					_pre_shift_selection();
 
-				cursor_set_line(text.size() - 1, true, false);
+				cursor_set_line(text.size() - 1, true, false, 9999);
 
 				if (k->get_shift())
 					_post_shift_selection();
@@ -2866,7 +2924,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					_pre_shift_selection();
 
 				if (k->get_command())
-					cursor_set_line(text.size() - 1, true, false);
+					cursor_set_line(text.size() - 1, true, false, 9999);
 				cursor_set_column(text[cursor.line].length());
 
 				if (k->get_shift())
@@ -2891,7 +2949,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 				if (k->get_shift())
 					_pre_shift_selection();
 
-				cursor_set_line(cursor_get_line() - num_lines_from(cursor.line, -get_visible_rows()), true, false);
+				cursor_set_line(cursor_get_line() - num_lines_from(cursor.line, -get_visible_rows()), true, false);//todo
 
 				if (k->get_shift())
 					_post_shift_selection();
@@ -3126,10 +3184,10 @@ void TextEdit::_scroll_down(real_t p_delta) {
 	}
 
 	if (smooth_scroll_enabled) {
-		int max_v_scroll = get_total_unhidden_rows();
+		int max_v_scroll = get_total_visible_rows();
 		if (!scroll_past_end_of_file_enabled) {
 			max_v_scroll -= get_visible_rows();
-			max_v_scroll = CLAMP(max_v_scroll, 0, get_total_unhidden_rows());
+			max_v_scroll = CLAMP(max_v_scroll, 0, get_total_visible_rows());
 		}
 
 		if (target_v_scroll > max_v_scroll) {
@@ -3184,10 +3242,10 @@ void TextEdit::_scroll_lines_down() {
 	scrolling = false;
 
 	// calculate the maximum vertical scroll position
-	int max_v_scroll = get_total_unhidden_rows();
+	int max_v_scroll = get_total_visible_rows();
 	if (!scroll_past_end_of_file_enabled) {
 		max_v_scroll -= get_visible_rows();
-		max_v_scroll = CLAMP(max_v_scroll, 0, get_total_unhidden_rows());
+		max_v_scroll = CLAMP(max_v_scroll, 0, get_total_visible_rows());
 	}
 
 	// adjust the vertical scroll
@@ -3458,21 +3516,24 @@ int TextEdit::get_visible_rows() const {
 	return total;
 }
 
-int TextEdit::get_total_unhidden_rows() const {
-	if (!is_hiding_enabled())
+int TextEdit::get_total_visible_rows() const {
+	// returns the total amount of rows we need in the editor.
+	// This skips hidden lines and counts each wrapping of a line
+	if (!is_hiding_enabled() && !is_wrap_enabled())
 		return text.size();
 
-	int total_unhidden = 0;
+	int total_rows = 0;
 	for (int i = 0; i < text.size(); i++) {
 		if (!text.is_hidden(i))
-			total_unhidden++;
+			total_rows++;
+		total_rows += times_line_wraps(i);
 	}
-	return total_unhidden;
+	return total_rows;
 }
 
 double TextEdit::get_line_scroll_pos(bool p_recalculate) const {
 
-	if (!is_hiding_enabled())
+	if (!is_wrap_enabled() && !is_hiding_enabled())
 		return cursor.line_ofs;
 	if (!p_recalculate)
 		return line_scroll_pos;
@@ -3483,25 +3544,21 @@ double TextEdit::get_line_scroll_pos(bool p_recalculate) const {
 	for (int i = 0; i < to; i++) {
 		if (!text.is_hidden(i))
 			new_line_scroll_pos++;
+		new_line_scroll_pos += times_line_wraps(i);
 	}
+	new_line_scroll_pos += cursor.wrap_ofs;
 	return new_line_scroll_pos;
 }
 
 void TextEdit::update_line_scroll_pos() {
 
-	if (!is_hiding_enabled()) {
-		line_scroll_pos = cursor.line_ofs;
-		return;
-	}
+	line_scroll_pos = get_line_scroll_pos(true);
+}
 
-	// count num unhidden lines to the cursor line ofs
-	double new_line_scroll_pos = 0;
-	int to = CLAMP(cursor.line_ofs, 0, text.size() - 1);
-	for (int i = 0; i < to; i++) {
-		if (!text.is_hidden(i))
-			new_line_scroll_pos++;
-	}
-	line_scroll_pos = new_line_scroll_pos;
+void TextEdit::update_wrap_at() {
+
+	wrap_at = cache.size.width - cache.style_normal->get_minimum_size().width - cache.line_number_w - cache.breakpoint_gutter_width - cache.fold_gutter_width - 10;
+	update_cursor_wrap_offset();
 }
 
 void TextEdit::adjust_viewport_to_cursor() {
@@ -3548,6 +3605,9 @@ void TextEdit::adjust_viewport_to_cursor() {
 	if (cursor_x < cursor.x_ofs)
 		cursor.x_ofs = cursor_x;
 
+	if (wrap_enabled) {
+		cursor.x_ofs = 0;
+	}
 	updating_scrolls = true;
 	h_scroll->set_value(cursor.x_ofs);
 	update_line_scroll_pos();
@@ -3561,6 +3621,143 @@ void TextEdit::adjust_viewport_to_cursor() {
 	update();
 }
 
+void TextEdit::update_cursor_wrap_offset() {
+	if (line_wraps(cursor.line_ofs)) {
+		cursor.wrap_ofs = MIN(cursor.wrap_ofs, times_line_wraps(cursor.line_ofs));
+	} else {
+		cursor.wrap_ofs = 0;
+	}
+}
+
+bool TextEdit::line_wraps(int line) const {
+
+	ERR_FAIL_INDEX_V(line, text.size(), 0);
+	if (!is_wrap_enabled())
+		return false;
+	return text.get_line_width(line) > wrap_at;
+}
+
+int TextEdit::times_line_wraps(int line) const {
+
+	ERR_FAIL_INDEX_V(line, text.size(), 0);
+	if (!line_wraps(line))
+		return 0;
+
+	int wrap_amount = text.get_line_wrap_amount(line);
+	if (wrap_amount == -1) {
+
+		// update the value
+		int max_wraps = 99;
+		int wrap_index = 0;
+		for (wrap_index = 0; wrap_index < max_wraps; wrap_index++) {
+			String s = get_wrap_line_text(p_line, wrap_index, false);
+			if (s == "")
+				break;
+		}
+		wrap_amount = wrap_index - 1;
+		text.set_line_wrap_amount(line, wrap_amount);
+	}
+
+	return wrap_amount;
+}
+
+String TextEdit::get_wrap_line_text(int p_line, int wrap_index, bool include_tab_offset) const {
+
+	ERR_FAIL_INDEX_V(p_line, text.size(), "");
+
+	if (!line_wraps(p_line)) {
+		return text[p_line];
+	}
+
+	int px = 0;
+	int col = 0;
+	String line_text = text[p_line];
+	String wrap_substring = "";
+
+	int word_px = 0;
+	String word_str = "";
+	int cur_wrap_index = 0;
+	int end_wrap_index = wrap_index;
+
+	int tab_offset_px = 0;
+	String tab_offset_str = "";
+	bool tab_offset_ended = false;
+
+	while (col < line_text.length()) {
+		char c = line_text[col];
+		int w = text.get_char_width(c, line_text[col + 1], px + word_px);
+
+		if (include_tab_offset && !tab_offset_ended) {
+			if (c == '\t' || c == ' ') {
+				tab_offset_str += c;
+				tab_offset_px += w;
+			} else {
+				tab_offset_ended = true;
+			}
+		}
+
+		if ((px + word_px + w) > wrap_at) {
+			// do not want to add this word
+			if (tab_offset_px + word_px > wrap_at) {
+				// not enough space; add it anyway
+				wrap_substring += word_str;
+				px += word_px;
+				word_str = "";
+				word_px = 0;
+			}
+			if (cur_wrap_index == end_wrap_index) {
+				// this is the line requested
+				return wrap_substring;
+			}
+			// reset for next wrap
+			cur_wrap_index++;
+			wrap_substring = tab_offset_str + word_str;
+			px = tab_offset_px + word_px;
+			tab_offset_ended = true;
+		} else if (c == ' ') {
+			// end of a word; add this word to the substring
+			wrap_substring += word_str + c;
+			px += word_px + w;
+			word_str = "";
+			word_px = 0;
+		} else {
+			// add to current word
+			word_str += c;
+			word_px += w;
+		}
+		col++;
+	}
+	if (cur_wrap_index == end_wrap_index) {
+		// line ends before hit wrap_at; add this word to the substring
+		wrap_substring += word_str;
+		px += word_px;
+		return wrap_substring;
+	} else {
+		// wrap_index is out of range
+		return "";
+	}
+}
+int TextEdit::get_line_wrap_index_at_col(int p_line, int p_column) const {
+	if (!line_wraps(p_line))
+		return 0;
+
+	// loop through wraps in the line text until we get to the column
+	int wrap_index = 0;
+	int col = 0;
+	int max_wraps = text.get_line_wrap_amount(line);
+	if (max_wraps == -1)
+		max_wraps = 99;
+	for (int i = 0; i < max_wraps; i++) {
+		wrap_index = i;
+		String s = get_wrap_line_text(p_line, wrap_index, false);
+		if (s == "")
+			return wrap_index - 1;
+		col += s.length();
+		if (col > p_column)
+			return wrap_index;
+	}
+	return 0;
+}
 void TextEdit::center_viewport_to_cursor() {
 	scrolling = false;
 
@@ -3581,7 +3778,7 @@ void TextEdit::center_viewport_to_cursor() {
 
 	int max_ofs = text.size() - (scroll_past_end_of_file_enabled ? 1 : num_lines_from(text.size() - 1, -visible_rows));
 	cursor.line_ofs = CLAMP(cursor.line - num_lines_from(cursor.line - visible_rows / 2, -visible_rows / 2), 0, max_ofs);
-	int cursor_x = get_column_x_offset(cursor.column, text[cursor.line]);
+	int cursor_x = get_column_x_offset_for_line(cursor.column, cursor.line);
 
 	if (cursor_x > (cursor.x_ofs + visible_width))
 		cursor.x_ofs = cursor_x - visible_width + 1;
@@ -3611,7 +3808,7 @@ void TextEdit::cursor_set_column(int p_col, bool p_adjust_viewport) {
 	if (cursor.column > get_line(cursor.line).length())
 		cursor.column = get_line(cursor.line).length();
 
-	cursor.last_fit_x = get_column_x_offset(cursor.column, get_line(cursor.line));
+	cursor.last_fit_x = get_column_x_offset_for_line(cursor.column, cursor.line);
 
 	if (p_adjust_viewport)
 		adjust_viewport_to_cursor();
@@ -3623,7 +3820,7 @@ void TextEdit::cursor_set_column(int p_col, bool p_adjust_viewport) {
 	}
 }
 
-void TextEdit::cursor_set_line(int p_row, bool p_adjust_viewport, bool p_can_be_hidden) {
+void TextEdit::cursor_set_line(int p_row, bool p_adjust_viewport, bool p_can_be_hidden, int p_wrap_index) {
 
 	if (setting_row)
 		return;
@@ -3651,7 +3848,7 @@ void TextEdit::cursor_set_line(int p_row, bool p_adjust_viewport, bool p_can_be_
 		}
 	}
 	cursor.line = p_row;
-	cursor.column = get_char_pos_for(cursor.last_fit_x, get_line(cursor.line));
+	cursor.column = get_char_pos_for_line(cursor.last_fit_x, cursor.line, p_wrap_index);
 
 	if (p_adjust_viewport)
 		adjust_viewport_to_cursor();
@@ -3721,7 +3918,7 @@ void TextEdit::_scroll_moved(double p_to_val) {
 		cursor.x_ofs = h_scroll->get_value();
 	if (v_scroll->is_visible_in_tree()) {
 		double val = v_scroll->get_value();
-		cursor.line_ofs = num_lines_from(0, (int)floor(val));
+		cursor.line_ofs = num_lines_from(0, (int)floor(val)); //todo only set line_ofs in special func
 		line_scroll_pos = (int)floor(val);
 	}
 	update();
@@ -3732,29 +3929,57 @@ int TextEdit::get_row_height() const {
 	return cache.font->get_height() + cache.line_spacing;
 }
 
+int TextEdit::get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) const {
+
+	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
+
+	if (line_wraps(p_line)) {
+
+		int line_wrap_amount = times_line_wraps(p_line);
+		if (p_wrap_index > line_wrap_amount)
+			p_wrap_index = line_wrap_amount;
+		// for (int i = 0; i < p_wrap_index; i++) {
+		// 	String s = get_wrap_line_text(p_line, i, false);
+		// 	p_px += get_column_x_offset(s.length(), s);
+		// }
+		String s = get_wrap_line_text(p_line, p_wrap_index, true);
+		return get_char_pos_for(p_px, s);
+	} else {
+
+		return get_char_pos_for(p_px, text[p_line]);
+	}
+}
+
+int TextEdit::get_column_x_offset_for_line(int p_char, int p_line) const {
+
+	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
+
+	if (line_wraps(p_line)) {
+
+		// int px = get_column_x_offset(p_char, text[p_line]);
+		int wrap_index = get_line_wrap_index_at_col(p_line, p_char);
+		for (int i=0; i< wrap_index; i++) {
+			String s = get_wrap_line_text(p_line, wrap_index, false);
+			p_char -= s.length();	
+		}
+		String s = get_wrap_line_text(p_line, wrap_index, false);
+		int px = get_column_x_offset(p_char, s);
+
+		return px;
+	} else {
+
+		return get_column_x_offset(p_char, text[p_line]);
+	}
+}
+
 int TextEdit::get_char_pos_for(int p_px, String p_str) const {
 
 	int px = 0;
 	int c = 0;
 
-	int tab_w = cache.font->get_char_size(' ').width * indent_size;
-
 	while (c < p_str.length()) {
 
-		int w = 0;
-
-		if (p_str[c] == '\t') {
-
-			int left = px % tab_w;
-			if (left == 0)
-				w = tab_w;
-			else
-				w = tab_w - px % tab_w; // is right...
-
-		} else {
-
-			w = cache.font->get_char_size(p_str[c], p_str[c + 1]).width;
-		}
+		int w = text.get_char_width(p_str[c], p_str[c + 1], px);
 
 		if (p_px < (px + w / 2))
 			break;
@@ -3769,24 +3994,12 @@ int TextEdit::get_column_x_offset(int p_char, String p_str) {
 
 	int px = 0;
 
-	int tab_w = cache.font->get_char_size(' ').width * indent_size;
-
 	for (int i = 0; i < p_char; i++) {
 
 		if (i >= p_str.length())
 			break;
 
-		if (p_str[i] == '\t') {
-
-			int left = px % tab_w;
-			if (left == 0)
-				px += tab_w;
-			else
-				px += tab_w - px % tab_w; // is right...
-
-		} else {
-			px += cache.font->get_char_size(p_str[i], p_str[i + 1]).width;
-		}
+		px += text.get_char_width(p_str[i], p_str[i + 1], px);
 	}
 
 	return px;
@@ -3948,6 +4161,7 @@ void TextEdit::_clear() {
 	cursor.line = 0;
 	cursor.x_ofs = 0;
 	cursor.line_ofs = 0;
+	cursor.wrap_ofs = 0;
 	line_scroll_pos = 0;
 	cursor.last_fit_x = 0;
 }
@@ -3970,9 +4184,14 @@ bool TextEdit::is_readonly() const {
 	return readonly;
 }
 
-void TextEdit::set_wrap(bool p_wrap) {
+void TextEdit::set_wrap_enabled(bool p_wrap_enabled) {
 
-	wrap = p_wrap;
+	wrap_enabled = p_wrap_enabled;
+}
+
+bool TextEdit::is_wrap_enabled() const {
+
+	return wrap_enabled;
 }
 
 void TextEdit::set_max_chars(int p_max_chars) {
@@ -4511,34 +4730,74 @@ void TextEdit::unhide_all_lines() {
 	update();
 }
 
-int TextEdit::num_lines_from(int p_line_from, int unhidden_amount) const {
+int TextEdit::num_lines_from(int p_line_from, int visible_amount) const {
 
 	// returns the number of hidden and unhidden lines from p_line_from to p_line_from + amount of visible lines
-	ERR_FAIL_INDEX_V(p_line_from, text.size(), ABS(unhidden_amount));
+	ERR_FAIL_INDEX_V(p_line_from, text.size(), ABS(visible_amount));
 
-	if (!is_hiding_enabled())
-		return ABS(unhidden_amount);
+	if (!is_hiding_enabled() && !is_wrap_enabled())
+		return ABS(visible_amount);
+
 	int num_visible = 0;
 	int num_total = 0;
-	if (unhidden_amount >= 0) {
+	if (visible_amount >= 0) {
 		for (int i = p_line_from; i < text.size(); i++) {
 			num_total++;
-			if (!is_line_hidden(i))
+			if (!is_line_hidden(i)) {
 				num_visible++;
-			if (num_visible >= unhidden_amount)
+				num_visible += times_line_wraps(i);
+			}
+			if (num_visible >= visible_amount)
 				break;
 		}
 	} else {
-		unhidden_amount = ABS(unhidden_amount);
+		visible_amount = ABS(visible_amount);
 		for (int i = p_line_from; i >= 0; i--) {
 			num_total++;
-			if (!is_line_hidden(i))
+			if (!is_line_hidden(i)) {
 				num_visible++;
-			if (num_visible >= unhidden_amount)
+				num_visible += times_line_wraps(i);
+			}
+			if (num_visible >= visible_amount)
 				break;
 		}
 	}
 	return num_total;
+}
+
+int TextEdit::num_lines_from_remainder(int p_line_from, int visible_amount) const {
+
+	// returns the remainder of num_lines_from
+	// useful for wrap index
+	ERR_FAIL_INDEX_V(p_line_from, text.size(), 0);
+
+	if (!is_hiding_enabled() && !is_wrap_enabled())
+		return 0
+
+			   int num_visible = 0;
+	int rem = 0;
+	if (visible_amount >= 0) {
+		for (int i = p_line_from; i < text.size(); i++) {
+			if (!is_line_hidden(i)) {
+				num_visible++;
+				num_visible += times_line_wraps(i);
+			}
+			if (num_visible >= visible_amount)
+				break;
+		}
+	} else {
+		visible_amount = ABS(visible_amount);
+		for (int i = p_line_from; i >= 0; i--) {
+			if (!is_line_hidden(i)) {
+				num_visible++;
+				num_visible += times_line_wraps(i);
+			}
+			if (num_visible >= visible_amount)
+				break;
+		}
+	}
+	rem = num_visible - ABS(visible_amount);
+	return rem;
 }
 
 int TextEdit::get_indent_level(int p_line) const {
@@ -4906,7 +5165,7 @@ void TextEdit::set_v_scroll(int p_scroll) {
 		p_scroll = 0;
 	}
 	if (!scroll_past_end_of_file_enabled) {
-		if (p_scroll + get_visible_rows() > get_total_unhidden_rows()) {
+		if (p_scroll + get_visible_rows() > get_total_visible_rows()) {
 			int num_rows = num_lines_from(CLAMP(p_scroll, 0, text.size() - 1), MIN(get_visible_rows(), text.size() - 1 - p_scroll));
 			p_scroll = text.size() - num_rows;
 		}
@@ -5460,7 +5719,8 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_readonly", "enable"), &TextEdit::set_readonly);
 	ClassDB::bind_method(D_METHOD("is_readonly"), &TextEdit::is_readonly);
 
-	ClassDB::bind_method(D_METHOD("set_wrap", "enable"), &TextEdit::set_wrap);
+	ClassDB::bind_method(D_METHOD("set_wrap_enabled", "enable"), &TextEdit::set_wrap_enabled);
+	ClassDB::bind_method(D_METHOD("is_wrap_enabled"), &TextEdit::is_wrap_enabled);
 	ClassDB::bind_method(D_METHOD("set_max_chars", "amount"), &TextEdit::set_max_chars);
 	ClassDB::bind_method(D_METHOD("set_context_menu_enabled", "enable"), &TextEdit::set_context_menu_enabled);
 	ClassDB::bind_method(D_METHOD("is_context_menu_enabled"), &TextEdit::is_context_menu_enabled);
@@ -5535,6 +5795,7 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "smooth_scrolling"), "set_smooth_scroll_enable", "is_smooth_scroll_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "v_scroll_speed"), "set_v_scroll_speed", "get_v_scroll_speed");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "hiding_enabled"), "set_hiding_enabled", "is_hiding_enabled");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "wrap_enabled"), "set_wrap_enabled", "is_wrap_enabled");
 
 	ADD_GROUP("Caret", "caret_");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "caret_block_mode"), "cursor_set_block_mode", "cursor_is_block_mode");
@@ -5567,7 +5828,7 @@ TextEdit::TextEdit() {
 	draw_caret = true;
 	max_chars = 0;
 	clear();
-	wrap = false;
+	wrap_enabled = false;
 	set_focus_mode(FOCUS_ALL);
 	_update_caches();
 	cache.size = Size2(1, 1);
@@ -5637,6 +5898,8 @@ TextEdit::TextEdit() {
 	current_op.version = 0;
 	version = 0;
 	saved_version = 0;
+
+	update_wrap_at();
 
 	completion_enabled = false;
 	completion_active = false;
