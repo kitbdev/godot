@@ -178,6 +178,7 @@ class TextEdit : public Control {
 		int size() const { return text.size(); }
 		void clear();
 		void clear_caches();
+		void clear_wrap_cache();
 		_FORCE_INLINE_ const String &operator[](int p_line) const { return text[p_line].data; }
 		Text() { indent_size = 4; }
 	};
@@ -324,7 +325,7 @@ class TextEdit : public Control {
 	void update_wrap_at();
 	bool line_wraps(int line) const;
 	int times_line_wraps(int line) const;
-	String get_wrap_line_text(int p_line, int wrap_index) const;
+	Vector<String> get_wrap_rows_text(int p_line) const;
 	int get_line_wrap_index_at_col(int p_line, int p_column) const;
 	int get_char_count();
 
