@@ -447,7 +447,7 @@ public:
 	void fold_all_lines();
 	void unhide_all_lines();
 	int num_lines_from(int p_line_from, int visible_amount) const;
-	int num_visible_lines_from(int p_line_from, int visible_amount, int &wrap_index) const;
+	int num_visible_lines_from(int p_line_from, int p_wrap_index_from, int visible_amount, int &wrap_index) const;
 	bool can_fold(int p_line) const;
 	bool is_folded(int p_line) const;
 	void fold_line(int p_line);
