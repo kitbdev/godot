@@ -324,7 +324,7 @@ class TextEdit : public Control {
 	void update_wrap_at();
 	bool line_wraps(int line) const;
 	int times_line_wraps(int line) const;
-	String get_wrap_line_text(int p_line, int wrap_index, bool include_tab_offset) const;
+	String get_wrap_line_text(int p_line, int wrap_index) const;
 	int get_line_wrap_index_at_col(int p_line, int p_column) const;
 	int get_char_count();
 
