@@ -312,14 +312,14 @@ class TextEdit : public Control {
 	int search_result_line;
 	int search_result_col;
 
-	double line_scroll_pos;
+	// double line_scroll_pos;
 
 	bool context_menu_enabled;
 
 	int get_visible_rows() const;
 	int get_total_visible_rows() const;
-	double get_line_scroll_pos(bool p_recalculate = false) const;
-	void update_line_scroll_pos();
+	// double get_line_scroll_pos(bool p_recalculate = false) const;
+	// void update_line_scroll_pos();
 
 	void update_cursor_wrap_offset();
 	void update_wrap_at();
@@ -328,6 +328,16 @@ class TextEdit : public Control {
 	Vector<String> get_wrap_rows_text(int p_line) const;
 	int get_line_wrap_index_at_col(int p_line, int p_column) const;
 	int get_char_count();
+
+	double get_scroll_pos_for_line(int p_line, int p_wrap_index = 0) const;
+	void set_line_as_first_visible(int p_line, int p_wrap_index = 0);
+	void set_line_as_center_visible(int p_line, int p_wrap_index = 0);
+	void set_line_as_last_visible(int p_line, int p_wrap_index = 0);
+	int get_first_visible_line() const;
+	int get_last_visible_line() const;
+	int get_first_visible_line_wrap_index() const;
+	int get_last_visible_line_wrap_index() const;
+	double get_v_scroll_offset() const;
 
 	int get_char_pos_for_line(int p_px, int p_line, int p_wrap_index = 0) const;
 	int get_column_x_offset_for_line(int p_char, int p_line) const;
@@ -554,8 +564,8 @@ public:
 	void add_color_region(const String &p_begin_key = String(), const String &p_end_key = String(), const Color &p_color = Color(), bool p_line_only = false);
 	void clear_colors();
 
-	int get_v_scroll() const;
-	void set_v_scroll(int p_scroll);
+	double get_v_scroll() const;
+	void set_v_scroll(double p_scroll);
 
 	int get_h_scroll() const;
 	void set_h_scroll(int p_scroll);
