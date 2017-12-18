@@ -1828,6 +1828,11 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 		int colx = p_mouse.x - (cache.style_normal->get_margin(MARGIN_LEFT) + cache.line_number_w + cache.breakpoint_gutter_width + cache.fold_gutter_width);
 		colx += cursor.x_ofs;
 		col = get_char_pos_for_line(colx, row, wrap_index);
+		if (wrap_index < times_line_wraps(row)) {
+			String s = get_wrap_line_text(row, wrap_index);
+			if (col >= s.length())
+				col -= 1;
+		}
 	}
 
 	r_row = row;
@@ -3601,7 +3606,7 @@ void TextEdit::adjust_viewport_to_cursor() {
 
 	// make sure the cursor is on the screen
 	// above the caret
-	if (cursor.line > (cursor.line_ofs + MAX(num_rows, visible_rows))) {
+	if (cursor.line > (cursor.line_ofs + MIN(num_rows, visible_rows))) {
 		cursor.line_ofs = cursor.line - num_lines_from(cursor.line, -visible_rows) + 1;
 	}
 	// below the caret
