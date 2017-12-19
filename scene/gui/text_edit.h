@@ -312,14 +312,10 @@ class TextEdit : public Control {
 	int search_result_line;
 	int search_result_col;
 
-	// double line_scroll_pos;
-
 	bool context_menu_enabled;
 
 	int get_visible_rows() const;
 	int get_total_visible_rows() const;
-	// double get_line_scroll_pos(bool p_recalculate = false) const;
-	// void update_line_scroll_pos();
 
 	void update_cursor_wrap_offset();
 	void update_wrap_at();
