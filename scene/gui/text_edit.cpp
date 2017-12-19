@@ -335,9 +335,8 @@ void TextEdit::_update_scrollbars() {
 	int visible_rows = get_visible_rows();
 	int wi;
 	int first_vis_line = get_first_visible_line();
-	//MIN(visible_rows, text.size() - 1 - cursor.line_ofs - cursor.wrap_ofs)
 	int num_rows = MAX(visible_rows, num_visible_lines_from(first_vis_line, cursor.wrap_ofs, visible_rows, wi));
-	// WARN_PRINTS("c lofs: " + itos(cursor.line_ofs) + " wofs:" + itos(cursor.wrap_ofs));
+
 	int total_rows = (is_hiding_enabled() || is_wrap_enabled() ? get_total_visible_rows() : text.size());
 	if (scroll_past_end_of_file_enabled) {
 		total_rows += visible_rows - 1;
@@ -906,8 +905,9 @@ void TextEdit::_notification(int p_what) {
 					}
 
 					int ofs_y = (i * get_row_height() + cache.line_spacing / 2) + ofs_readonly;
+					ofs_y -= cursor.wrap_ofs * get_row_height();
 					if (smooth_scroll_enabled)
-						ofs_y = get_v_scroll_offset();
+						ofs_y += get_v_scroll_offset();
 
 					// check if line contains highlighted word
 					int highlighted_text_col = -1;
@@ -2731,7 +2731,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					int cur_wrap_index = get_line_wrap_index_at_col(cursor.line, cursor.column);
 					if (cur_wrap_index > 0) {
 						cursor_set_line(cursor.line, true, true, cur_wrap_index - 1);
-					} else if (cursor.line == 0){
+					} else if (cursor.line == 0) {
 						cursor_set_column(0);
 					} else {
 						int new_line = cursor_get_line() - num_lines_from(CLAMP(cursor.line - 1, 0, text.size() - 1), -1);
@@ -2783,7 +2783,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					int cur_wrap_index = get_line_wrap_index_at_col(cursor.line, cursor.column);
 					if (cur_wrap_index < times_line_wraps(cursor.line)) {
 						cursor_set_line(cursor.line, true, false, cur_wrap_index + 1);
-					} else if (cursor.line == text.size() - 1){
+					} else if (cursor.line == text.size() - 1) {
 						cursor_set_column(text[text.size() - 1].length());
 					} else {
 						int new_line = cursor_get_line() + num_lines_from(CLAMP(cursor.line + 1, 0, text.size() - 1), 1);
@@ -3298,7 +3298,6 @@ void TextEdit::_scroll_lines_up() {
 void TextEdit::_scroll_lines_down() {
 	scrolling = false;
 
-
 	// adjust the vertical scroll
 	set_v_scroll(get_v_scroll() + 1);
 
@@ -3607,8 +3606,7 @@ void TextEdit::adjust_viewport_to_cursor() {
 	if (cur_line < first_vis_line) {
 		// cursor is above screen
 		set_line_as_first_visible(cur_line, cur_wrap);
-	} else
-	if (cur_line > last_vis_line) {
+	} else if (cur_line > last_vis_line) {
 		// cursor is below screen
 		set_line_as_last_visible(cur_line, cur_wrap);
 	}
@@ -3635,7 +3633,7 @@ void TextEdit::adjust_viewport_to_cursor() {
 }
 
 void TextEdit::center_viewport_to_cursor() {
-	
+
 	// move viewport so the cursor is in the center
 	scrolling = false;
 
@@ -3664,11 +3662,13 @@ void TextEdit::center_viewport_to_cursor() {
 }
 
 void TextEdit::update_cursor_wrap_offset() {
-	if (line_wraps(cursor.line_ofs)) {
-		cursor.wrap_ofs = MIN(cursor.wrap_ofs, times_line_wraps(cursor.line_ofs));
+	int first_vis_line = get_first_visible_line();
+	if (line_wraps(first_vis_line)) {
+		cursor.wrap_ofs = MIN(cursor.wrap_ofs, times_line_wraps(first_vis_line));
 	} else {
 		cursor.wrap_ofs = 0;
 	}
+	set_line_as_first_visible(cursor.line_ofs, cursor.wrap_ofs);
 }
 
 bool TextEdit::line_wraps(int line) const {
@@ -3905,22 +3905,23 @@ void TextEdit::_scroll_moved(double p_to_val) {
 		cursor.x_ofs = h_scroll->get_value();
 	if (v_scroll->is_visible_in_tree()) {
 
-		// set line ofs
+		// set line ofs and wrap ofs
 		int v_scroll_i = floor(get_v_scroll());
 		int sc = 0;
 		int n_line;
-		for (int n_line=0; n_line < text.size(); n_line++) {
-			if (is_line_hidden(n_line)) {
-				sc--;
+		for (n_line = 0; n_line < text.size(); n_line++) {
+			if (!is_line_hidden(n_line)) {
+				sc++;
+				sc += times_line_wraps(n_line);
+				if (sc > v_scroll_i)
+					break;
 			}
-			sc += times_line_wraps(n_line);
-			if (sc < v_scroll_i)
-				break;
 		}
-		int wi = v_scroll_i - sc;
+		int wi = times_line_wraps(n_line) - (sc - v_scroll_i - 1);
 
 		cursor.line_ofs = n_line;
 		cursor.wrap_ofs = wi;
+		WARN_PRINTS("v_scroll_pos: " + itos(get_v_scroll() * 100) + " line_ofs: " + itos(cursor.line_ofs) + " wrap_ofs:" + itos(cursor.wrap_ofs));
 	}
 	update();
 }
@@ -4777,7 +4778,7 @@ int TextEdit::num_lines_from(int p_line_from, int visible_amount) const {
 int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int visible_amount, int &wrap_index) const {
 
 	// returns the number of hidden and unhidden lines from p_line_from to p_line_from + amount of visible lines
-	// wrap index is the wrap index of the last line 
+	// wrap index is the wrap index of the last line
 	wrap_index = 0;
 	ERR_FAIL_INDEX_V(p_line_from, text.size(), ABS(visible_amount));
 
@@ -4786,7 +4787,10 @@ int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int
 
 	int num_visible = 0;
 	int num_total = 0;
-	if (visible_amount >= 0) {
+	if (visible_amount == 0) {
+		num_total = 0;
+		wrap_index = 0;
+	} else if (visible_amount > 0) {
 		int i;
 		num_visible -= p_wrap_index_from;
 		for (i = p_line_from; i < text.size(); i++) {
@@ -4799,7 +4803,6 @@ int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int
 				break;
 		}
 		wrap_index = times_line_wraps(i) - (num_visible - visible_amount);
-		WARN_PRINTS("wi1: "+itos(wrap_index));
 	} else {
 		visible_amount = ABS(visible_amount);
 		int i;
@@ -4814,46 +4817,10 @@ int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int
 				break;
 		}
 		wrap_index = times_line_wraps(i) - (num_visible - visible_amount);
-		WARN_PRINTS("wi2: "+itos(wrap_index));
 	}
 	wrap_index = MAX(wrap_index, 0);
 	return num_total;
 }
-
-// int TextEdit::num_visible_lines_from_remainder(int p_line_from, int visible_amount) const {
-
-// 	// returns the remainder of num_lines_from
-// 	// useful for wrap index
-// 	ERR_FAIL_INDEX_V(p_line_from, text.size(), 0);
-
-// 	if (!is_hiding_enabled() && !is_wrap_enabled())
-// 		return 0;
-
-// 	int num_visible = 0;
-// 	int rem = 0;
-// 	if (visible_amount >= 0) {
-// 		for (int i = p_line_from; i < text.size(); i++) {
-// 			if (!is_line_hidden(i)) {
-// 				num_visible++;
-// 				num_visible += times_line_wraps(i);
-// 			}
-// 			if (num_visible >= visible_amount)
-// 				break;
-// 		}
-// 	} else {
-// 		visible_amount = ABS(visible_amount);
-// 		for (int i = p_line_from; i >= 0; i--) {
-// 			if (!is_line_hidden(i)) {
-// 				num_visible++;
-// 				num_visible += times_line_wraps(i);
-// 			}
-// 			if (num_visible >= visible_amount)
-// 				break;
-// 		}
-// 	}
-// 	rem = num_visible - ABS(visible_amount);
-// 	return rem;
-// }
 
 int TextEdit::get_indent_level(int p_line) const {
 
@@ -5239,7 +5206,7 @@ void TextEdit::set_line_as_first_visible(int p_line, int p_wrap_index) {
 void TextEdit::set_line_as_center_visible(int p_line, int p_wrap_index) {
 
 	int wi;
-	int first_line = num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows() / 2, wi);
+	int first_line = get_first_visible_line() + num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows() / 2, wi);
 
 	cursor.line_ofs = first_line;
 	cursor.wrap_ofs = wi;
@@ -5249,7 +5216,7 @@ void TextEdit::set_line_as_center_visible(int p_line, int p_wrap_index) {
 void TextEdit::set_line_as_last_visible(int p_line, int p_wrap_index) {
 
 	int wi;
-	int first_line = num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows(), wi);
+	int first_line = get_first_visible_line() + num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows(), wi);
 
 	cursor.line_ofs = first_line;
 	cursor.wrap_ofs = wi;
@@ -5262,30 +5229,32 @@ int TextEdit::get_first_visible_line() const {
 }
 
 int TextEdit::get_last_visible_line() const {
-	
+
 	int last_vis_line = 0;
 	int wi;
-	last_vis_line = num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
+	last_vis_line = get_first_visible_line() + num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
 	last_vis_line = CLAMP(last_vis_line, 0, text.size() - 1);
 	return last_vis_line;
 }
 
 int TextEdit::get_first_visible_line_wrap_index() const {
-	
+
 	return cursor.wrap_ofs;
 }
 
 int TextEdit::get_last_visible_line_wrap_index() const {
-	
+
 	int wi;
-	int last_vis_line = num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
+	num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
 	return wi;
 }
 
 double TextEdit::get_v_scroll_offset() const {
 
 	// difference between v_scroll and line_ofs
-	return 0;
+	double val = get_v_scroll() - (double)get_scroll_pos_for_line(cursor.line_ofs, cursor.wrap_ofs);
+	val = 1 - val;
+	return CLAMP(val, -1, 0) * get_row_height();
 }
 
 double TextEdit::get_v_scroll() const {
@@ -5318,7 +5287,7 @@ int TextEdit::get_h_scroll() const {
 }
 
 void TextEdit::set_h_scroll(int p_scroll) {
-	
+
 	if (p_scroll < 0) {
 		p_scroll = 0;
 	}
