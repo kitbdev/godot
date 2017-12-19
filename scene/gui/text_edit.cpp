@@ -332,9 +332,9 @@ void TextEdit::_update_scrollbars() {
 	h_scroll->set_end(Point2(size.width - vmin.width, size.height));
 
 	int hscroll_rows = ((hmin.height - 1) / get_row_height()) + 1;
-	int visible_rows = get_visible_rows();
-	int wi;
+	int visible_rows = get_visible_rows() + 1;
 	int first_vis_line = get_first_visible_line();
+	int wi;
 	int num_rows = MAX(visible_rows, num_visible_lines_from(first_vis_line, cursor.wrap_ofs, visible_rows, wi));
 
 	int total_rows = (is_hiding_enabled() || is_wrap_enabled() ? get_total_visible_rows() : text.size());
@@ -450,8 +450,8 @@ void TextEdit::_update_selection_mode_pointer() {
 
 	select(selection.selecting_line, selection.selecting_column, row, col);
 
-	cursor_set_line(row);
-	cursor_set_column(col);
+	cursor_set_line(row, false);
+	cursor_set_column(col, false);
 	update();
 
 	click_select_held->start();
@@ -504,7 +504,7 @@ void TextEdit::_update_selection_mode_word() {
 			cursor_set_column(selection.to_column);
 		}
 	}
-	cursor_set_line(row);
+	cursor_set_line(row, false);
 
 	update();
 	click_select_held->start();
@@ -519,15 +519,15 @@ void TextEdit::_update_selection_mode_line() {
 	col = 0;
 	if (row < selection.selecting_line) {
 		// cursor is above us
-		cursor_set_line(row - 1);
+		cursor_set_line(row - 1, false);
 		selection.selecting_column = text[selection.selecting_line].length();
 	} else {
 		// cursor is below us
-		cursor_set_line(row + 1);
+		cursor_set_line(row + 1, false);
 		selection.selecting_column = 0;
 		col = text[row].length();
 	}
-	cursor_set_column(0);
+	cursor_set_column(0, false);
 
 	select(selection.selecting_line, selection.selecting_column, row, col);
 	update();
@@ -545,7 +545,7 @@ void TextEdit::_notification(int p_what) {
 				MessageQueue::get_singleton()->push_call(this, "_cursor_changed_emit");
 			if (text_changed_dirty)
 				MessageQueue::get_singleton()->push_call(this, "_text_changed_emit");
-
+			update_wrap_at();
 		} break;
 		case NOTIFICATION_RESIZED: {
 
@@ -561,6 +561,7 @@ void TextEdit::_notification(int p_what) {
 		case MainLoop::NOTIFICATION_WM_FOCUS_IN: {
 			window_has_focus = true;
 			draw_caret = true;
+			update_wrap_at();
 			update();
 		} break;
 		case MainLoop::NOTIFICATION_WM_FOCUS_OUT: {
@@ -643,7 +644,7 @@ void TextEdit::_notification(int p_what) {
 
 			int ascent = cache.font->get_ascent();
 
-			int visible_rows = get_visible_rows() + 1;
+			int visible_rows = get_visible_rows() + 2;
 
 			Color color = cache.font_color;
 			color.a *= readonly_alpha;
@@ -844,8 +845,9 @@ void TextEdit::_notification(int p_what) {
 			String line_num_padding = line_numbers_zero_padded ? "0" : " ";
 
 			int line = get_first_visible_line() - 1;
-			// another row may be visible during smooth scrolling
+
 			int draw_amount = visible_rows + (smooth_scroll_enabled ? 1 : 0);
+			draw_amount += times_line_wraps(line + 1);
 			for (int i = 0; i < draw_amount; i++) {
 
 				line++;
@@ -890,9 +892,6 @@ void TextEdit::_notification(int p_what) {
 					if (line_wrap_index > 0)
 						last_wrap_column += wrap_rows[line_wrap_index - 1].length();
 
-					// if (line_wrap_amount > 0)
-					// 	WARN_PRINTS("wrapping line " + itos(line) + " w" + itos(line_wrap_index) + "/" + itos(line_wrap_amount) + " at " + str.substr(0, 1) + ":" + str.substr(str.size() - 2, 1) + " curswi:" + itos(cursor_wrap_index) + "\n" + str);
-
 					int char_margin = xmargin_beg - cursor.x_ofs;
 					char_margin += indent_px;
 					int char_ofs = 0;
@@ -907,7 +906,7 @@ void TextEdit::_notification(int p_what) {
 					int ofs_y = (i * get_row_height() + cache.line_spacing / 2) + ofs_readonly;
 					ofs_y -= cursor.wrap_ofs * get_row_height();
 					if (smooth_scroll_enabled)
-						ofs_y += get_v_scroll_offset();
+						ofs_y += (-get_v_scroll_offset()) * get_row_height();
 
 					// check if line contains highlighted word
 					int highlighted_text_col = -1;
@@ -1804,14 +1803,15 @@ void TextEdit::_get_mouse_pos(const Point2i &p_mouse, int &r_row, int &r_col) co
 	float rows = p_mouse.y;
 	rows -= cache.style_normal->get_margin(MARGIN_TOP);
 	rows /= get_row_height();
+	rows += get_v_scroll_offset();
 	int first_vis_line = get_first_visible_line();
-	int row = first_vis_line + (rows + get_v_scroll_offset());
+	int row = first_vis_line + rows;
 	int wrap_index = 0;
 
 	if (is_wrap_enabled() || is_hiding_enabled()) {
 
 		int f_ofs = num_visible_lines_from(first_vis_line, cursor.wrap_ofs, rows + 1, wrap_index) - 1;
-		row = first_vis_line + (f_ofs + get_v_scroll_offset());
+		row = first_vis_line + f_ofs;
 		row = CLAMP(row, 0, get_last_visible_line());
 	}
 
@@ -3001,7 +3001,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					_pre_shift_selection();
 
 				int wi;
-				int n_line = cursor.line - num_visible_lines_from(cursor.line, get_line_wrap_index_at_col(cursor.line, cursor.column), -get_visible_rows(), wi);
+				int n_line = cursor.line - num_visible_lines_from(cursor.line, get_line_wrap_index_at_col(cursor.line, cursor.column), -get_visible_rows() - 1, wi) + 1;
 				cursor_set_line(n_line, true, false, wi);
 
 				if (k->get_shift())
@@ -3016,7 +3016,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					scancode_handled = false;
 					break;
 				}
-				// numlock disabled. fallthrough to key_pageup
+				// numlock disabled. fallthrough to key_pagedown
 			}
 			case KEY_PAGEDOWN: {
 
@@ -3024,7 +3024,7 @@ void TextEdit::_gui_input(const Ref<InputEvent> &p_gui_input) {
 					_pre_shift_selection();
 
 				int wi;
-				int n_line = cursor.line + num_visible_lines_from(cursor.line, get_line_wrap_index_at_col(cursor.line, cursor.column), get_visible_rows(), wi);
+				int n_line = cursor.line + num_visible_lines_from(cursor.line, get_line_wrap_index_at_col(cursor.line, cursor.column), get_visible_rows() + 1, wi) - 1;
 				cursor_set_line(n_line, true, false, wi);
 
 				if (k->get_shift())
@@ -3284,12 +3284,10 @@ void TextEdit::_scroll_lines_up() {
 	// adjust the vertical scroll
 	set_v_scroll(get_v_scroll() - 1);
 
-	// adjust_viewport_to_cursor();
-
 	// adjust the cursor
 	int wi;
 	int first_vis_line = get_first_visible_line();
-	int num_lines = num_visible_lines_from(first_vis_line, cursor.wrap_ofs, get_visible_rows(), wi);
+	int num_lines = num_visible_lines_from(first_vis_line, cursor.wrap_ofs, get_visible_rows() + 1, wi) - 1;
 	if (cursor.line >= first_vis_line + cursor.wrap_ofs + num_lines && !selection.active) {
 		cursor_set_line(first_vis_line + num_lines, false, false, cursor.wrap_ofs);
 	}
@@ -3301,7 +3299,6 @@ void TextEdit::_scroll_lines_down() {
 	// adjust the vertical scroll
 	set_v_scroll(get_v_scroll() + 1);
 
-	// adjust_viewport_to_cursor();
 	// adjust the cursor
 	int first_vis_line = get_first_visible_line();
 	if (cursor.line <= first_vis_line + cursor.wrap_ofs - 1 && !selection.active) {
@@ -3566,7 +3563,9 @@ int TextEdit::get_visible_rows() const {
 
 	int total = cache.size.height;
 	total -= cache.style_normal->get_minimum_size().height;
+	if (h_scroll->is_visible_in_tree()) total -= h_scroll->get_size().height;
 	total /= get_row_height();
+	total -= 1;
 	return total;
 }
 
@@ -3601,12 +3600,14 @@ void TextEdit::adjust_viewport_to_cursor() {
 	int cur_wrap = get_line_wrap_index_at_col(cursor.line, cursor.column);
 
 	int first_vis_line = get_first_visible_line();
+	int first_vis_wrap = cursor.wrap_ofs;
 	int last_vis_line = get_last_visible_line();
+	int last_vis_wrap = get_last_visible_line_wrap_index();
 
-	if (cur_line < first_vis_line) {
+	if (cur_line < first_vis_line || (cur_line == first_vis_line && cur_wrap < first_vis_wrap)) {
 		// cursor is above screen
 		set_line_as_first_visible(cur_line, cur_wrap);
-	} else if (cur_line > last_vis_line) {
+	} else if (cur_line > last_vis_line || (cur_line == last_vis_line && cur_wrap > last_vis_wrap)) {
 		// cursor is below screen
 		set_line_as_last_visible(cur_line, cur_wrap);
 	}
@@ -3805,8 +3806,8 @@ void TextEdit::cursor_set_line(int p_row, bool p_adjust_viewport, bool p_can_be_
 	if (p_row < 0)
 		p_row = 0;
 
-	if (p_row >= (int)text.size())
-		p_row = (int)text.size() - 1;
+	if (p_row >= text.size())
+		p_row = text.size() - 1;
 
 	if (!p_can_be_hidden) {
 		if (is_line_hidden(CLAMP(p_row, 0, text.size() - 1))) {
@@ -3917,11 +3918,12 @@ void TextEdit::_scroll_moved(double p_to_val) {
 					break;
 			}
 		}
-		int wi = times_line_wraps(n_line) - (sc - v_scroll_i - 1);
+		int line_wrap_amount = times_line_wraps(n_line);
+		int wi = line_wrap_amount - (sc - v_scroll_i - 1);
+		wi = CLAMP(wi, 0, line_wrap_amount);
 
 		cursor.line_ofs = n_line;
 		cursor.wrap_ofs = wi;
-		WARN_PRINTS("v_scroll_pos: " + itos(get_v_scroll() * 100) + " line_ofs: " + itos(cursor.line_ofs) + " wrap_ofs:" + itos(cursor.wrap_ofs));
 	}
 	update();
 }
@@ -4802,7 +4804,7 @@ int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int
 			if (num_visible >= visible_amount)
 				break;
 		}
-		wrap_index = times_line_wraps(i) - (num_visible - visible_amount);
+		wrap_index = times_line_wraps(MIN(i, text.size() - 1)) - (num_visible - visible_amount);
 	} else {
 		visible_amount = ABS(visible_amount);
 		int i;
@@ -4816,7 +4818,7 @@ int TextEdit::num_visible_lines_from(int p_line_from, int p_wrap_index_from, int
 			if (num_visible >= visible_amount)
 				break;
 		}
-		wrap_index = times_line_wraps(i) - (num_visible - visible_amount);
+		wrap_index = (num_visible - visible_amount);
 	}
 	wrap_index = MAX(wrap_index, 0);
 	return num_total;
@@ -5206,7 +5208,7 @@ void TextEdit::set_line_as_first_visible(int p_line, int p_wrap_index) {
 void TextEdit::set_line_as_center_visible(int p_line, int p_wrap_index) {
 
 	int wi;
-	int first_line = get_first_visible_line() + num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows() / 2, wi);
+	int first_line = p_line - num_visible_lines_from(p_line, p_wrap_index, -(get_visible_rows() - 1) / 2, wi) + 1;
 
 	cursor.line_ofs = first_line;
 	cursor.wrap_ofs = wi;
@@ -5216,7 +5218,7 @@ void TextEdit::set_line_as_center_visible(int p_line, int p_wrap_index) {
 void TextEdit::set_line_as_last_visible(int p_line, int p_wrap_index) {
 
 	int wi;
-	int first_line = get_first_visible_line() + num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows(), wi);
+	int first_line = p_line - num_visible_lines_from(p_line, p_wrap_index, -get_visible_rows() - 1, wi) + 1;
 
 	cursor.line_ofs = first_line;
 	cursor.wrap_ofs = wi;
@@ -5230,31 +5232,28 @@ int TextEdit::get_first_visible_line() const {
 
 int TextEdit::get_last_visible_line() const {
 
+	int first_vis_line = get_first_visible_line();
 	int last_vis_line = 0;
 	int wi;
-	last_vis_line = get_first_visible_line() + num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
+	last_vis_line = first_vis_line + num_visible_lines_from(first_vis_line, cursor.wrap_ofs, get_visible_rows() + 1, wi) - 1;
 	last_vis_line = CLAMP(last_vis_line, 0, text.size() - 1);
 	return last_vis_line;
 }
 
-int TextEdit::get_first_visible_line_wrap_index() const {
-
-	return cursor.wrap_ofs;
-}
-
 int TextEdit::get_last_visible_line_wrap_index() const {
 
+	int first_vis_line = get_first_visible_line();
+	int last_vis_line = 0;
 	int wi;
-	num_visible_lines_from(get_first_visible_line(), cursor.wrap_ofs, get_visible_rows(), wi);
+	last_vis_line = first_vis_line + num_visible_lines_from(first_vis_line, cursor.wrap_ofs, get_visible_rows() + 1, wi) - 1;
 	return wi;
 }
 
 double TextEdit::get_v_scroll_offset() const {
 
-	// difference between v_scroll and line_ofs
-	double val = get_v_scroll() - (double)get_scroll_pos_for_line(cursor.line_ofs, cursor.wrap_ofs);
-	val = 1 - val;
-	return CLAMP(val, -1, 0) * get_row_height();
+	double val = get_v_scroll() - floor(get_v_scroll());
+	// val = 0;
+	return CLAMP(val, 0, 1);
 }
 
 double TextEdit::get_v_scroll() const {
@@ -5271,7 +5270,7 @@ void TextEdit::set_v_scroll(double p_scroll) {
 	int max_v_scroll = get_total_visible_rows();
 	if (!scroll_past_end_of_file_enabled) {
 		max_v_scroll -= get_visible_rows();
-		max_v_scroll -= h_scroll->is_visible_in_tree() ? 1 : 0;
+		// max_v_scroll -= h_scroll->is_visible_in_tree() ? 1 : 0;
 		max_v_scroll = CLAMP(max_v_scroll, 0, get_total_visible_rows());
 	}
 	if (p_scroll > max_v_scroll) {

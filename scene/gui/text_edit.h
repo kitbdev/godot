@@ -331,7 +331,6 @@ class TextEdit : public Control {
 	void set_line_as_last_visible(int p_line, int p_wrap_index = 0);
 	int get_first_visible_line() const;
 	int get_last_visible_line() const;
-	int get_first_visible_line_wrap_index() const;
 	int get_last_visible_line_wrap_index() const;
 	double get_v_scroll_offset() const;
 
