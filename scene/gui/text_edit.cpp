@@ -1695,7 +1695,8 @@ void TextEdit::indent_right() {
 
 	// fix selection and cursor being off by one on the last line
 	if (is_selection_active()) {
-		select(selection.from_line, selection.from_column + 1, selection.to_line, selection.to_column + 1);
+		int new_to_col = selection.to_column == 0 ? selection.to_column : selection.to_column + 1;
+		select(selection.from_line, selection.from_column + 1, selection.to_line, new_to_col);
 	}
 	cursor_set_column(cursor.column + 1, false);
 	end_complex_operation();
