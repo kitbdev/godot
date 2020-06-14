@@ -32,13 +32,13 @@
 #define TABS_H
 
 #include "scene/gui/control.h"
+#include "scene/gui/popup.h"
 
 class Tabs : public Control {
 	GDCLASS(Tabs, Control);
 
 public:
 	enum TabAlign {
-
 		ALIGN_LEFT,
 		ALIGN_CENTER,
 		ALIGN_RIGHT,
@@ -46,7 +46,6 @@ public:
 	};
 
 	enum CloseButtonDisplayPolicy {
-
 		CLOSE_BUTTON_SHOW_NEVER,
 		CLOSE_BUTTON_SHOW_ACTIVE_ONLY,
 		CLOSE_BUTTON_SHOW_ALWAYS,
@@ -60,6 +59,7 @@ private:
 		Ref<Texture2D> icon;
 		int ofs_cache;
 		bool disabled;
+		bool hidden;
 		int size_cache;
 		int size_text;
 		int x_cache;
@@ -77,24 +77,33 @@ private:
 	bool missing_right;
 	Vector<Tab> tabs;
 	int current;
-	int _get_top_margin() const;
+	int previous;
+	int hover;
 	TabAlign tab_align;
+	bool tabs_visible;
+	Popup *popup;
+	bool menu_hovered;
 	int rb_hover;
 	bool rb_pressing;
 
 	bool select_with_rmb;
+	// todo to have better control and compatibility
+	// bool squish_tabs_to_fit;
+	// int override_min_size; //? or just need the squish
 
 	int cb_hover;
 	bool cb_pressing;
 	CloseButtonDisplayPolicy cb_displaypolicy;
 
-	int hover; // Hovered tab.
 	int min_width;
 	bool scrolling_enabled;
 	bool drag_to_rearrange_enabled;
 	int tabs_rearrange_group;
+	bool always_ensure_current_tab_visible;
 
-	int get_tab_width(int p_idx) const;
+	int _get_top_margin() const;
+	int _get_tab_width(int p_idx) const;
+	void _on_theme_changed();
 	void _ensure_no_over_offset();
 
 	void _update_hover();
@@ -124,11 +133,17 @@ public:
 	void set_tab_disabled(int p_tab, bool p_disabled);
 	bool get_tab_disabled(int p_tab) const;
 
+	void set_tab_hidden(int p_tab, bool p_hidden);
+	bool get_tab_hidden(int p_tab) const;
+
 	void set_tab_right_button(int p_tab, const Ref<Texture2D> &p_right_button);
 	Ref<Texture2D> get_tab_right_button(int p_tab) const;
 
 	void set_tab_align(TabAlign p_align);
 	TabAlign get_tab_align() const;
+
+	void set_tabs_visible(bool p_visible);
+	bool are_tabs_visible() const;
 
 	void move_tab(int from, int to);
 
@@ -138,6 +153,7 @@ public:
 	int get_tab_count() const;
 	void set_current_tab(int p_current);
 	int get_current_tab() const;
+	int get_previous_tab() const;
 	int get_hovered_tab() const;
 
 	int get_tab_offset() const;
@@ -150,6 +166,10 @@ public:
 	void set_scrolling_enabled(bool p_enabled);
 	bool get_scrolling_enabled() const;
 
+	void set_popup(Node *p_popup);
+	void remove_popup();
+	Popup *get_popup() const;
+
 	void set_drag_to_rearrange_enabled(bool p_enabled);
 	bool get_drag_to_rearrange_enabled() const;
 	void set_tabs_rearrange_group(int p_group_id);
@@ -159,6 +179,8 @@ public:
 	bool get_select_with_rmb() const;
 
 	void ensure_tab_visible(int p_idx);
+	void set_always_ensure_current_tab_visible(bool p_enabled);
+	bool get_always_ensure_current_tab_visible() const;
 	void set_min_width(int p_width);
 
 	Rect2 get_tab_rect(int p_tab) const;

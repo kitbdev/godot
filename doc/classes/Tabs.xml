@@ -120,6 +120,29 @@
 				Removes the tab at index [code]tab_idx[/code].
 			</description>
 		</method>
+		<method name="get_popup" qualifiers="const">
+			<return type="Popup">
+			</return>
+			<description>
+				Returns the [Popup] node instance if one has been set already with [method set_popup].
+			</description>
+		</method>
+		<method name="remove_popup">
+			<return type="void">
+			</return>
+			<description>
+				Removes the [Popup] from the [Tabs] if one has been set with [method set_popup].
+			</description>
+		</method>
+		<method name="set_popup" qualifiers="const">
+			<return type="void">
+			</return>
+			<argument index="0" name="popup" type="Node">
+			</argument>
+			<description>
+				If set on a [Popup] node instance, a popup menu icon appears in the top-right corner of the [Tabs]. Clicking it will expand the [Popup] node.
+			</description>
+		</method>
 		<method name="set_select_with_rmb">
 			<return type="void">
 			</return>
@@ -261,6 +284,18 @@
 		</constant>
 	</constants>
 	<theme_items>
+		<theme_item name="font" type="Font">
+			The font used to draw tab names.
+		</theme_item>
+		<theme_item name="font_color_bg" type="Color" default="Color( 0.69, 0.69, 0.69, 1 )">
+			Font color of inactive tabs.
+		</theme_item>
+		<theme_item name="font_color_disabled" type="Color" default="Color( 0.9, 0.9, 0.9, 0.2 )">
+			Font color of disabled tabs.
+		</theme_item>
+		<theme_item name="font_color_fg" type="Color" default="Color( 0.94, 0.94, 0.94, 1 )">
+			Font color of the currently selected tab.
+		</theme_item>
 		<theme_item name="button" type="StyleBox">
 			Background of the close button when it's being hovered with the cursor.
 		</theme_item>
@@ -276,28 +311,23 @@
 		<theme_item name="decrement_highlight" type="Texture2D">
 			Icon for the left arrow button that appears when there are too many tabs to fit in the container width. Used when the button is being hovered with the cursor.
 		</theme_item>
-		<theme_item name="font" type="Font">
-			The font used to draw tab names.
-		</theme_item>
-		<theme_item name="font_color_bg" type="Color" default="Color( 0.69, 0.69, 0.69, 1 )">
-			Font color of inactive tabs.
-		</theme_item>
-		<theme_item name="font_color_disabled" type="Color" default="Color( 0.9, 0.9, 0.9, 0.2 )">
-			Font color of disabled tabs.
-		</theme_item>
-		<theme_item name="font_color_fg" type="Color" default="Color( 0.94, 0.94, 0.94, 1 )">
-			Font color of the currently selected tab.
-		</theme_item>
-		<theme_item name="hseparation" type="int" default="4">
-			The horizontal separation between the tabs.
-		</theme_item>
 		<theme_item name="increment" type="Texture2D">
 			Icon for the right arrow button that appears when there are too many tabs to fit in the container width. When the button is disabled (i.e. the last tab is visible) it appears semi-transparent.
 		</theme_item>
 		<theme_item name="increment_highlight" type="Texture2D">
 			Icon for the right arrow button that appears when there are too many tabs to fit in the container width. Used when the button is being hovered with the cursor.
 		</theme_item>
+		<theme_item name="menu" type="Texture2D">
+			The icon for the menu button (see [method set_popup]).
+		</theme_item>
+		<theme_item name="menu_highlight" type="Texture2D">
+			The icon for the menu button (see [method set_popup]) when it's being hovered with the cursor.
+		</theme_item>
 		<theme_item name="panel" type="StyleBox">
+			The style for the background fill.
+		</theme_item>
+		<theme_item name="icon_separation" type="int" default="4">
+			Space between tab's name and its icon or close button.
 		</theme_item>
 		<theme_item name="tab_bg" type="StyleBox">
 			The style of an inactive tab.

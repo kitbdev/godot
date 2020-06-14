@@ -804,7 +804,9 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_color("font_color_fg", "Tabs", font_color);
 	theme->set_color("font_color_bg", "Tabs", font_color_disabled);
 	theme->set_icon("menu", "TabContainer", theme->get_icon("GuiTabMenu", "EditorIcons"));
+	theme->set_icon("menu", "Tabs", theme->get_icon("GuiTabMenu", "EditorIcons"));
 	theme->set_icon("menu_highlight", "TabContainer", theme->get_icon("GuiTabMenuHl", "EditorIcons"));
+	theme->set_icon("menu_highlight", "Tabs", theme->get_icon("GuiTabMenuHl", "EditorIcons"));
 	theme->set_stylebox("SceneTabFG", "EditorStyles", style_tab_selected);
 	theme->set_stylebox("SceneTabBG", "EditorStyles", style_tab_unselected);
 	theme->set_icon("close", "Tabs", theme->get_icon("GuiClose", "EditorIcons"));
@@ -818,7 +820,8 @@ Ref<Theme> create_editor_theme(const Ref<Theme> p_theme) {
 	theme->set_icon("decrement_highlight", "Tabs", theme->get_icon("GuiScrollArrowLeftHl", "EditorIcons"));
 	theme->set_icon("increment_highlight", "TabContainer", theme->get_icon("GuiScrollArrowRightHl", "EditorIcons"));
 	theme->set_icon("decrement_highlight", "TabContainer", theme->get_icon("GuiScrollArrowLeftHl", "EditorIcons"));
-	theme->set_constant("hseparation", "Tabs", 4 * EDSCALE);
+	theme->set_constant("icon_separation", "TabContainer", 4 * EDSCALE);
+	theme->set_constant("icon_separation", "Tabs", 4 * EDSCALE);
 
 	// Content of each tab
 	Ref<StyleBoxFlat> style_content_panel = style_default->duplicate();

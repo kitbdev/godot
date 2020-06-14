@@ -4,8 +4,8 @@
 		Tabbed container.
 	</brief_description>
 	<description>
+		Treats [Control] children as tabs. Ignores non-[Control] children.
 		Sets the active tab's [code]visible[/code] property to the value [code]true[/code]. Sets all other children's to [code]false[/code].
-		Ignores non-[Control] children.
 		Individual tabs are always visible unless you use [method set_tab_disabled] and [method set_tab_title] to hide it.
 		To hide only a tab's content, nest the content inside a child [Control], so it receives the [TabContainer]'s visibility setting instead.
 	</description>
@@ -186,12 +186,6 @@
 		</constant>
 	</constants>
 	<theme_items>
-		<theme_item name="decrement" type="Texture2D">
-			Icon for the left arrow button that appears when there are too many tabs to fit in the container width. When the button is disabled (i.e. the first tab is visible), it appears semi-transparent.
-		</theme_item>
-		<theme_item name="decrement_highlight" type="Texture2D">
-			Icon for the left arrow button that appears when there are too many tabs to fit in the container width. Used when the button is being hovered with the cursor.
-		</theme_item>
 		<theme_item name="font" type="Font">
 			The font used to draw tab names.
 		</theme_item>
@@ -204,8 +198,11 @@
 		<theme_item name="font_color_fg" type="Color" default="Color( 0.94, 0.94, 0.94, 1 )">
 			Font color of the currently selected tab.
 		</theme_item>
-		<theme_item name="icon_separation" type="int" default="4">
-			Space between tab's name and its icon.
+		<theme_item name="decrement" type="Texture2D">
+			Icon for the left arrow button that appears when there are too many tabs to fit in the container width. When the button is disabled (i.e. the first tab is visible), it appears semi-transparent.
+		</theme_item>
+		<theme_item name="decrement_highlight" type="Texture2D">
+			Icon for the left arrow button that appears when there are too many tabs to fit in the container width. Used when the button is being hovered with the cursor.
 		</theme_item>
 		<theme_item name="increment" type="Texture2D">
 			Icon for the right arrow button that appears when there are too many tabs to fit in the container width. When the button is disabled (i.e. the last tab is visible) it appears semi-transparent.
@@ -221,6 +218,9 @@
 		</theme_item>
 		<theme_item name="panel" type="StyleBox">
 			The style for the background fill.
+		</theme_item>
+		<theme_item name="icon_separation" type="int" default="4">
+			Space between tab's name and its icon.
 		</theme_item>
 		<theme_item name="side_margin" type="int" default="8">
 			The space at the left and right edges of the tab bar.

@@ -697,6 +697,8 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_icon("decrement", "Tabs", make_icon(scroll_button_left_png));
 	theme->set_icon("decrement_highlight", "Tabs", make_icon(scroll_button_left_hl_png));
 	theme->set_icon("close", "Tabs", make_icon(tab_close_png));
+	theme->set_icon("menu", "Tabs", make_icon(tab_menu_png));
+	theme->set_icon("menu_highlight", "Tabs", make_icon(tab_menu_hl_png));
 
 	theme->set_font("font", "Tabs", default_font);
 
@@ -704,7 +706,7 @@ void fill_default_theme(Ref<Theme> &theme, const Ref<Font> &default_font, const 
 	theme->set_color("font_color_bg", "Tabs", control_font_color_low);
 	theme->set_color("font_color_disabled", "Tabs", control_font_color_disabled);
 
-	theme->set_constant("hseparation", "Tabs", 4 * scale);
+	theme->set_constant("icon_separation", "Tabs", 4 * scale);
 
 	// Separators
 
