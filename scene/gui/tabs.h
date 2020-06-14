@@ -44,6 +44,7 @@ public:
 		ALIGN_RIGHT,
 		ALIGN_MAX
 	};
+	// todo align_fill? - stretch to fill available space
 
 	enum CloseButtonDisplayPolicy {
 		CLOSE_BUTTON_SHOW_NEVER,
@@ -71,6 +72,7 @@ private:
 	};
 
 	int offset;
+	int min_offset;
 	int max_drawn_tab;
 	int highlight_arrow;
 	bool buttons_visible;
@@ -88,8 +90,12 @@ private:
 
 	bool select_with_rmb;
 	// todo to have better control and compatibility
-	// bool squish_tabs_to_fit;
+	bool squish_tabs_to_fit;
+	bool stretch_tabs_to_fill;
+	bool tabs_must_fill_space;
 	// int override_min_size; //? or just need the squish
+	// ?the int gives more control but seems like too much to be set by users
+	// ? min_offset
 
 	int cb_hover;
 	bool cb_pressing;
@@ -101,6 +107,7 @@ private:
 	int tabs_rearrange_group;
 	bool always_ensure_current_tab_visible;
 
+	void _set_offset(int p_idx);
 	int _get_top_margin() const;
 	int _get_tab_width(int p_idx) const;
 	void _on_theme_changed();

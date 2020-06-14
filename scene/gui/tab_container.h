@@ -39,47 +39,25 @@ class TabContainer : public Container {
 
 public:
 	enum TabAlign {
-
 		ALIGN_LEFT,
 		ALIGN_CENTER,
-		ALIGN_RIGHT
+		ALIGN_RIGHT,
+		ALIGN_MAX
 	};
 
 private:
 	Tabs *tabs;
-	int first_tab_cache;
-	int tabs_ofs_cache;
-	int last_tab_cache;
-	int current;
-	int previous;
-	bool tabs_visible;
-	bool buttons_visible_cache;
-	bool menu_hovered;
-	int highlight_arrow;
-	Popup *popup;
-	bool drag_to_rearrange_enabled;
-	int tabs_rearrange_group;
 	bool use_hidden_tabs_for_min_size;
 
-	Control *_get_tab(int p_idx) const;
 	Vector<Control *> _get_tabs() const;
 	int _get_top_margin() const;
-	int _get_tab_width(int p_idx) const;
 	void _on_theme_changed();
-	void _on_mouse_exited();
-	void _update_current_tab();
 
 protected:
 	void _child_renamed_callback();
-	void _gui_input(const Ref<InputEvent> &p_event);
 	void _notification(int p_what);
 	virtual void add_child_notify(Node *p_child);
 	virtual void remove_child_notify(Node *p_child);
-
-	Variant get_drag_data(const Point2 &p_point);
-	bool can_drop_data(const Point2 &p_point, const Variant &p_data) const;
-	void drop_data(const Point2 &p_point, const Variant &p_data);
-	int get_tab_idx_at_point(const Point2 &p_point) const;
 
 	static void _bind_methods();
 

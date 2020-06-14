@@ -516,6 +516,15 @@ bool Tabs::get_tab_disabled(int p_tab) const {
 void Tabs::set_tab_hidden(int p_tab, bool p_hidden) {
 	ERR_FAIL_INDEX(p_tab, tabs.size());
 	tabs.write[p_tab].hidden = p_hidden;
+	if (current == p_tab) {
+		for (int i = 0; i < tabs.size(); i++) {
+			int try_tab = (p_tab + 1 + i) % tabs.size();
+			if (!get_tab_disabled(try_tab) && !get_tab_hidden(try_tab)) {
+				set_current_tab(try_tab);
+				break;
+			}
+		}
+	}
 	update();
 	minimum_size_changed();
 }
@@ -589,6 +598,7 @@ void Tabs::_update_cache() {
 	Ref<Texture2D> cb = get_theme_icon("close");
 	int icon_seperation = get_theme_constant("icon_separation");
 
+	// todo if nav visible?
 	int limit = get_size().width - incr->get_width() - decr->get_width();
 	if (popup) {
 		limit -= menu->get_width();
@@ -613,7 +623,9 @@ void Tabs::_update_cache() {
 		}
 	}
 	// todo if squish...
+	// squish_tabs_to_fit_enabled ?
 	// cut off each visible tab to fit in available space
+	// todo may not need nav btns if all can fit
 	bool squishy = false;
 	if (squishy) {
 		int m_width = min_width;
@@ -677,6 +689,10 @@ void Tabs::add_tab(const String &p_str, const Ref<Texture2D> &p_icon) {
 	t.size_cache = 0;
 
 	tabs.push_back(t);
+	if (tabs.size() == 1) {
+		current = 0;
+		emit_signal("tab_changed", current);
+	}
 	_update_cache();
 	call_deferred("_update_hover");
 	update();
@@ -940,6 +956,7 @@ Size2 Tabs::get_minimum_size() const {
 		}
 	}
 
+	// todo stretch_control_enabled
 	ms.width = 0; //TODO: should make this optional
 	return ms;
 }
@@ -957,41 +974,50 @@ int Tabs::_get_tab_width(int p_idx) const {
 	Ref<Font> font = get_theme_font("font");
 	int icon_seperation = get_theme_constant("icon_separation");
 
-	int x = 0;
+	int width = 0;
 
 	Ref<Texture2D> tex = tabs[p_idx].icon;
 	if (tex.is_valid()) {
-		x += tex->get_width();
+		width += tex->get_width();
 		if (tabs[p_idx].text != "") {
-			x += icon_seperation;
+			width += icon_seperation;
 		}
 	}
 
-	x += Math::ceil(font->get_string_size(tabs[p_idx].xl_text).width);
+	width += Math::ceil(font->get_string_size(tabs[p_idx].xl_text).width);
 
 	if (tabs[p_idx].disabled) {
-		x += tab_disabled->get_minimum_size().width;
+		width += tab_disabled->get_minimum_size().width;
 	} else if (current == p_idx) {
-		x += tab_fg->get_minimum_size().width;
+		width += tab_fg->get_minimum_size().width;
 	} else {
-		x += tab_bg->get_minimum_size().width;
+		width += tab_bg->get_minimum_size().width;
 	}
 
 	if (tabs[p_idx].right_button.is_valid()) {
 		Ref<Texture2D> rb = tabs[p_idx].right_button;
-		x += rb->get_width();
-		x += icon_seperation;
+		width += rb->get_width();
+		width += icon_seperation;
 	}
 
 	if (cb_displaypolicy == CLOSE_BUTTON_SHOW_ALWAYS || (cb_displaypolicy == CLOSE_BUTTON_SHOW_ACTIVE_ONLY && p_idx == current)) {
 		Ref<Texture2D> cb = get_theme_icon("close");
-		x += cb->get_width();
-		x += icon_seperation;
+		width += cb->get_width();
+		width += icon_seperation;
 	}
 
-	return x;
+	return width;
 }
-
+void Tabs::_set_offset(int p_idx) {
+	if (p_idx < 0 || p_idx >= tabs.size()) {
+		return;
+	}
+	offset = p_idx;
+	if (always_ensure_current_tab_visible) {
+		ensure_tab_visible(current);
+	}
+	update();
+}
 void Tabs::_ensure_no_over_offset() {
 	if (!is_inside_tree()) {
 		return;
@@ -1005,29 +1031,68 @@ void Tabs::_ensure_no_over_offset() {
 	if (popup) {
 		limit -= menu->get_width();
 	}
+	WARN_PRINT("ensure no over offset");
 
+
+			// // Check if all tabs would fit into the header area.
+			// int all_tabs_width = 0;
+			// for (int i = 0; i < tabcs.size(); i++) {
+			// 	if (get_tab_hidden(i)) {
+			// 		continue;
+			// 	}
+			// 	int tab_width = _get_tab_width(i);
+			// 	all_tabs_width += tab_width;
+
+			// 	if (all_tabs_width > header_width) {
+			// 		// Not all tabs are visible at the same time - reserve space for navigation buttons.
+			// 		buttons_visible_cache = true;
+			// 		header_width -= decrement->get_width() + increment->get_width();
+			// 		break;
+			// 	} else {
+			// 		buttons_visible_cache = false;
+			// 	}
+			// }
+			// // Find the width of all tabs after first_tab_cache.
+			// int all_tabs_width = 0;
+			// for (int i = first_tab_cache; i < tabcs.size(); i++) {
+			// 	int tab_width = _get_tab_width(i);
+			// 	all_tabs_width += tab_width;
+			// }
+
+			// // Check if tabs before first_tab_cache would fit into the header area.
+			// for (int i = first_tab_cache - 1; i >= 0; i--) {
+			// 	int tab_width = _get_tab_width(i);
+
+			// 	if (all_tabs_width + tab_width > header_width) {
+			// 		break;
+			// 	}
+
+			// 	all_tabs_width += tab_width;
+			// 	first_tab_cache--;
+			// }
 	// fill available space by decreasing the offset
 	// todo fix so its not janky, doesn't work with squishiness (fixedsize)
-	bool moveover = false;
-	if (moveover) {
-		while (offset > 0) {
-			int total_w = 0;
-			for (int i = offset - 1; i < tabs.size(); i++) {
-				if (tabs[i].hidden) {
-					continue;
-				}
-				total_w += tabs[i].size_cache;
-			}
+	// ?calculate a max_offset that the offset can be to fill the space?
+	//  do this whenever current changes, squishyenabled, or add/remove
+	//
+	// todo or have this just be in an if for some_var
+	// while (offset > 0) {
+	// 	int total_w = 0;
+	// 	for (int i = offset - 1; i < tabs.size(); i++) {
+	// 		if (tabs[i].hidden) {
+	// 			continue;
+	// 		}
+	// 		total_w += tabs[i].size_cache;
+	// 	}
 
-			if (total_w < limit) {
-				offset--;
-				update();
-				// _update_cache();
-			} else {
-				break;
-			}
-		}
-	}
+	// 	if (total_w < limit) {
+	// 		offset--;
+	// 		update();
+	// 		// _update_cache();
+	// 	} else {
+	// 		break;
+	// 	}
+	// }
 }
 
 void Tabs::ensure_tab_visible(int p_idx) {
