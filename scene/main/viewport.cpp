@@ -2408,9 +2408,7 @@ void Viewport::_gui_hide_control(Control *p_control) {
 	if (gui.key_focus == p_control) {
 		gui_release_focus();
 	}
-	if (gui.mouse_over == p_control) {
-		_drop_mouse_over();
-	}
+	_reevaluate_mouse_over();
 	if (gui.drag_mouse_over == p_control) {
 		gui.drag_mouse_over = nullptr;
 	}
@@ -2431,8 +2429,9 @@ void Viewport::_gui_remove_control(Control *p_control) {
 	if (gui.key_focus == p_control) {
 		gui.key_focus = nullptr;
 	}
-	if (gui.mouse_over == p_control) {
-		_drop_mouse_over();
+	if (gui.mouse_over == p_control || gui.mouse_over_hierarchy.find(p_control) >= 0) {
+		_drop_mouse_over(p_control->get_parent_control());
+		callable_mp(this, &Viewport::_reevaluate_mouse_over).call_deferred();
 	}
 	if (gui.drag_mouse_over == p_control) {
 		gui.drag_mouse_over = nullptr;
@@ -2987,6 +2986,14 @@ bool Viewport::_sub_windows_forward_input(const Ref<InputEvent> &p_event) {
 	return true;
 }
 
+void Viewport::_reevaluate_mouse_over() {
+	if (!gui.mouse_in_viewport) {
+		return;
+	}
+	// Send mouse entered exited notifications for current viewport.
+	_update_mouse_over(gui.last_mouse_pos);
+}
+
 void Viewport::_update_mouse_over() {
 	// Update gui.mouse_over and gui.subwindow_over in all Viewports.
 	// Send necessary mouse_enter/mouse_exit signals and the MOUSE_ENTER/MOUSE_EXIT notifications for every Viewport in the SceneTree.
@@ -3070,15 +3077,55 @@ void Viewport::_update_mouse_over(Vector2 p_pos) {
 	Control *over = gui_find_control(p_pos);
 	bool notify_embedded_viewports = false;
 	if (over != gui.mouse_over) {
-		if (gui.mouse_over) {
-			_drop_mouse_over();
+		// Find the common ancestor of `gui.mouse_over` and `over`.
+		Control *common_ancestor = nullptr;
+		LocalVector<Control *> over_ancestors;
+
+		if (over) {
+			// Get all ancestors that the mouse is currently over and need an enter signal.
+			Control *ancestor = over;
+			while (ancestor) {
+				int found = gui.mouse_over_hierarchy.find(ancestor);
+				if (found >= 0) {
+					common_ancestor = gui.mouse_over_hierarchy[found];
+					break;
+				}
+				if (ancestor->get_mouse_filter() != Control::MOUSE_FILTER_IGNORE) {
+					over_ancestors.push_back(ancestor);
+				}
+				if (ancestor->is_set_as_top_level() || ancestor->get_mouse_filter() == Control::MOUSE_FILTER_STOP) {
+					// Top level Control nodes and MOUSE_FILTER_STOP break the propagation chain.
+					break;
+				}
+				// Consider only direct Control parents. (Could be changed to include non-Control CanvasItems.)
+				ancestor = ancestor->get_parent_control();
+			}
+		}
+
+		if (gui.mouse_over || !gui.mouse_over_hierarchy.is_empty()) {
+			// Send Mouse Exit Self and Mouse Exit notifications.
+			_drop_mouse_over(common_ancestor);
 		} else {
 			_drop_physics_mouseover();
 		}
 
-		gui.mouse_over = over;
 		if (over) {
-			over->notification(Control::NOTIFICATION_MOUSE_ENTER);
+			gui.mouse_over = over;
+			gui.mouse_over_hierarchy.reserve(gui.mouse_over_hierarchy.size() + over_ancestors.size());
+
+			// Send Mouse Enter notifications to parents first.
+			for (int i = over_ancestors.size() - 1; i >= 0; i--) {
+				over_ancestors[i]->notification(Control::NOTIFICATION_MOUSE_ENTER);
+				gui.mouse_over_hierarchy.push_back(over_ancestors[i]);
+			}
+
+			// Send Mouse Enter Self notification.
+			if (!over_ancestors.is_empty()) {
+				over_ancestors[0]->notification(Control::NOTIFICATION_MOUSE_ENTER_SELF);
+			} else if (gui.mouse_over->get_mouse_filter() != Control::MOUSE_FILTER_IGNORE) {
+				gui.mouse_over->notification(Control::NOTIFICATION_MOUSE_ENTER_SELF);
+			}
+
 			notify_embedded_viewports = true;
 		}
 	}
@@ -3119,7 +3166,7 @@ void Viewport::_mouse_leave_viewport() {
 	notification(NOTIFICATION_VP_MOUSE_EXIT);
 }
 
-void Viewport::_drop_mouse_over() {
+void Viewport::_drop_mouse_over(Control *p_until_control) {
 	_gui_cancel_tooltip();
 	SubViewportContainer *c = Object::cast_to<SubViewportContainer>(gui.mouse_over);
 	if (c) {
@@ -3131,10 +3178,19 @@ void Viewport::_drop_mouse_over() {
 			v->_mouse_leave_viewport();
 		}
 	}
-	if (gui.mouse_over->is_inside_tree()) {
-		gui.mouse_over->notification(Control::NOTIFICATION_MOUSE_EXIT);
+	if (gui.mouse_over && gui.mouse_over->is_inside_tree()) {
+		gui.mouse_over->notification(Control::NOTIFICATION_MOUSE_EXIT_SELF);
 	}
 	gui.mouse_over = nullptr;
+
+	// Send Mouse Exit notifications to children first. Don't send to p_until_control or above.
+	int notification_until = p_until_control ? gui.mouse_over_hierarchy.find(p_until_control) + 1 : 0;
+	for (int i = gui.mouse_over_hierarchy.size() - 1; i >= notification_until; i--) {
+		if (gui.mouse_over_hierarchy[i]->is_inside_tree()) {
+			gui.mouse_over_hierarchy[i]->notification(Control::NOTIFICATION_MOUSE_EXIT);
+		}
+	}
+	gui.mouse_over_hierarchy.resize(notification_until);
 }
 
 void Viewport::push_input(const Ref<InputEvent> &p_event, bool p_local_coords) {
