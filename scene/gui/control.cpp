@@ -708,6 +708,14 @@ Transform2D Control::get_transform() const {
 	return xform;
 }
 
+void Control::_top_level_changed() {
+	// Controls don't need to do anything else, only other CanvasItems.
+
+	if (get_viewport()) {
+		get_viewport()->_gui_update_mouse_over(this);
+	}
+}
+
 void Control::_top_level_changed_on_parent() {
 	// Update root control status.
 	_notification(NOTIFICATION_EXIT_CANVAS);
@@ -1834,6 +1842,10 @@ void Control::set_mouse_filter(MouseFilter p_filter) {
 	data.mouse_filter = p_filter;
 	notify_property_list_changed();
 	update_configuration_warnings();
+
+	if (get_viewport()) {
+		get_viewport()->_gui_update_mouse_over(this);
+	}
 }
 
 Control::MouseFilter Control::get_mouse_filter() const {
@@ -3568,6 +3580,8 @@ void Control::_bind_methods() {
 	BIND_CONSTANT(NOTIFICATION_RESIZED);
 	BIND_CONSTANT(NOTIFICATION_MOUSE_ENTER);
 	BIND_CONSTANT(NOTIFICATION_MOUSE_EXIT);
+	BIND_CONSTANT(NOTIFICATION_MOUSE_ENTER_SELF);
+	BIND_CONSTANT(NOTIFICATION_MOUSE_EXIT_SELF);
 	BIND_CONSTANT(NOTIFICATION_FOCUS_ENTER);
 	BIND_CONSTANT(NOTIFICATION_FOCUS_EXIT);
 	BIND_CONSTANT(NOTIFICATION_THEME_CHANGED);
