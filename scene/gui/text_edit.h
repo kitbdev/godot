@@ -381,18 +381,11 @@ private:
 	/* Caret. */
 	struct Selection {
 		bool active = false;
-		bool shiftclick_left = false;
 
-		int selecting_line = 0;
-		int selecting_column = 0;
+		int origin_line = 0;
+		int origin_column = 0;
 		int selected_word_beg = 0;
 		int selected_word_end = 0;
-		int selected_word_origin = 0;
-
-		int from_line = 0;
-		int from_column = 0;
-		int to_line = 0;
-		int to_column = 0;
 	};
 
 	struct Caret {
@@ -403,6 +396,18 @@ private:
 		int last_fit_x = 0;
 		int line = 0;
 		int column = 0;
+
+		// bool operator<(const Caret &p_other) {
+		// 	// Sort by start of selection.
+		// 	int this_line = selection.active ? MIN(selection.origin_line, line) : line;
+		// 	int other_line = p_other.selection.active ? MIN(p_other.selection.origin_line, p_other.line) : p_other.line;
+		// 	if (this_line == other_line) {
+		// 		int this_col = selection.active ? MIN(selection.origin_column, column) : column;
+		// 		int other_col = p_other.selection.active ? MIN(p_other.selection.origin_column, p_other.column) : p_other.column;
+		// 		return this_col < other_col;
+		// 	}
+		// 	return (this_line < other_line);
+		// }
 	};
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
@@ -617,9 +622,6 @@ private:
 	void _move_caret_document_end(bool p_select);
 	bool _clear_carets_and_selection();
 
-	// Used in add_caret_at_carets
-	void _get_above_below_caret_line_column(int p_old_line, int p_old_wrap_index, int p_old_column, bool p_below, int &p_new_line, int &p_new_column, int p_last_fit_x = -1) const;
-
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -744,6 +746,9 @@ public:
 	void set_line(int p_line, const String &p_new_text);
 	String get_line(int p_line) const;
 
+	void set_text_range(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_update_carets = true, bool p_grow_selection = true, bool p_insert_after_caret = false);
+	String get_text_range(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
+
 	int get_line_width(int p_line, int p_wrap_index = -1) const;
 	int get_line_height() const;
 
@@ -847,10 +852,12 @@ public:
 
 	Vector<int> get_caret_index_edit_order();
 	void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
+	void adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
 
 	bool is_caret_visible(int p_caret = 0) const;
 	Point2 get_caret_draw_pos(int p_caret = 0) const;
 
+	void set_caret(int p_line, int p_column, int p_caret = 0, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0);
 	void set_caret_line(int p_line, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0, int p_caret = 0);
 	int get_caret_line(int p_caret = 0) const;
 
@@ -877,19 +884,21 @@ public:
 	void select_all();
 	void select_word_under_caret(int p_caret = -1);
 	void add_selection_for_next_occurrence();
-	void select(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_caret = 0);
+	void select(int p_origin_line, int p_origin_column, int p_caret_line, int p_caret_column, int p_caret = 0);
 
 	bool has_selection(int p_caret = -1) const;
 
 	String get_selected_text(int p_caret = -1);
 
-	int get_selection_line(int p_caret = 0) const;
-	int get_selection_column(int p_caret = 0) const;
+	int get_selection_origin_line(int p_caret = 0) const;
+	int get_selection_origin_column(int p_caret = 0) const;
 
 	int get_selection_from_line(int p_caret = 0) const;
 	int get_selection_from_column(int p_caret = 0) const;
 	int get_selection_to_line(int p_caret = 0) const;
 	int get_selection_to_column(int p_caret = 0) const;
+
+	bool is_selection_direction_right(int p_caret = 0) const;
 
 	void deselect(int p_caret = -1);
 	void delete_selection(int p_caret = -1);

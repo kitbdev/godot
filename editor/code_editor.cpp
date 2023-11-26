@@ -1552,14 +1552,19 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 				caret_col += (is_line_selection && caret_col == 0) ? 0 : offset;
 				text_editor->set_caret_column(caret_col, c2 == 0, c2);
 			}
-			if (text_editor->has_selection(c2) && text_editor->get_selection_to_line(c2) >= from && text_editor->get_selection_to_line(c2) <= to) {
-				int from_col = text_editor->get_selection_from_column(c2);
-				from_col += (is_line_selection && from_col == 0) ? 0 : offset;
-				int to_col = selection_to_cols[selection_i++];
-				to_col += (to_col == 0) ? 0 : offset;
-				text_editor->select(
-						text_editor->get_selection_from_line(c2), from_col,
-						text_editor->get_selection_to_line(c2), to_col, c2);
+			if (text_editor->has_selection(c2)) {
+				if (text_editor->get_selection_from_line(c2) >= from && text_editor->get_selection_from_line(c2) <= to) {
+					// todo
+				}
+				if (text_editor->get_selection_to_line(c2) >= from && text_editor->get_selection_to_line(c2) <= to) {
+					int from_col = text_editor->get_selection_from_column(c2);
+					from_col += (is_line_selection && from_col == 0) ? 0 : offset;
+					int to_col = selection_to_cols[selection_i++];
+					to_col += (to_col == 0) ? 0 : offset;
+					text_editor->select(
+							text_editor->get_selection_from_line(c2), from_col,
+							text_editor->get_selection_to_line(c2), to_col, c2);
+				}
 			}
 		}
 	}
@@ -1654,7 +1659,7 @@ Variant CodeTextEditor::get_navigation_state() {
 	state["h_scroll_position"] = text_editor->get_h_scroll();
 	state["column"] = text_editor->get_caret_column();
 	state["row"] = text_editor->get_caret_line();
-
+	//todo
 	state["selection"] = get_text_editor()->has_selection();
 	if (get_text_editor()->has_selection()) {
 		state["selection_from_line"] = text_editor->get_selection_from_line();
