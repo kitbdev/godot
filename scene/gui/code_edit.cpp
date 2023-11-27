@@ -2838,10 +2838,8 @@ void CodeEdit::_gutter_clicked(int p_line, int p_gutter) {
 
 	if (p_gutter == line_number_gutter) {
 		remove_secondary_carets();
-		set_selection_mode(TextEdit::SelectionMode::SELECTION_MODE_LINE, p_line, 0);
+		set_selection_mode(TextEdit::SelectionMode::SELECTION_MODE_LINE);
 		select(p_line, 0, p_line + 1, 0);
-		set_caret_line(p_line + 1);
-		set_caret_column(0);
 		return;
 	}
 

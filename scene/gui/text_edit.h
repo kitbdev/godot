@@ -453,6 +453,7 @@ private:
 
 	bool selection_drag_attempt = false;
 	bool dragging_selection = false;
+	int drag_caret_index = -1;
 
 	Timer *click_select_held = nullptr;
 	uint64_t last_dblclk = 0;
@@ -851,8 +852,9 @@ public:
 	void add_caret_at_carets(bool p_below);
 
 	Vector<int> get_caret_index_edit_order();
-	void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
+	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
 	void adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
+	int collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	bool is_caret_visible(int p_caret = 0) const;
 	Point2 get_caret_draw_pos(int p_caret = 0) const;
@@ -878,7 +880,7 @@ public:
 	void set_drag_and_drop_selection_enabled(const bool p_enabled);
 	bool is_drag_and_drop_selection_enabled() const;
 
-	void set_selection_mode(SelectionMode p_mode, int p_line = -1, int p_column = -1, int p_caret = 0);
+	void set_selection_mode(SelectionMode p_mode);
 	SelectionMode get_selection_mode() const;
 
 	void select_all();
@@ -890,6 +892,8 @@ public:
 
 	String get_selected_text(int p_caret = -1);
 
+	void set_selection_origin_line(int p_caret, int p_line);
+	void set_selection_origin_column(int p_caret, int p_column);
 	int get_selection_origin_line(int p_caret = 0) const;
 	int get_selection_origin_column(int p_caret = 0) const;
 
