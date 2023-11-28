@@ -384,6 +384,7 @@ private:
 
 		int origin_line = 0;
 		int origin_column = 0;
+		int origin_last_fit_x = 0;
 		int selected_word_beg = 0;
 		int selected_word_end = 0;
 	};
@@ -412,7 +413,7 @@ private:
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
 	Vector<Caret> carets;
-	Vector<Caret> operation_carets;
+	Vector<Caret> operation_carets; //todo
 	Vector<int> caret_index_edit_order;
 
 	bool setting_caret_line = false;
@@ -436,6 +437,7 @@ private:
 	bool drag_action = false;
 	bool drag_caret_force_displayed = false;
 
+	void _caret_changed(int p_caret = -1);
 	void _emit_caret_changed();
 
 	void _reset_caret_blink_timer();
@@ -461,6 +463,11 @@ private:
 	Timer *click_select_held = nullptr;
 	uint64_t last_dblclk = 0;
 	Vector2 last_dblclk_pos;
+
+	bool selection_pos_dirty = false;
+
+	void _selection_changed(int p_caret = -1);
+	void _emit_selection_changed();
 	void _click_selection_held();
 
 	void _update_selection_mode_pointer();
@@ -600,6 +607,7 @@ private:
 
 	/*** Super internal Core API. Everything builds on it. ***/
 	bool text_changed_dirty = false;
+	void _text_changed();
 	void _text_changed_emit();
 
 	void _insert_text(int p_line, int p_char, const String &p_text, int *r_end_line = nullptr, int *r_end_char = nullptr);
@@ -762,9 +770,8 @@ public:
 	void swap_lines(int p_from_line, int p_to_line);
 
 	void insert_line_at(int p_at, const String &p_text);
+	void remove_line_at(int p_line, bool p_move_cursors_down = true);
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
-
-	void remove_line(int p_at, bool p_move_cursors_down = true);
 
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
