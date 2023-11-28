@@ -412,6 +412,7 @@ private:
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
 	Vector<Caret> carets;
+	Vector<Caret> operation_carets;
 	Vector<int> caret_index_edit_order;
 
 	bool setting_caret_line = false;
@@ -441,6 +442,8 @@ private:
 	void _toggle_draw_caret();
 
 	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
+
+	void _cancel_drag();
 
 	/* Selection. */
 	SelectionMode selecting_mode = SelectionMode::SELECTION_MODE_NONE;
@@ -761,6 +764,8 @@ public:
 	void insert_line_at(int p_at, const String &p_text);
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
 
+	void remove_line(int p_at, bool p_move_cursors_down = true);
+
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	int get_last_unhidden_line() const;
@@ -891,6 +896,12 @@ public:
 	bool has_selection(int p_caret = -1) const;
 
 	String get_selected_text(int p_caret = -1);
+	// todo use this more?
+	bool selection_contains(int p_caret, int p_line, int p_column, bool p_include_edges = true, bool p_only_selections = true) const;
+	// returns the caret index.
+	int get_selection_at(int p_line, int p_column, bool p_include_edges = true) const;
+	// ignores duplicates, useful for text manipulation like toggle comments and indent. see commentimpl?
+	Vector<Point2i> get_all_line_ranges_with_caret(int p_caret = -1);
 
 	void set_selection_origin_line(int p_caret, int p_line);
 	void set_selection_origin_column(int p_caret, int p_column);

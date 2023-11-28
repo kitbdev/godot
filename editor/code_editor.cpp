@@ -1815,7 +1815,7 @@ int CodeTextEditor::_get_affected_lines_to(int p_caret) {
 	}
 	int line = text_editor->get_selection_to_line(p_caret);
 	// Don't affect a line with no selected characters.
-	if (text_editor->get_selection_to_column(p_caret) == 0) {
+	if (text_editor->get_selection_to_column(p_caret) == 0) { //todo
 		line--;
 	}
 	return line;
