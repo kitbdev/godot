@@ -279,7 +279,7 @@ private:
 
 	void _update_placeholder();
 
-	/* Initialize to opposite first, so we get past the early-out in set_editable. */
+	// Initialize to opposite first, so we get past the early-out in set_editable.
 	bool editable = false;
 
 	TextDirection text_direction = TEXT_DIRECTION_AUTO;
@@ -292,6 +292,12 @@ private:
 
 	void _clear();
 	void _update_caches();
+
+	void _cancel_ime(); //todo public?
+	void _apply_ime();
+	void _close_ime_window();
+	void _update_ime_window_position();
+	void _update_ime_text();
 
 	// User control.
 	bool overtype_mode = false;
@@ -910,6 +916,7 @@ public:
 	// ignores duplicates, useful for text manipulation like toggle comments and indent. see commentimpl?
 	Vector<Point2i> get_all_line_ranges_with_caret(int p_caret = -1);
 
+	// void set_selection_origin(int p_caret, int p_line, int p_column);//todo
 	void set_selection_origin_line(int p_caret, int p_line);
 	void set_selection_origin_column(int p_caret, int p_column);
 	int get_selection_origin_line(int p_caret = 0) const;
