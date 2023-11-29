@@ -866,7 +866,7 @@
 			<param index="3" name="wrap_index" type="int" default="0" />
 			<param index="4" name="caret_index" type="int" default="0" />
 			<description>
-				Moves the caret to the specified [param line] index.
+				Moves the caret to the specified [param line] index. The caret column will be moved to the same visual position it was at the last time [method set_caret_column] was called, or clamped to the end of the line.
 				If [param adjust_viewport] is [code]true[/code], the viewport will center at the caret position after the move occurs.
 				If [param can_be_hidden] is [code]true[/code], the specified [param line] can be hidden.
 				[b]Note:[/b] If supporting multiple carets this will not check for any overlap. See [method merge_overlapping_carets].

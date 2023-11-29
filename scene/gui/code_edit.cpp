@@ -1829,8 +1829,8 @@ void CodeEdit::create_code_region() {
 
 	// Select name of the first region to allow quick edit.
 	remove_secondary_carets();
-	set_caret_line(first_region_start);
 	int tag_length = code_region_start_string.length() + RTR("New Code Region").length() + 1;
+	set_caret_line(first_region_start);
 	set_caret_column(tag_length);
 	select(first_region_start, code_region_start_string.length() + 1, first_region_start, tag_length);
 

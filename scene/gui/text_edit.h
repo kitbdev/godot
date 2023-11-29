@@ -419,12 +419,17 @@ private:
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
 	Vector<Caret> carets;
-	Vector<Caret> operation_carets; //todo
-	Vector<int> caret_index_edit_order;
+	Vector<Caret> operation_carets; //todo wont really work?
+	Vector<int> caret_index_edit_order; // todo remove
+	Vector<int> carets_to_ignore_list; // todo impl
+	// Returns true for carets that will be removed at the end of this complex operation.
+	// mulicaret_edit_skip_caret()
+	bool should_ignore_caret(int p_caret) const;
 
 	bool setting_caret_line = false;
 	bool caret_pos_dirty = false;
 	bool caret_index_edit_dirty = true;
+	bool multiedit_merge_queued = false;
 
 	CaretType caret_type = CaretType::CARET_TYPE_LINE;
 
@@ -862,22 +867,29 @@ public:
 	void set_multiple_carets_enabled(bool p_enabled);
 	bool is_multiple_carets_enabled() const;
 
-	int add_caret(int p_line, int p_col);
+	int add_caret(int p_line, int p_column, bool p_allow_overlapping = false);
 	void remove_caret(int p_caret);
 	void remove_secondary_carets();
-	void merge_overlapping_carets();
 	int get_caret_count() const;
 	void add_caret_at_carets(bool p_below);
 
+	bool is_line_col_in_range(int p_line, int p_column, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_include_edges = true) const;
+
+	// todo make private?
+	Vector<int> _get_sorted_carets() const; // ? dont cache so its const
 	Vector<int> get_caret_index_edit_order();
 	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
 	void adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
-	int collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
+	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
+
+	void merge_overlapping_carets();
+	void queue_merge_carets();
+	void merge_carets_outside_of_complex_op();
 
 	bool is_caret_visible(int p_caret = 0) const;
 	Point2 get_caret_draw_pos(int p_caret = 0) const;
 
-	void set_caret(int p_line, int p_column, int p_caret = 0, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0);
+	void set_caret(int p_line, int p_column, int p_caret = 0, bool p_adjust_viewport = true, bool p_can_be_hidden = true);
 	void set_caret_line(int p_line, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0, int p_caret = 0);
 	int get_caret_line(int p_caret = 0) const;
 
