@@ -403,31 +403,17 @@ private:
 		int last_fit_x = 0;
 		int line = 0;
 		int column = 0;
-
-		// bool operator<(const Caret &p_other) {
-		// 	// Sort by start of selection.
-		// 	int this_line = selection.active ? MIN(selection.origin_line, line) : line;
-		// 	int other_line = p_other.selection.active ? MIN(p_other.selection.origin_line, p_other.line) : p_other.line;
-		// 	if (this_line == other_line) {
-		// 		int this_col = selection.active ? MIN(selection.origin_column, column) : column;
-		// 		int other_col = p_other.selection.active ? MIN(p_other.selection.origin_column, p_other.column) : p_other.column;
-		// 		return this_col < other_col;
-		// 	}
-		// 	return (this_line < other_line);
-		// }
 	};
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
 	Vector<Caret> carets;
-	Vector<int> caret_index_edit_order; // todo remove
-	// Vector<int> carets_to_ignore_list; // todo impl
-	HashSet<int> multicaret_edit_ignore_carets;
 
 	bool setting_caret_line = false;
 	bool caret_pos_dirty = false;
-	bool caret_index_edit_dirty = true;
-	bool multicaret_edit_merge_queued = false;
+
 	int multicaret_edit_count = 0;
+	bool multicaret_edit_merge_queued = false;
+	HashSet<int> multicaret_edit_ignore_carets;
 
 	CaretType caret_type = CaretType::CARET_TYPE_LINE;
 
@@ -454,7 +440,7 @@ private:
 
 	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
 
-	void _cancel_drag();
+	void _cancel_drag_and_drop_text();
 
 	/* Selection. */
 	SelectionMode selecting_mode = SelectionMode::SELECTION_MODE_NONE;
@@ -467,6 +453,7 @@ private:
 
 	bool selection_drag_attempt = false;
 	bool dragging_selection = false;
+	int drag_and_drop_origin_caret_index = -1;
 	int drag_caret_index = -1;
 
 	Timer *click_select_held = nullptr;
@@ -865,7 +852,7 @@ public:
 	void set_multiple_carets_enabled(bool p_enabled);
 	bool is_multiple_carets_enabled() const;
 
-	int add_caret(int p_line, int p_column, bool p_allow_overlapping = false);
+	int add_caret(int p_line, int p_column);
 	void remove_caret(int p_caret);
 	void remove_secondary_carets();
 	int get_caret_count() const;
@@ -878,7 +865,7 @@ public:
 	// todo make private?
 	// Vector<int> get_caret_index_edit_order();
 	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
-	void adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
+	void offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
 	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_dont_ignore_caret = -1);
 
 	void merge_overlapping_carets();
