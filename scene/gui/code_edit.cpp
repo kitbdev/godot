@@ -628,9 +628,12 @@ Control::CursorShape CodeEdit::get_cursor_shape(const Point2 &p_pos) const {
 // Overridable actions
 void CodeEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) {
 	start_action(EditAction::ACTION_TYPING);
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < get_caret_count(); i++) {
 		if (p_caret != -1 && p_caret != i) {
+			continue;
+		}
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 
@@ -690,6 +693,7 @@ void CodeEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_ca
 			insert_text_at_caret(chr, i);
 		}
 	}
+	end_multicaret_edit();
 	end_action();
 }
 

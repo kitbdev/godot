@@ -4642,7 +4642,8 @@ int TextEdit::add_caret(int p_line, int p_column, bool p_allow_overlapping = fal
 	p_line = CLAMP(p_line, 0, text.size() - 1);
 	p_column = CLAMP(p_column, 0, get_line(p_line).length());
 
-	if (!p_allow_overlapping) {
+	// todo no flag, just is in multicaret edit?
+	if (!p_allow_overlapping && !is_in_mulitcaret_edit()) {
 		// Carets cannot overlap.
 		for (int i = 0; i < carets.size(); i++) {
 			// todo overlap_add_selections param?
@@ -4660,6 +4661,7 @@ int TextEdit::add_caret(int p_line, int p_column, bool p_allow_overlapping = fal
 
 	if (is_in_mulitcaret_edit()) {
 		multicaret_edit_ignore_carets.insert(new_index);
+		queue_merge_carets();
 	}
 
 	return new_index;
@@ -5063,9 +5065,12 @@ void TextEdit::merge_overlapping_carets() {
 }
 
 void TextEdit::queue_merge_carets() {
+	if (!is_in_mulitcaret_edit()) {
+		merge_overlapping_carets();
+		return;
+	}
+
 	multicaret_edit_merge_queued = true;
-	// todo need to check on complex op end...
-	// todo auto collapse here? cant
 }
 
 // Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
