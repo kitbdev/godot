@@ -2281,8 +2281,11 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 	}
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		bool first_line = false;
 		if (!p_split_current_line) {
 			deselect(i);
@@ -2305,6 +2308,7 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 			set_caret_line(0, i == 0, true, 0, i);
 		}
 	}
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -2594,7 +2598,7 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 	// Vector<int> caret_edit_order = get_caret_index_edit_order();
 	// for (int i = 0; i < caret_edit_order.size(); i++) {
 	for (int i = 0; i < carets.size(); i++) {
-		if (should_ignore_caret(i)) {
+		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 
@@ -2665,9 +2669,12 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 
 	start_action(EditAction::ACTION_DELETE);
 
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (int i = 0; i < caret_edit_order.size(); i++) {
-		int caret_idx = caret_edit_order[i];
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
+		int caret_idx = i;
 		if (has_selection(caret_idx)) {
 			delete_selection(caret_idx);
 			continue;
@@ -2682,22 +2689,6 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 		int next_column;
 
 		if (p_all_to_right) {
-			// Get caret furthest to the left.
-			for (int j = i + 1; j < caret_edit_order.size(); j++) {
-				if (get_caret_line(caret_edit_order[j]) != get_caret_line(caret_idx)) {
-					break;
-				}
-
-				if (has_selection(caret_edit_order[j]) && get_selection_from_line(caret_edit_order[j]) != get_caret_line(caret_idx)) {
-					break;
-				}
-
-				if (!has_selection(caret_edit_order[j])) {
-					i = j;
-					caret_idx = caret_edit_order[i];
-				}
-			}
-
 			if (get_caret_column(caret_idx) == curline_len) {
 				continue;
 			}
@@ -2730,14 +2721,13 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 		}
 
 		_remove_text(get_caret_line(caret_idx), get_caret_column(caret_idx), next_line, next_column);
-		collapse_carets(get_caret_line(caret_idx), get_caret_column(caret_idx), next_line, next_column);
+		collapse_carets(get_caret_line(caret_idx), get_caret_column(caret_idx), next_line, next_column, caret_idx);
 		adjust_carets_after(next_line, next_column, get_caret_line(caret_idx), get_caret_column(caret_idx));
 	}
 
-	// If we are deleting from the end of a line, due to column preservation we could still overlap with another caret.
-	merge_overlapping_carets();
 	end_action();
-	queue_redraw();
+	end_multicaret_edit();
+	queue_redraw(); //?
 }
 
 void TextEdit::_move_caret_document_start(bool p_select) {
@@ -3299,6 +3289,7 @@ void TextEdit::set_text(const String &p_text) {
 	if (!undo_enabled) {
 		_clear();
 		insert_text_at_caret(p_text);
+		// todo make sure carets are valid...
 	}
 
 	if (undo_enabled) {
@@ -3356,10 +3347,17 @@ void TextEdit::set_line(int p_line, const String &p_new_text) {
 		return;
 	}
 	begin_complex_operation();
-	_remove_text(p_line, 0, p_line, text[p_line].length());
-	_insert_text(p_line, 0, p_new_text);
+	int old_column = text[p_line].length();
+	_remove_text(p_line, 0, p_line, old_column);
+	int new_line, new_column;
+	_insert_text(p_line, 0, p_new_text, &new_line, &new_column);
+	// collapse_carets(p_line, 0, p_line, text[p_line].length());
+
+	// If multiple lines were inserted, make sure following carets are adjusted.
+	adjust_carets_after(p_line, old_column, new_line, new_column);
 
 	// Clamp carets.
+	// todo add to ignore list?
 	for (int i = 0; i < carets.size(); i++) {
 		if (get_caret_line(i) == p_line && get_caret_column(i) > p_new_text.length()) {
 			set_caret_column(p_new_text.length(), false, i);
@@ -3368,6 +3366,7 @@ void TextEdit::set_line(int p_line, const String &p_new_text) {
 			set_selection_origin_column(i, text[p_line].length());
 		}
 	}
+	queue_merge_carets();
 	end_complex_operation();
 	queue_redraw();
 }
@@ -3403,6 +3402,7 @@ void TextEdit::set_text_range(const String &p_new_text, int p_from_line, int p_f
 	}
 
 	begin_complex_operation();
+	begin_multicaret_edit();
 
 	// Set the text.
 	if (p_from_line != p_to_line || p_from_column != p_to_column) {
@@ -3500,8 +3500,9 @@ void TextEdit::set_text_range(const String &p_new_text, int p_from_line, int p_f
 		}
 
 		adjust_carets_after(p_to_line, p_to_column, new_end_line, new_end_column);
-		merge_overlapping_carets();
+		queue_merge_carets();
 	}
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -3575,14 +3576,21 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line) {
 	String from_line_text = get_line(p_from_line);
 	String to_line_text = get_line(p_to_line);
 	begin_complex_operation();
-	set_line(p_to_line, from_line_text);
-	set_line(p_from_line, to_line_text);
-	end_complex_operation();
+	begin_multicaret_edit();
+	_remove_text(p_from_line, 0, p_from_line, text[p_from_line].length());
+	_remove_text(p_to_line, 0, p_to_line, text[p_to_line].length());
+	_insert_text(p_from_line, 0, to_line_text);
+	_insert_text(p_to_line, 0, from_line_text);
+	// dont use set line to avoid clamping and updating carets needlessly. // todo dont_clamp param or something?
+	// set_line(p_to_line, from_line_text);
+	// set_line(p_from_line, to_line_text);
 
-	// todo handle it in setline instead??
+	// todo option to not swap carets?
+	// bool p_swap_carets = true;
 
-	// Adjust cursors.
+	// Swap carets.
 	for (int i = 0; i < carets.size(); i++) {
+		// todo columns wont get set right
 		if (get_caret_line(i) == p_from_line) {
 			set_caret_line(get_caret_line(i) + 1, false, true, 0, i);
 			set_caret_column(from_line_text.length(), false, i);
@@ -3603,17 +3611,19 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line) {
 			set_selection_origin_column(i, to_line_text.length());
 		}
 	}
-	merge_overlapping_carets();
 
+	end_multicaret_edit();
+	end_complex_operation();
 	queue_redraw();
 }
 
 void TextEdit::insert_line_at(int p_line, const String &p_text) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
-	_insert_text(p_line, 0, p_text + "\n");
+	int new_line, new_column;
+	_insert_text(p_line, 0, p_text + "\n", &new_line, &new_column);
 
-	adjust_carets_after(p_line, 0, p_line + 1, 0);
+	adjust_carets_after(p_line, 0, new_line, new_column);
 
 	// todo this for all?
 	// Need to apply the adjustments to the undo / redo carets.
@@ -3652,9 +3662,12 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 	ERR_FAIL_COND(p_caret >= carets.size());
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
 		if (p_caret != -1 && p_caret != i) {
+			continue;
+		}
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 
@@ -3677,6 +3690,7 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 		_update_ime_text();
 	}
 
+	end_multicaret_edit();
 	end_complex_operation();
 	queue_redraw();
 }
@@ -4016,7 +4030,6 @@ void TextEdit::begin_complex_operation() {
 	if (complex_operation_count == 0) {
 		next_operation_is_complex = true;
 		current_op.start_carets = carets;
-		operation_carets = carets;
 	}
 	complex_operation_count++;
 }
@@ -4645,8 +4658,9 @@ int TextEdit::add_caret(int p_line, int p_column, bool p_allow_overlapping = fal
 	set_caret_column(p_column, false, new_index);
 	_caret_changed(new_index);
 
-	// todo only if in complex operation?
-	carets_to_ignore_list.push_back(new_index);
+	if (is_in_mulitcaret_edit()) {
+		multicaret_edit_ignore_carets.insert(new_index);
+	}
 
 	return new_index;
 }
@@ -4670,8 +4684,12 @@ int TextEdit::get_caret_count() const {
 
 void TextEdit::add_caret_at_carets(bool p_below) {
 	int view_target_caret = 0;
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &caret_index : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
+		int caret_index = i;
 		const int caret_line = get_caret_line(caret_index);
 		const int caret_column = get_caret_column(caret_index);
 		const int selection_origin_line = get_selection_origin_line(caret_index);
@@ -4742,7 +4760,7 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 	// Show the topmost caret if added above or bottommost caret if added below.
 	adjust_viewport_to_caret(view_target_caret);
 
-	merge_overlapping_carets();
+	end_multicaret_edit();
 	queue_redraw();
 }
 
@@ -4759,75 +4777,121 @@ bool TextEdit::is_line_col_in_range(int p_line, int p_column, int p_from_line, i
 	return false;
 }
 
-Vector<int> TextEdit::get_caret_index_edit_order() {
-	if (!caret_index_edit_dirty) {
-		return caret_index_edit_order;
-	}
-	// todo check all uses and make sure it can sort by start instead of end
+Vector<int> TextEdit::get_sorted_carets() const {
+	// Sort by selection start from top to bottom of text.
 
-	// struct SelectionStartComparator {
-	// 	bool operator()(const Caret &a, const Caret &b) const {
-	// 		// Sort by start of selection from highest to lowest.
-	// 		int aline = a.selection.active ? MIN(a.selection.origin_line, a.line) : a.line;
-	// 		int bline = b.selection.active ? MIN(b.selection.origin_line, b.line) : b.line;
-	// 		if (aline == bline) {
-	// 			int acol = a.selection.active ? MIN(a.selection.origin_column, a.column) : a.column;
-	// 			int bcol = b.selection.active ? MIN(b.selection.origin_column, b.column) : b.column;
-	// 			return acol > bcol;
-	// 		}
-	// 		return (aline > bline);
-	// 	}
-	// };
-
-	// todo move to sort method and reverse
-
-	// todo ignore drag_caret_index?
-
-	// Sort by selection start from bottom to top of text.
-
-	caret_index_edit_order.clear();
-	caret_index_edit_order.push_back(0);
+	// todo better sorting?
+	Vector<int> sorted;
+	sorted.clear();
+	sorted.push_back(0);
 	for (int i = 1; i < carets.size(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		int j = 0;
 
 		int line = get_selection_from_line(i);
 		int col = get_selection_from_column(i);
 
-		for (; j < caret_index_edit_order.size(); j++) {
-			int idx = caret_index_edit_order[j];
+		for (; j < sorted.size(); j++) {
+			int idx = sorted[j];
 			int other_line = get_selection_from_line(idx);
 			int other_col = get_selection_from_column(idx);
-			if (line > other_line || (line == other_line && col > other_col)) {
+			if (line < other_line || (line == other_line && col <= other_col)) {
 				break;
 			}
 		}
-		caret_index_edit_order.insert(j, i);
+		sorted.insert(j, i);
 	}
-	caret_index_edit_dirty = false;
-	return caret_index_edit_order;
+	// caret_index_edit_dirty = false;
+	return sorted;
 }
 
+// Vector<int> TextEdit::get_caret_index_edit_order() {
+// 	if (!caret_index_edit_dirty) {
+// 		return caret_index_edit_order;
+// 	}
+// todo check all uses and make sure it can sort by start instead of end
+
+// struct SelectionStartComparator {
+// 	bool operator()(const Caret &a, const Caret &b) const {
+// 		// Sort by start of selection from highest to lowest.
+// 		int aline = a.selection.active ? MIN(a.selection.origin_line, a.line) : a.line;
+// 		int bline = b.selection.active ? MIN(b.selection.origin_line, b.line) : b.line;
+// 		if (aline == bline) {
+// 			int acol = a.selection.active ? MIN(a.selection.origin_column, a.column) : a.column;
+// 			int bcol = b.selection.active ? MIN(b.selection.origin_column, b.column) : b.column;
+// 			return acol > bcol;
+// 		}
+// 		return (aline > bline);
+// 	}
+// };
+
+// todo move to sort method and reverse
+
+// todo ignore drag_caret_index?
+
+// Sort by selection start from bottom to top of text.
+
+// 	caret_index_edit_order.clear();
+// 	caret_index_edit_order.push_back(0);
+// 	for (int i = 1; i < carets.size(); i++) {
+// 		int j = 0;
+
+// 		int line = get_selection_from_line(i);
+// 		int col = get_selection_from_column(i);
+
+// 		for (; j < caret_index_edit_order.size(); j++) {
+// 			int idx = caret_index_edit_order[j];
+// 			int other_line = get_selection_from_line(idx);
+// 			int other_col = get_selection_from_column(idx);
+// 			if (line > other_line || (line == other_line && col > other_col)) {
+// 				break;
+// 			}
+// 		}
+// 		caret_index_edit_order.insert(j, i);
+// 	}
+// 	caret_index_edit_dirty = false;
+// 	return caret_index_edit_order;
+// }
+
 void TextEdit::adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column) {
+	// Moves all carets at or after old_line and old_column.
+	// Called after deleting or inserting text so that the carets stay with the text they are at.
+
 	int edit_height = p_new_line - p_old_line;
 	int edit_size = p_new_column - p_old_column;
 	if (edit_height == 0 && edit_size == 0) {
 		return;
 	}
 
-	// dont use ordered since this happens just after an edit so getting the order is O(n^2), where we could just be O(n)
+	// todo at or after when removing, only after when inserting?
 	for (int i = 0; i < carets.size(); i++) {
-		// Move all carets that are after the affected lines and after or at the affected column.
-		if (get_caret_line(i) > p_old_line || (get_caret_line(i) == p_old_line && get_caret_column(i) >= p_old_column)) {
-			// Adjust caret.
+		// Move all carets that are after the affected lines and column.
+		if (get_caret_line(i) > p_old_line || (get_caret_line(i) == p_old_line && get_caret_column(i) > p_old_column)) {
 			// set_caret_line could adjust the column, so save here.
-			int caret_column = get_caret_column(i);
-			int caret_line = get_caret_line(i);
-			if (edit_height != 0) { // todo replace setvaret
-				set_caret_line(caret_line + edit_height, false, true, 0, i);
+			// int caret_column = get_caret_column(i);
+			// int caret_line = get_caret_line(i);
+			// if (edit_height != 0) {
+			// 	set_caret_line(caret_line + edit_height, false, true, 0, i);
+			// }
+			// if (edit_height == 0 && caret_line == p_old_line) {
+			// 	set_caret_column(caret_column + edit_size, false, i);
+			// } else if (get_caret_line(i) == p_new_line) {
+			// 	set_caret_column(caret_column - p_old_column, false, i);
+			// }
+			int ncaret_line = get_caret_line(i) + edit_height;
+			int ncaret_column = get_caret_column(i);
+			if (edit_height == 0 && ncaret_line == p_old_line) {
+				ncaret_column += edit_size;
+			} else if (ncaret_line == p_new_line) {
+				ncaret_column -= p_old_column;
 			}
-			if (caret_line == p_old_line) {
-				set_caret_column(caret_column + edit_size, false, i);
+
+			if (edit_height != 0) {
+				set_caret_line(ncaret_line, false, true, 0, i);
 			}
+			set_caret_column(ncaret_column, false, i);
 		}
 
 		// Adjust selection.
@@ -4835,10 +4899,11 @@ void TextEdit::adjust_carets_after(int p_old_line, int p_old_column, int p_new_l
 			continue;
 		}
 		int selection_origin_line = get_selection_origin_line(i);
-		if (selection_origin_line > p_old_line || (selection_origin_line == p_old_line && get_selection_origin_column(i) >= p_old_column)) {
+		if (selection_origin_line > p_old_line || (selection_origin_line == p_old_line && get_selection_origin_column(i) > p_old_column)) {
 			if (edit_height != 0) {
 				set_selection_origin_line(i, selection_origin_line + edit_height);
 			}
+			// todo save column since set origin line might set it?
 			if (selection_origin_line == p_old_line) {
 				set_selection_origin_column(i, get_selection_origin_column(i) + edit_size);
 			}
@@ -4846,7 +4911,7 @@ void TextEdit::adjust_carets_after(int p_old_line, int p_old_column, int p_new_l
 	}
 }
 
-void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column) {
+void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_dont_ignore_caret) {
 	// Collapse carets in the selected range(inclusive) to the from position.
 	// Collapsed carets can be merged later.
 
@@ -4876,9 +4941,8 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 			// Caret was in the removed text.
 			set_caret_line(collapse_line, false, i);
 			set_caret_column(collapse_column, false, i);
-			// Don't ignore first one.
-			if (any_collapsed) {
-				carets_to_ignore_list.push_back(i);
+			if (i != p_dont_ignore_caret) { // todo skip entirely instead?
+				multicaret_edit_ignore_carets.insert(i);
 			}
 			any_collapsed = true;
 		} else {
@@ -4889,8 +4953,8 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 				deselect(i);
 				set_caret_line(collapse_line, false, i);
 				set_caret_column(collapse_column, false, i);
-				if (any_collapsed) {
-					carets_to_ignore_list.push_back(i);
+				if (i != p_dont_ignore_caret) {
+					multicaret_edit_ignore_carets.insert(i);
 				}
 				any_collapsed = true;
 			} else if (is_caret_in) {
@@ -4909,10 +4973,8 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 
 void TextEdit::merge_overlapping_carets() {
 	// Sorted by start pos, from top to bottom.
-	Vector<int> sorted_carets = get_caret_index_edit_order();
-	sorted_carets.reverse();
+	Vector<int> sorted_carets = get_sorted_carets();
 	for (int i = 0; i < sorted_carets.size() - 1; i++) {
-		// for (int i = sorted_carets.size() - 2; i >= 0; i--) {
 		int first_caret = sorted_carets[i];
 		int second_caret = sorted_carets[i + 1];
 
@@ -4977,7 +5039,6 @@ void TextEdit::merge_overlapping_carets() {
 
 		// Update the rest of the sorted list.
 		// caret_edit_order = get_caret_index_edit_order();
-		// for (int j = 0; j <= i; j++) {
 		for (int j = i; j < sorted_carets.size(); j--) {
 			if (sorted_carets[j] > caret_to_remove) {
 				// Shift the index since a caret before it was removed.
@@ -4992,27 +5053,49 @@ void TextEdit::merge_overlapping_carets() {
 	}
 
 	// Clear the queue and ignore list.
-	multiedit_merge_queued = false;
-	carets_to_ignore_list.clear();
+	multicaret_edit_merge_queued = false;
+	multicaret_edit_ignore_carets.clear();
 	if (drag_caret_index >= 0) {
 		// Always ignore the drag caret.
 		// todo necessary in any case?
-		carets_to_ignore_list.push_back(drag_caret_index);
+		multicaret_edit_ignore_carets.insert(drag_caret_index);
 	}
 }
 
 void TextEdit::queue_merge_carets() {
-	multiedit_merge_queued = true;
+	multicaret_edit_merge_queued = true;
 	// todo need to check on complex op end...
 	// todo auto collapse here? cant
 }
-// todo one or the other
 
-void TextEdit::merge_carets_outside_of_complex_op() {
-	if (complex_operation_count == 0) {
+// Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
+void TextEdit::begin_multicaret_edit() {
+	multicaret_edit_count++;
+	// todo prevent some actions when in an edit?
+}
+
+void TextEdit::end_multicaret_edit() {
+	// todo something with undo? to merge with previous?
+	if (multicaret_edit_count > 0) {
+		multicaret_edit_count--;
+	}
+	if (multicaret_edit_count != 0) {
+		return;
+	}
+	// todo clear queue anyway?
+	if (multicaret_edit_merge_queued) {
 		merge_overlapping_carets();
 	}
 }
+
+bool TextEdit::is_in_mulitcaret_edit() const {
+	return multicaret_edit_count > 0;
+}
+
+bool TextEdit::multicaret_edit_ignore_caret(int p_caret) const {
+	return multicaret_edit_ignore_carets.has(p_caret);
+}
+// todo one or the other
 
 class CaretIterator {
 	_FORCE_INLINE_ const int &operator*() const { return caret_edit_order[index]; }
@@ -5394,9 +5477,9 @@ String TextEdit::get_selected_text(int p_caret) {
 	ERR_FAIL_COND_V(p_caret >= carets.size(), "");
 
 	StringBuilder selected_text;
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (int i = caret_edit_order.size() - 1; i >= 0; i--) {
-		int caret_idx = caret_edit_order[i];
+	Vector<int> sorted_carets = get_sorted_carets();
+	for (int i = 0; i < sorted_carets.size(); i++) {
+		int caret_idx = sorted_carets[i];
 		if (p_caret != -1 && p_caret != caret_idx) {
 			continue;
 		}
@@ -5439,29 +5522,37 @@ int TextEdit::get_selection_at(int p_line, int p_column, bool p_include_edges = 
 	return -1;
 }
 
-Vector<Point2i> TextEdit::get_all_line_ranges_with_caret(int p_caret = -1) {
-	ERR_FAIL_INDEX(p_caret, carets.size());
+Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bool p_merge_adjacent, int p_caret) const {
+	if (p_caret != -1) {
+		ERR_FAIL_INDEX(p_caret, carets.size());
+		return { Point2(get_selection_from_line(p_caret), get_selection_to_line(p_caret)) };
+	}
 
 	// todo use for text manipulation like toggle comments and indent. remove affected_lines
-	// Get a series of ranges that cover all lines that have a caret or selection.
+	// Get a series of line ranges that cover all lines that have a caret or selection.
 	Vector<Point2i> ret;
-	int last_to_line = -1;
+	int last_to_line = INT_MIN;
 
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (int i = caret_edit_order.size() - 1; i >= 0; i--) {
-		if (p_caret != -1 && p_caret != i) {
+	Vector<int> sorted_carets = get_sorted_carets();
+	for (int i = sorted_carets.size() - 1; i >= 0; i--) {
+		int caret_index = sorted_carets[i];
+		if (p_only_selections && !has_selection(i)) {
 			continue;
 		}
-		Point2i range = Point2i(get_selection_from_line(i), get_selection_to_line(i));
+		Point2i range = Point2i(get_selection_from_line(caret_index), get_selection_to_line(caret_index));
 		if (range.x == range.y) {
 			continue;
+		} else if (get_selection_to_column(caret_index) == 0) {
+			// Dont include selection end line if it ends at column 0.
+			range.y--;
 		}
-		if (range.x == last_to_line) {
+		if (range.x == last_to_line || (p_merge_adjacent && range.x - 1 == last_to_line)) {
+			// Merge if on the same line or adjacent lines.
 			ret.write[ret.size() - 1].y = range.y;
 		} else {
 			ret.append(range);
-			last_to_line = range.y;
 		}
+		last_to_line = range.y;
 	}
 	return ret;
 }
@@ -5599,9 +5690,14 @@ void TextEdit::delete_selection(int p_caret) {
 	ERR_FAIL_COND(p_caret >= carets.size());
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
 		if (p_caret != -1 && p_caret != i) {
+			continue;
+		}
+
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
+			// todo correct?
 			continue;
 		}
 
@@ -5616,16 +5712,19 @@ void TextEdit::delete_selection(int p_caret) {
 
 		set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
 		_remove_text(selection_from_line, selection_from_column, selection_to_line, selection_to_column);
+		// todo not needed since selections cannot have carets in them...
+		// todo can selection ranges touch? then maybe...
+		// collapse_carets(selection_from_line, selection_from_column, selection_to_line, selection_to_column);
 
+		deselect(i);
 		set_caret_line(selection_from_line, false, false, 0, i);
 		set_caret_column(selection_from_column, i == 0, i);
 
 		adjust_carets_after(selection_to_line, selection_to_column, selection_from_line, selection_from_column);
-
-		deselect(i);
 	}
+	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
+	queue_redraw(); // todo needed?
 }
 
 /* Line wrapping. */
@@ -6600,7 +6699,8 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_caret_count"), &TextEdit::get_caret_count);
 	ClassDB::bind_method(D_METHOD("add_caret_at_carets", "below"), &TextEdit::add_caret_at_carets);
 
-	ClassDB::bind_method(D_METHOD("get_caret_index_edit_order"), &TextEdit::get_caret_index_edit_order);
+	// ClassDB::bind_method(D_METHOD("get_caret_index_edit_order"), &TextEdit::get_caret_index_edit_order);
+	ClassDB::bind_method(D_METHOD("get_sorted_carets"), &TextEdit::get_sorted_carets);
 	// todo deprecate properly. keep old name?
 	// ClassDB::bind_method(D_METHOD("adjust_carets_after_edit", "caret", "from_line", "from_col", "to_line", "to_col"), &TextEdit::adjust_carets_after_edit);
 	ClassDB::bind_method(D_METHOD("adjust_carets_after", "old_line", "old_col", "new_line", "new_col"), &TextEdit::adjust_carets_after);
@@ -6962,8 +7062,11 @@ void TextEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_ca
 	}
 
 	start_action(EditAction::ACTION_TYPING);
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		if (p_caret != -1 && p_caret != i) {
 			continue;
 		}
@@ -6981,6 +7084,7 @@ void TextEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_ca
 		const char32_t chr[2] = { (char32_t)p_unicode, 0 };
 		insert_text_at_caret(chr, i);
 	}
+	end_multicaret_edit();
 	end_action();
 }
 
@@ -6996,8 +7100,11 @@ void TextEdit::_backspace_internal(int p_caret) {
 	}
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < carets.size(); i++) {
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		if (p_caret != -1 && p_caret != i) {
 			continue;
 		}
@@ -7015,16 +7122,17 @@ void TextEdit::_backspace_internal(int p_caret) {
 		merge_gutters(prev_line, cl);
 
 		if (_is_line_hidden(cl)) {
-			_set_line_as_hidden(prev_line, true);
+			_set_line_as_hidden(prev_line, true); // todo
 		}
 		_remove_text(prev_line, prev_column, cl, cc);
+		collapse_carets(prev_line, prev_column, cl, cc, i);
 
 		set_caret_line(prev_line, false, true, 0, i);
 		set_caret_column(prev_column, i == 0, i);
 
 		adjust_carets_after(cl, cc, prev_line, prev_column);
 	}
-	merge_overlapping_carets();
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -7042,7 +7150,12 @@ void TextEdit::_cut_internal(int p_caret) {
 	}
 
 	// Cut full lines.
-	Vector<Point2i> line_ranges = get_all_line_ranges_with_caret(p_caret);
+	Vector<Point2i> line_ranges;
+	if (p_caret == -1) {
+		line_ranges = get_line_ranges_from_carets(false, true, p_caret);
+	} else {
+		line_ranges.push_back(Point2(get_selection_from_line(p_caret), get_selection_to_line(p_caret)));
+	}
 	for (int i = line_ranges.size() - 1; i >= 0; i--) {
 		// Preserve cursors on the last line.
 		remove_line_at(line_ranges[i].y);
@@ -7063,9 +7176,9 @@ void TextEdit::_copy_internal(int p_caret) {
 
 	// Copy full lines.
 	StringBuilder clipboard;
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (int i = caret_edit_order.size() - 1; i >= 0; i--) {
-		int caret_idx = caret_edit_order[i];
+	Vector<int> sorted_carets = get_sorted_carets();
+	for (int i = 0; i < carets.size(); i++) {
+		int caret_idx = sorted_carets[i];
 		if (p_caret != -1 && p_caret != caret_idx) {
 			continue;
 		}
@@ -7094,9 +7207,12 @@ void TextEdit::_paste_internal(int p_caret) {
 	bool is_full_line = !cut_copy_line.is_empty() && cut_copy_line == clipboard;
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
+	begin_multicaret_edit();
 	int clipboad_line = clipboad_lines.size() - 1;
-	for (const int &i : caret_edit_order) {
+	for (int i = 0; i < carets.size(); i++) {
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		if (p_caret != -1 && p_caret != i) {
 			continue;
 		}
@@ -7114,6 +7230,7 @@ void TextEdit::_paste_internal(int p_caret) {
 		insert_text_at_caret(clipboard, i);
 		clipboad_line--;
 	}
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -7986,7 +8103,7 @@ void TextEdit::_text_changed() {
 	_cancel_drag();
 	queue_redraw();
 
-	if (text_changed_dirty) {
+	if (text_changed_dirty || setting_text) {
 		return;
 	}
 
@@ -8127,19 +8244,19 @@ void TextEdit::_base_insert_text(int p_line, int p_char, const String &p_text, i
 	ERR_FAIL_INDEX(p_line, text.size());
 	ERR_FAIL_COND(p_char < 0);
 
-	/* STEP 1: Remove \r from source text and separate in substrings. */
+	// STEP 1: Remove \r from source text and separate in substrings.
 	const String text_to_insert = p_text.replace("\r", "");
 	Vector<String> substrings = text_to_insert.split("\n");
 
 	// Is this just a new empty line?
 	bool shift_first_line = p_char == 0 && substrings.size() == 2 && text_to_insert == "\n";
 
-	/* STEP 2: Add spaces if the char is greater than the end of the line. */
+	// STEP 2: Add spaces if the char is greater than the end of the line.
 	while (p_char > text[p_line].length()) {
 		text.set(p_line, text[p_line] + String::chr(' '), structured_text_parser(st_parser, st_args, text[p_line] + String::chr(' ')));
 	}
 
-	/* STEP 3: Separate dest string in pre and post text. */
+	// STEP 3: Separate dest string in pre and post text.
 	String postinsert_text = text[p_line].substr(p_char, text[p_line].size());
 
 	substrings.write[0] = text[p_line].substr(0, p_char) + substrings[0];
@@ -8168,9 +8285,7 @@ void TextEdit::_base_insert_text(int p_line, int p_char, const String &p_text, i
 		input_direction = (TextDirection)dir;
 	}
 
-	if (!setting_text) {
-		_text_changed();
-	}
+	_text_changed();
 	emit_signal(SNAME("lines_edited_from"), p_line, r_end_line);
 }
 
@@ -8211,9 +8326,7 @@ void TextEdit::_base_remove_text(int p_from_line, int p_from_column, int p_to_li
 	text.remove_range(p_from_line, p_to_line);
 	text.set(p_from_line, pre_text + post_text, structured_text_parser(st_parser, st_args, pre_text + post_text));
 
-	if (!setting_text) {
-		_text_changed();
-	}
+	_text_changed();
 	emit_signal(SNAME("lines_edited_from"), p_to_line, p_from_line);
 }
 

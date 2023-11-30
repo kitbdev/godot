@@ -1641,7 +1641,7 @@ void CodeEdit::fold_line(int p_line) {
 		return;
 	}
 
-	/* Find the last line to be hidden. */
+	// Find the last line to be hidden.
 	const int line_count = get_line_count() - 1;
 	int end_line = line_count;
 
@@ -1698,27 +1698,10 @@ void CodeEdit::fold_line(int p_line) {
 		_set_line_as_hidden(i, true);
 	}
 
-	for (int i = 0; i < get_caret_count(); i++) {
-		// Fix selection.
-		if (has_selection(i)) {
-			if (_is_line_hidden(get_selection_from_line(i)) && _is_line_hidden(get_selection_to_line(i))) {
-				deselect(i);
-			} else if (_is_line_hidden(get_selection_from_line(i))) {
-				select(p_line, 9999, get_selection_to_line(i), get_selection_to_column(i), i);
-			} else if (_is_line_hidden(get_selection_to_line(i))) {
-				select(get_selection_from_line(i), get_selection_from_column(i), p_line, 9999, i);
-			}
-		}
-
-		// Reset caret.
-		if (_is_line_hidden(get_caret_line(i))) {
-			set_caret_line(p_line, false, false, 0, i);
-			set_caret_column(get_line(p_line).length(), false, i);
-		}
-	}
-
-	merge_overlapping_carets();
-	queue_redraw();
+	// Collapse any carets in the hidden area.
+	begin_multicaret_edit();
+	collapse_carets(p_line + 1, 0, end_line, get_line(p_line).length());
+	end_multicaret_edit();
 }
 
 void CodeEdit::unfold_line(int p_line) {
@@ -1794,37 +1777,16 @@ void CodeEdit::create_code_region() {
 		return;
 	}
 	begin_complex_operation();
-	// Merge selections if selection starts on the same line the previous one ends.
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	Vector<int> carets_to_remove;
-	for (int i = 1; i < caret_edit_order.size(); i++) {
-		int current_caret = caret_edit_order[i - 1];
-		int next_caret = caret_edit_order[i];
-		if (get_selection_from_line(current_caret) == get_selection_to_line(next_caret)) {
-			select(get_selection_from_line(next_caret), get_selection_from_column(next_caret), get_selection_to_line(current_caret), get_selection_to_column(current_caret), next_caret);
-			carets_to_remove.append(current_caret);
-		}
-	}
-	// Sort and remove backwards to preserve indices.
-	carets_to_remove.sort();
-	for (int i = carets_to_remove.size() - 1; i >= 0; i--) {
-		remove_caret(carets_to_remove[i]);
-	}
+	begin_multicaret_edit();
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets(true, false);
 
-	// Adding start and end region tags.
+	// Add start and end region tags.
 	int first_region_start = -1;
-	for (int caret_idx : get_caret_index_edit_order()) {
-		if (!has_selection(caret_idx)) {
-			continue;
-		}
-		int from_line = get_selection_from_line(caret_idx);
-		if (first_region_start == -1 || from_line < first_region_start) {
-			first_region_start = from_line;
-		}
-		int to_line = get_selection_to_line(caret_idx);
-		set_line(to_line, get_line(to_line) + "\n" + code_region_end_string);
-		insert_line_at(from_line, code_region_start_string + " " + RTR("New Code Region"));
-		fold_line(from_line);
+	for (Point2i line_range : line_ranges) {
+		// todo use set text range?
+		set_line(line_range.y, get_line(line_range.y) + "\n" + code_region_end_string);
+		insert_line_at(line_range.x, code_region_start_string + " " + RTR("New Code Region"));
+		fold_line(line_range.x);
 	}
 
 	// Select name of the first region to allow quick edit.
@@ -1834,6 +1796,7 @@ void CodeEdit::create_code_region() {
 	set_caret_column(tag_length);
 	select(first_region_start, code_region_start_string.length() + 1, first_region_start, tag_length);
 
+	end_multicaret_edit();
 	end_complex_operation();
 	queue_redraw();
 }

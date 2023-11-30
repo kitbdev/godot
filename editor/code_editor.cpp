@@ -1151,9 +1151,13 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 		return;
 	}
 	text_editor->begin_complex_operation();
+	// todo why is the CodeEdit called text_editor?
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-	for (const int &c : caret_edit_order) {
+	text_editor->begin_multicaret_edit();
+	for (int c = 0; c < text_editor->get_caret_count(); c++) {
+		if (text_editor->multicaret_edit_ignore_caret(c)) {
+			continue;
+		}
 		if (!text_editor->has_selection(c)) {
 			continue;
 		}
@@ -1199,243 +1203,78 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 
 void CodeTextEditor::move_lines_up() {
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-
-	// Lists of carets representing each group.
-	Vector<Vector<int>> caret_groups;
-	Vector<Pair<int, int>> group_borders;
-
-	// Search for groups of carets and their selections residing on the same lines.
-	for (int i = 0; i < caret_edit_order.size(); i++) {
-		int c = caret_edit_order[i];
-
-		Vector<int> new_group{ c };
-		Pair<int, int> group_border;
-		group_border.first = _get_affected_lines_from(c);
-		group_border.second = _get_affected_lines_to(c);
-
-		for (int j = i; j < caret_edit_order.size() - 1; j++) {
-			int c_current = caret_edit_order[j];
-			int c_next = caret_edit_order[j + 1];
-
-			int next_start_pos = _get_affected_lines_from(c_next);
-			int next_end_pos = _get_affected_lines_to(c_next);
-
-			int current_start_pos = text_editor->has_selection(c_current) ? text_editor->get_selection_from_line(c_current) : text_editor->get_caret_line(c_current);
-
-			i = j;
-			if (next_end_pos != current_start_pos && next_end_pos + 1 != current_start_pos) {
-				break;
-			}
-			group_border.first = next_start_pos;
-			new_group.push_back(c_next);
-			// If the last caret is added to the current group there is no need to process it again.
-			if (j + 1 == caret_edit_order.size() - 1) {
-				i++;
-			}
-		}
-		group_borders.push_back(group_border);
-		caret_groups.push_back(new_group);
-	}
-
-	for (int i = group_borders.size() - 1; i >= 0; i--) {
-		if (group_borders[i].first - 1 < 0) {
+	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
+	for (int i = 0; i < line_ranges.size(); i++) {
+		if (line_ranges[i].x == 0) {
 			continue;
 		}
+		for (int line = line_ranges[i].x; line <= line_ranges[i].y; line++) {
+			text_editor->unfold_line(line);
+			text_editor->unfold_line(line - 1);
 
-		// If the group starts overlapping with the upper group don't move it.
-		if (i < group_borders.size() - 1 && group_borders[i].first - 1 <= group_borders[i + 1].second) {
-			continue;
-		}
-
-		// We have to remember caret positions and selections prior to line swapping.
-		Vector<Vector<int>> caret_group_parameters;
-
-		for (int j = 0; j < caret_groups[i].size(); j++) {
-			int c = caret_groups[i][j];
-			int cursor_line = text_editor->get_caret_line(c);
-			int cursor_column = text_editor->get_caret_column(c);
-
-			if (!text_editor->has_selection(c)) {
-				caret_group_parameters.push_back(Vector<int>{ -1, -1, -1, -1, cursor_line, cursor_column });
-				continue;
-			}
-			int from_line = text_editor->get_selection_from_line(c);
-			int from_col = text_editor->get_selection_from_column(c);
-			int to_line = text_editor->get_selection_to_line(c);
-			int to_column = text_editor->get_selection_to_column(c);
-			caret_group_parameters.push_back(Vector<int>{ from_line, from_col, to_line, to_column, cursor_line, cursor_column });
-		}
-
-		for (int line_id = group_borders[i].first; line_id <= group_borders[i].second; line_id++) {
-			text_editor->unfold_line(line_id);
-			text_editor->unfold_line(line_id - 1);
-
-			text_editor->swap_lines(line_id - 1, line_id);
-		}
-
-		for (int j = 0; j < caret_groups[i].size(); j++) {
-			int c = caret_groups[i][j];
-			const Vector<int> &caret_parameters = caret_group_parameters[j];
-			text_editor->set_caret_line(caret_parameters[4] - 1, c == 0, true, 0, c);
-			text_editor->set_caret_column(caret_parameters[5], c == 0, c);
-
-			if (caret_parameters[0] >= 0) {
-				text_editor->select(caret_parameters[0] - 1, caret_parameters[1], caret_parameters[2] - 1, caret_parameters[3], c);
-			}
+			text_editor->swap_lines(line - 1, line);
 		}
 	}
 
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
-	text_editor->merge_overlapping_carets();
-	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::move_lines_down() {
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-
-	// Lists of carets representing each group.
-	Vector<Vector<int>> caret_groups;
-	Vector<Pair<int, int>> group_borders;
-	Vector<int> group_border_ends;
-	// Search for groups of carets and their selections residing on the same lines.
-	for (int i = 0; i < caret_edit_order.size(); i++) {
-		int c = caret_edit_order[i];
-
-		Vector<int> new_group{ c };
-		Pair<int, int> group_border;
-		group_border.first = _get_affected_lines_from(c);
-		group_border.second = _get_affected_lines_to(c);
-
-		for (int j = i; j < caret_edit_order.size() - 1; j++) {
-			int c_current = caret_edit_order[j];
-			int c_next = caret_edit_order[j + 1];
-
-			int next_start_pos = _get_affected_lines_from(c_next);
-			int next_end_pos = _get_affected_lines_to(c_next);
-
-			int current_start_pos = text_editor->has_selection(c_current) ? text_editor->get_selection_from_line(c_current) : text_editor->get_caret_line(c_current);
-
-			i = j;
-			if (next_end_pos == current_start_pos || next_end_pos + 1 == current_start_pos) {
-				group_border.first = next_start_pos;
-				new_group.push_back(c_next);
-				// If the last caret is added to the current group there is no need to process it again.
-				if (j + 1 == caret_edit_order.size() - 1) {
-					i++;
-				}
-			} else {
-				break;
-			}
-		}
-		group_borders.push_back(group_border);
-		group_border_ends.push_back(text_editor->has_selection(c) ? text_editor->get_selection_to_line(c) : text_editor->get_caret_line(c));
-		caret_groups.push_back(new_group);
-	}
-
-	for (int i = 0; i < group_borders.size(); i++) {
-		if (group_border_ends[i] + 1 > text_editor->get_line_count() - 1) {
+	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
+	for (int i = 0; i < line_ranges.size(); i++) {
+		if (line_ranges[i].y == text_editor->get_line_count() - 1) {
 			continue;
 		}
+		for (int line = line_ranges[i].y; line >= line_ranges[i].x; line--) {
+			text_editor->unfold_line(line);
+			text_editor->unfold_line(line + 1);
 
-		// If the group starts overlapping with the upper group don't move it.
-		if (i > 0 && group_border_ends[i] + 1 >= group_borders[i - 1].first) {
-			continue;
-		}
-
-		// We have to remember caret positions and selections prior to line swapping.
-		Vector<Vector<int>> caret_group_parameters;
-
-		for (int j = 0; j < caret_groups[i].size(); j++) {
-			int c = caret_groups[i][j];
-			int cursor_line = text_editor->get_caret_line(c);
-			int cursor_column = text_editor->get_caret_column(c);
-
-			if (!text_editor->has_selection(c)) {
-				caret_group_parameters.push_back(Vector<int>{ -1, -1, -1, -1, cursor_line, cursor_column });
-				continue;
-			}
-			int from_line = text_editor->get_selection_from_line(c);
-			int from_col = text_editor->get_selection_from_column(c);
-			int to_line = text_editor->get_selection_to_line(c);
-			int to_column = text_editor->get_selection_to_column(c);
-			caret_group_parameters.push_back(Vector<int>{ from_line, from_col, to_line, to_column, cursor_line, cursor_column });
-		}
-
-		for (int line_id = group_borders[i].second; line_id >= group_borders[i].first; line_id--) {
-			text_editor->unfold_line(line_id);
-			text_editor->unfold_line(line_id + 1);
-
-			text_editor->swap_lines(line_id + 1, line_id);
-		}
-
-		for (int j = 0; j < caret_groups[i].size(); j++) {
-			int c = caret_groups[i][j];
-			const Vector<int> &caret_parameters = caret_group_parameters[j];
-			text_editor->set_caret_line(caret_parameters[4] + 1, c == 0, true, 0, c);
-			text_editor->set_caret_column(caret_parameters[5], c == 0, c);
-
-			if (caret_parameters[0] >= 0) {
-				text_editor->select(caret_parameters[0] + 1, caret_parameters[1], caret_parameters[2] + 1, caret_parameters[3], c);
-			}
+			text_editor->swap_lines(line + 1, line);
 		}
 	}
 
-	text_editor->merge_overlapping_carets();
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
-	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::delete_lines() {
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-	Vector<int> lines;
-	int last_line = INT_MAX;
-	for (const int &c : caret_edit_order) {
-		for (int line = _get_affected_lines_to(c); line >= _get_affected_lines_from(c); line--) {
-			if (line >= last_line) {
-				continue;
-			}
-			last_line = line;
-			lines.append(line);
+	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
+	for (int i = line_ranges.size() - 1; i >= 0; i--) {
+		text_editor->remove_line_at(line_ranges[i].y);
+		text_editor->unfold_line(MIN(line_ranges[i].y, text_editor->get_line_count() - 1));
+		if (line_ranges[i].x != line_ranges[i].y) {
+			text_editor->remove_text(line_ranges[i].x, 0, line_ranges[i].y, 0);
 		}
 	}
 
-	for (const int &line : lines) {
-		if (line != text_editor->get_line_count() - 1) {
-			text_editor->remove_text(line, 0, line + 1, 0);
-		} else {
-			text_editor->remove_text(line - 1, text_editor->get_line(line - 1).length(), line, text_editor->get_line(line).length());
-		}
-		// Readjust carets.
-		int new_line = MIN(line, text_editor->get_line_count() - 1);
-		text_editor->unfold_line(new_line);
-		for (const int &c : caret_edit_order) {
-			if (text_editor->get_caret_line(c) == line || (text_editor->get_caret_line(c) == line + 1 && text_editor->get_caret_column(c) == 0)) {
-				text_editor->deselect(c);
-				text_editor->set_caret_line(new_line, c == 0, true, 0, c);
-				continue;
-			}
-			if (text_editor->get_caret_line(c) > line) {
-				text_editor->set_caret_line(text_editor->get_caret_line(c) - 1, c == 0, true, 0, c);
-				continue;
-			}
-			break;
-		}
-	}
-	text_editor->merge_overlapping_carets();
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
 }
 
 void CodeTextEditor::duplicate_selection() {
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-	for (const int &c : caret_edit_order) {
+	if (!text_editor->has_selection()) {
+		// todo copy lines instead?
+	}
+
+	for (int i = 0; i < text_editor->get_caret_count(); i++) {
+		if (text_editor->multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
+		int c = i;
+
+		// todo
 		const int cursor_column = text_editor->get_caret_column(c);
 		int from_line = text_editor->get_caret_line(c);
 		int to_line = text_editor->get_caret_line(c);
@@ -1473,32 +1312,30 @@ void CodeTextEditor::duplicate_selection() {
 			text_editor->select(to_line, to_column, 2 * to_line - from_line, to_line == from_line ? 2 * to_column - from_column : to_column, c);
 		}
 	}
-	text_editor->merge_overlapping_carets();
+
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
 	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-	caret_edit_order.reverse();
-	int last_line = -1;
+	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
 	int folded_to = 0;
-	for (const int &c1 : caret_edit_order) {
-		int from = _get_affected_lines_from(c1);
-		from += from == last_line ? 1 + folded_to : 0;
-		int to = _get_affected_lines_to(c1);
-		last_line = to;
+	for (int i = 0; i < line_ranges.size(); i++) {
+		int from_line = line_ranges[i].x;
+		int to_line = line_ranges[i].y;
 		// If last line is folded, extends to the end of the folded section
-		if (text_editor->is_line_folded(to)) {
-			folded_to = text_editor->get_next_visible_line_offset_from(to + 1, 1) - 1;
-			to += folded_to;
+		if (text_editor->is_line_folded(to_line)) {
+			folded_to = text_editor->get_next_visible_line_offset_from(to_line + 1, 1) - 1;
+			to_line += folded_to;
 		}
 		// Check first if there's any uncommented lines in selection.
 		bool is_commented = true;
 		bool is_all_empty = true;
-		for (int line = from; line <= to; line++) {
+		for (int line = from_line; line <= to_line; line++) {
 			// `+ delimiter.length()` here because comment delimiter is not actually `in comment` so we check first character after it
 			int delimiter_idx = text_editor->is_in_comment(line, text_editor->get_first_non_whitespace_column(line) + delimiter.length());
 			// Empty lines should not be counted.
@@ -1514,22 +1351,11 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 		// Special case for commenting empty lines, treat it/them as uncommented lines.
 		is_commented = is_commented && !is_all_empty;
 
-		// Caret positions need to be saved since they could be moved at the eol.
-		Vector<int> caret_cols;
-		Vector<int> selection_to_cols;
-		for (const int &c2 : caret_edit_order) {
-			if (text_editor->get_caret_line(c2) >= from && text_editor->get_caret_line(c2) <= to) {
-				caret_cols.append(text_editor->get_caret_column(c2));
-			}
-			if (text_editor->has_selection(c2) && text_editor->get_selection_to_line(c2) >= from && text_editor->get_selection_to_line(c2) <= to) {
-				selection_to_cols.append(text_editor->get_selection_to_column(c2));
-			}
-		}
-
 		// Comment/uncomment.
-		for (int line = from; line <= to; line++) {
+		for (int line = from_line; line <= to_line; line++) {
 			String line_text = text_editor->get_line(line);
 			if (is_all_empty) {
+				// todo use set_range instead
 				text_editor->set_line(line, delimiter);
 				continue;
 			}
@@ -1540,35 +1366,9 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 				text_editor->set_line(line, line_text.insert(text_editor->get_first_non_whitespace_column(line), delimiter));
 			}
 		}
-
-		// Readjust carets and selections.
-		int caret_i = 0;
-		int selection_i = 0;
-		int offset = (is_commented ? -1 : 1) * delimiter.length();
-		for (const int &c2 : caret_edit_order) {
-			bool is_line_selection = text_editor->has_selection(c2) && text_editor->get_selection_from_line(c2) < text_editor->get_selection_to_line(c2);
-			if (text_editor->get_caret_line(c2) >= from && text_editor->get_caret_line(c2) <= to) {
-				int caret_col = caret_cols[caret_i++];
-				caret_col += (is_line_selection && caret_col == 0) ? 0 : offset;
-				text_editor->set_caret_column(caret_col, c2 == 0, c2);
-			}
-			if (text_editor->has_selection(c2)) {
-				if (text_editor->get_selection_from_line(c2) >= from && text_editor->get_selection_from_line(c2) <= to) {
-					// todo
-				}
-				if (text_editor->get_selection_to_line(c2) >= from && text_editor->get_selection_to_line(c2) <= to) {
-					int from_col = text_editor->get_selection_from_column(c2);
-					from_col += (is_line_selection && from_col == 0) ? 0 : offset;
-					int to_col = selection_to_cols[selection_i++];
-					to_col += (to_col == 0) ? 0 : offset;
-					text_editor->select(
-							text_editor->get_selection_from_line(c2), from_col,
-							text_editor->get_selection_to_line(c2), to_col, c2);
-				}
-			}
-		}
 	}
-	text_editor->merge_overlapping_carets();
+
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
 	text_editor->queue_redraw();
 }
@@ -1803,22 +1603,6 @@ void CodeTextEditor::_set_show_warnings_panel(bool p_show) {
 void CodeTextEditor::_toggle_scripts_pressed() {
 	ScriptEditor::get_singleton()->toggle_scripts_panel();
 	update_toggle_scripts_button();
-}
-
-int CodeTextEditor::_get_affected_lines_from(int p_caret) {
-	return text_editor->has_selection(p_caret) ? text_editor->get_selection_from_line(p_caret) : text_editor->get_caret_line(p_caret);
-}
-
-int CodeTextEditor::_get_affected_lines_to(int p_caret) {
-	if (!text_editor->has_selection(p_caret)) {
-		return text_editor->get_caret_line(p_caret);
-	}
-	int line = text_editor->get_selection_to_line(p_caret);
-	// Don't affect a line with no selected characters.
-	if (text_editor->get_selection_to_column(p_caret) == 0) { //todo
-		line--;
-	}
-	return line;
 }
 
 void CodeTextEditor::_error_pressed(const Ref<InputEvent> &p_event) {

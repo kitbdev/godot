@@ -419,17 +419,15 @@ private:
 
 	// Vector containing all the carets, index '0' is the "main caret" and should never be removed.
 	Vector<Caret> carets;
-	Vector<Caret> operation_carets; //todo wont really work?
 	Vector<int> caret_index_edit_order; // todo remove
-	Vector<int> carets_to_ignore_list; // todo impl
-	// Returns true for carets that will be removed at the end of this complex operation.
-	// mulicaret_edit_skip_caret()
-	bool should_ignore_caret(int p_caret) const;
+	// Vector<int> carets_to_ignore_list; // todo impl
+	HashSet<int> multicaret_edit_ignore_carets;
 
 	bool setting_caret_line = false;
 	bool caret_pos_dirty = false;
 	bool caret_index_edit_dirty = true;
-	bool multiedit_merge_queued = false;
+	bool multicaret_edit_merge_queued = false;
+	int multicaret_edit_count = 0;
 
 	CaretType caret_type = CaretType::CARET_TYPE_LINE;
 
@@ -875,16 +873,21 @@ public:
 
 	bool is_line_col_in_range(int p_line, int p_column, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_include_edges = true) const;
 
+	Vector<int> get_sorted_carets() const; // ? dont cache so its const
+
 	// todo make private?
-	Vector<int> _get_sorted_carets() const; // ? dont cache so its const
-	Vector<int> get_caret_index_edit_order();
+	// Vector<int> get_caret_index_edit_order();
 	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
 	void adjust_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
-	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
+	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_dont_ignore_caret = -1);
 
 	void merge_overlapping_carets();
 	void queue_merge_carets();
-	void merge_carets_outside_of_complex_op();
+	void begin_multicaret_edit();
+	void end_multicaret_edit();
+	bool is_in_mulitcaret_edit() const;
+	bool multicaret_edit_ignore_caret(int p_caret) const;
+	// int get_next_edit_caret(int p_last_caret);// todo?
 
 	bool is_caret_visible(int p_caret = 0) const;
 	Point2 get_caret_draw_pos(int p_caret = 0) const;
@@ -925,8 +928,7 @@ public:
 	bool selection_contains(int p_caret, int p_line, int p_column, bool p_include_edges = true, bool p_only_selections = true) const;
 	// returns the caret index.
 	int get_selection_at(int p_line, int p_column, bool p_include_edges = true) const;
-	// ignores duplicates, useful for text manipulation like toggle comments and indent. see commentimpl?
-	Vector<Point2i> get_all_line_ranges_with_caret(int p_caret = -1);
+	Vector<Point2i> get_line_ranges_from_carets(bool p_only_selections = false, bool p_merge_adjacent = true, int p_caret = -1) const;
 
 	// void set_selection_origin(int p_caret, int p_line, int p_column);//todo
 	void set_selection_origin_line(int p_caret, int p_line);

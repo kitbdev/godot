@@ -205,9 +205,6 @@ class CodeTextEditor : public VBoxContainer {
 
 	void _toggle_scripts_pressed();
 
-	int _get_affected_lines_from(int p_caret);
-	int _get_affected_lines_to(int p_caret);
-
 protected:
 	virtual void _load_theme_settings() {}
 	virtual void _validate_script() {}
