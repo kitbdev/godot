@@ -707,10 +707,15 @@ void CodeEdit::_backspace_internal(int p_caret) {
 		return;
 	}
 
+	// todo difference between this and regular backspace?
+
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < get_caret_count(); i++) {
 		if (p_caret != -1 && p_caret != i) {
+			continue;
+		}
+		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 
@@ -742,8 +747,6 @@ void CodeEdit::_backspace_internal(int p_caret) {
 				}
 				set_caret_line(prev_line, false, true, 0, i);
 				set_caret_column(prev_column, i == 0, i);
-
-				adjust_carets_after_edit(i, prev_line, prev_column, cl, cc + auto_brace_completion_pairs[idx].close_key.length());
 				continue;
 			}
 		}
@@ -760,10 +763,10 @@ void CodeEdit::_backspace_internal(int p_caret) {
 
 		set_caret_line(prev_line, false, true, 0, i);
 		set_caret_column(prev_column, i == 0, i);
-
-		adjust_carets_after_edit(i, prev_line, prev_column, cl, cc);
 	}
-	merge_overlapping_carets();
+
+	// merge_overlapping_carets();
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -856,24 +859,17 @@ void CodeEdit::indent_lines() {
 	}
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &c : caret_edit_order) {
+	begin_multicaret_edit();
+
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+	for (Point2i line_range : line_ranges) {
+		// todo
 		// This value informs us by how much we changed selection position by indenting right.
 		// Default is 1 for tab indentation.
 		int selection_offset = 1;
 
-		int start_line = get_caret_line(c);
-		int end_line = start_line;
-		if (has_selection(c)) {
-			start_line = get_selection_from_line(c);
-			end_line = get_selection_to_line(c);
-
-			// Ignore the last line if the selection is not past the first column.
-			if (get_selection_to_column(c) == 0) {
-				selection_offset = 0;
-				end_line--;
-			}
-		}
+		int start_line = line_range.x;
+		int end_line = line_range.y;
 
 		for (int i = start_line; i <= end_line; i++) {
 			const String line_text = get_line(i);
@@ -882,6 +878,7 @@ void CodeEdit::indent_lines() {
 			}
 
 			if (!indent_using_spaces) {
+				// todo insert text func?
 				set_line(i, '\t' + line_text);
 				continue;
 			}
@@ -899,6 +896,7 @@ void CodeEdit::indent_lines() {
 		}
 		set_caret_column(get_caret_column(c) + selection_offset, false, c);
 	}
+	end_multicaret_edit();
 	end_complex_operation();
 	queue_redraw();
 }
@@ -994,27 +992,6 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 	ERR_FAIL_COND(p_to_line >= get_line_count());
 	ERR_FAIL_COND(p_to_line < p_from_line);
 
-	// Store caret states.
-	Vector<int> caret_columns;
-	Vector<Pair<int, int>> from_selections;
-	Vector<Pair<int, int>> to_selections;
-	caret_columns.resize(get_caret_count());
-	from_selections.resize(get_caret_count());
-	to_selections.resize(get_caret_count());
-	for (int c = 0; c < get_caret_count(); c++) {
-		caret_columns.write[c] = get_caret_column(c);
-
-		// Set "selection_from_line" to -1 to allow checking if there was a selection later.
-		if (!has_selection(c)) {
-			from_selections.write[c].first = -1;
-			continue;
-		}
-		from_selections.write[c].first = get_selection_from_line(c);
-		from_selections.write[c].second = get_selection_from_column(c);
-		to_selections.write[c].first = get_selection_to_line(c);
-		to_selections.write[c].second = get_selection_to_column(c);
-	}
-
 	// Check lines within range.
 	const char32_t from_indent_char = indent_using_spaces ? '\t' : ' ';
 	int size_diff = indent_using_spaces ? indent_size - 1 : -(indent_size - 1);
@@ -1046,21 +1023,8 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 			line_changed = true;
 			if (!changed_indentation) {
 				begin_complex_operation();
+				begin_multicaret_edit();
 				changed_indentation = true;
-			}
-
-			// Calculate new caret state.
-			for (int c = 0; c < get_caret_count(); c++) {
-				if (get_caret_line(c) != i || caret_columns[c] <= j) {
-					continue;
-				}
-				caret_columns.write[c] += size_diff;
-
-				if (from_selections.write[c].first == -1) {
-					continue;
-				}
-				from_selections.write[c].second = from_selections[c].first == i ? from_selections[c].second + size_diff : from_selections[c].second;
-				to_selections.write[c].second = to_selections[c].first == i ? to_selections[c].second + size_diff : to_selections[c].second;
 			}
 
 			// Calculate new line.
@@ -1070,6 +1034,7 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 			j += size_diff;
 		}
 
+		// todo how to preserve caret visual positions?
 		if (line_changed) {
 			set_line(i, line);
 		}
@@ -1079,16 +1044,9 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 		return;
 	}
 
-	// Restore caret states.
-	for (int c = 0; c < get_caret_count(); c++) {
-		set_caret_column(caret_columns[c], c == 0, c);
-		if (from_selections.write[c].first != -1) {
-			select(from_selections.write[c].first, from_selections.write[c].second, to_selections.write[c].first, to_selections.write[c].second, c);
-		}
-	}
-	merge_overlapping_carets();
+	queue_merge_carets();
+	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
 }
 
 int CodeEdit::_calculate_spaces_till_next_left_indent(int p_column) const {

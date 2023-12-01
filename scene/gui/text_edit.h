@@ -754,22 +754,22 @@ public:
 	void set_line(int p_line, const String &p_new_text);
 	String get_line(int p_line) const;
 
-	void set_text_range(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_update_carets = true, bool p_grow_selection = true, bool p_insert_after_caret = false);
-	String get_text_range(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
-
 	int get_line_width(int p_line, int p_wrap_index = -1) const;
 	int get_line_height() const;
 
 	int get_indent_level(int p_line) const;
 	int get_first_non_whitespace_column(int p_line) const;
 
-	void swap_lines(int p_from_line, int p_to_line);
+	void swap_lines(int p_from_line, int p_to_line, bool p_swap_carets = true);
 
-	void insert_line_at(int p_at, const String &p_text);
+	void insert_line_at(int p_line, const String &p_text);
 	void remove_line_at(int p_line, bool p_move_cursors_down = true);
-	void insert_text_at_caret(const String &p_text, int p_caret = -1);
 
+	void insert_text_at_caret(const String &p_text, int p_caret = -1);
+	void insert_text(int p_line, int p_column, const String &p_text);
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
+	void replace_text(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_grow_selection = true, bool p_insert_after_caret = false);
+	String get_text_at(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	int get_last_unhidden_line() const;
 	int get_next_visible_line_offset_from(int p_line_from, int p_visible_amount) const;
@@ -860,13 +860,14 @@ public:
 
 	bool is_line_col_in_range(int p_line, int p_column, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_include_edges = true) const;
 
-	Vector<int> get_sorted_carets() const; // ? dont cache so its const
+	Vector<int> get_sorted_carets(bool p_include_ignored_carets = false) const; // ? dont cache so its const
 
 	// todo make private?
 	// Vector<int> get_caret_index_edit_order();
 	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
 	void offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
 	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_dont_ignore_caret = -1);
+	void clamp_carets(int p_line);
 
 	void merge_overlapping_carets();
 	void queue_merge_carets();
@@ -883,7 +884,7 @@ public:
 	void set_caret_line(int p_line, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0, int p_caret = 0);
 	int get_caret_line(int p_caret = 0) const;
 
-	void set_caret_column(int p_col, bool p_adjust_viewport = true, int p_caret = 0);
+	void set_caret_column(int p_column, bool p_adjust_viewport = true, int p_caret = 0);
 	int get_caret_column(int p_caret = 0) const;
 
 	int get_caret_wrap_index(int p_caret = 0) const;

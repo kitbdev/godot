@@ -165,10 +165,8 @@ bool FindReplaceBar::_search(uint32_t p_flags, int p_from_line, int p_from_col) 
 	if (pos.x != -1) {
 		if (!preserve_cursor && !is_selection_only()) {
 			text_editor->unfold_line(pos.y);
-			text_editor->set_caret_line(pos.y, false);
-			text_editor->set_caret_column(pos.x + text.length(), false);
-			text_editor->center_viewport_to_caret(0);
 			text_editor->select(pos.y, pos.x, pos.y, pos.x + text.length());
+			text_editor->center_viewport_to_caret(0);
 
 			line_col_changed_for_result = true;
 		}
