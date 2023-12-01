@@ -1326,15 +1326,12 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			code_editor->get_text_editor()->duplicate_lines();
 		} break;
 		case EDIT_TOGGLE_FOLD_LINE: {
-			int previous_line = -1;
-			for (int caret_idx : tx->get_caret_index_edit_order()) {
-				int line_idx = tx->get_caret_line(caret_idx);
-				if (line_idx != previous_line) {
-					tx->toggle_foldable_line(line_idx);
-					previous_line = line_idx;
+			Vector<Point2i> line_ranges = tx->get_line_ranges_from_carets();
+			for (Point2i line_range : line_ranges) {
+				for (int i = line_range.x; i <= line_range.y; i++) {
+					tx->toggle_foldable_line(i);
 				}
 			}
-			tx->queue_redraw();
 		} break;
 		case EDIT_FOLD_ALL_LINES: {
 			tx->fold_all_lines();
@@ -1361,24 +1358,30 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			}
 
 			tx->begin_complex_operation();
-			int begin, end;
+			tx->begin_multicaret_edit();
+			int begin = INT_MAX, end = 0;
 			if (tx->has_selection()) {
-				begin = tx->get_selection_from_line();
-				end = tx->get_selection_to_line();
-				// ignore if the cursor is not past the first column
-				if (tx->get_selection_to_column() == 0) {
-					end--;
+				Vector<Point2i> line_ranges = tx->get_line_ranges_from_carets();
+				for (Point2i line_range : line_ranges) {
+					scr->get_language()->auto_indent_code(text, line_range.x, line_range.y);
+					if (line_range.x < begin) {
+						begin = line_range.x;
+					}
+					if (line_range.y > end) {
+						end = line_range.y;
+					}
 				}
 			} else {
 				begin = 0;
 				end = tx->get_line_count() - 1;
+				scr->get_language()->auto_indent_code(text, begin, end);
 			}
-			scr->get_language()->auto_indent_code(text, begin, end);
 			Vector<String> lines = text.split("\n");
 			for (int i = begin; i <= end; ++i) {
 				tx->set_line(i, lines[i]);
 			}
 
+			tx->end_multicaret_edit();
 			tx->end_complex_operation();
 		} break;
 		case EDIT_TRIM_TRAILING_WHITESAPCE: {
@@ -1477,13 +1480,12 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			code_editor->remove_all_bookmarks();
 		} break;
 		case DEBUG_TOGGLE_BREAKPOINT: {
-			Vector<int> caret_edit_order = tx->get_caret_index_edit_order();
-			caret_edit_order.reverse();
+			Vector<int> sorted_carets = tx->get_sorted_carets();
 			int last_line = -1;
-			for (const int &c : caret_edit_order) {
-				int from = tx->has_selection(c) ? tx->get_selection_from_line(c) : tx->get_caret_line(c);
+			for (const int &c : sorted_carets) {
+				int from = tx->get_selection_from_line(c);
 				from += from == last_line ? 1 : 0;
-				int to = tx->has_selection(c) ? tx->get_selection_to_line(c) : tx->get_caret_line(c);
+				int to = tx->get_selection_to_line(c);
 				if (to < from) {
 					continue;
 				}

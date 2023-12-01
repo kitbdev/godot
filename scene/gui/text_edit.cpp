@@ -2285,6 +2285,7 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 
 	begin_complex_operation();
 	begin_multicaret_edit();
+
 	for (int i = 0; i < carets.size(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
@@ -2311,6 +2312,7 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 			set_caret_line(0, i == 0, true, 0, i);
 		}
 	}
+
 	end_multicaret_edit();
 	end_complex_operation();
 }
@@ -2913,6 +2915,7 @@ void TextEdit::_update_ime_text() {
 			text.invalidate_cache(get_caret_line(i), get_caret_column(i), true);
 		}
 	}
+	queue_redraw();
 }
 
 /* General overrides. */
@@ -3542,7 +3545,7 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 		int from_line = get_caret_line(i);
 		int from_col = get_caret_column(i);
 
-		int new_column, new_line;
+		int new_line, new_column;
 		_insert_text(from_line, from_col, p_text, &new_line, &new_column);
 		_update_scrollbars(); // todo why? needed?
 
@@ -3558,7 +3561,19 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 
 	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
+}
+
+void TextEdit::insert_text(const String &p_text, int p_line, int p_column) {
+	ERR_FAIL_INDEX(p_line, text.size());
+	ERR_FAIL_INDEX(p_column, text[p_line].length() + 1);
+
+	begin_complex_operation();
+
+	int new_line, new_column;
+	_insert_text(p_line, p_column, p_text, &new_line, &new_column);
+	offset_carets_after(p_line, p_column, new_line, new_column);
+
+	end_complex_operation();
 }
 
 void TextEdit::remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column) {
@@ -3569,10 +3584,13 @@ void TextEdit::remove_text(int p_from_line, int p_from_column, int p_to_line, in
 	ERR_FAIL_COND(p_to_line < p_from_line);
 	ERR_FAIL_COND(p_to_line == p_from_line && p_to_column < p_from_column);
 
+	begin_complex_operation();
+
 	_remove_text(p_from_line, p_from_column, p_to_line, p_to_column);
-	// todo check
 	collapse_carets(p_from_line, p_from_column, p_to_line, p_to_column);
 	offset_carets_after(p_to_line, p_to_column, p_from_line, p_to_column);
+
+	end_complex_operation();
 }
 
 // todo use this everywhere set_line is used and in set_caret stuff, everywhere really
@@ -4693,6 +4711,7 @@ void TextEdit::remove_secondary_carets() {
 }
 
 int TextEdit::get_caret_count() const {
+	// todo dont include drag caret?
 	return carets.size();
 }
 

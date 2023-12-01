@@ -225,6 +225,7 @@ void FindReplaceBar::_replace() {
 				}
 			}
 		} else {
+			// todo cursor is moved from selection!
 			text_editor->insert_text_at_caret(repl_text, 0);
 		}
 	}
@@ -1351,17 +1352,16 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 
 		// Comment/uncomment.
 		for (int line = from_line; line <= to_line; line++) {
-			String line_text = text_editor->get_line(line);
 			if (is_all_empty) {
-				// todo use set_range instead
-				text_editor->set_line(line, delimiter);
+				text_editor->insert_text(delimiter, line, 0);
 				continue;
 			}
 
 			if (is_commented) {
-				text_editor->set_line(line, line_text.replace_first(delimiter, ""));
+				int delimiter_column = text_editor->get_line(line).find(delimiter);
+				text_editor->remove_text(line, delimiter_column, line, delimiter_column + delimiter.length());
 			} else {
-				text_editor->set_line(line, line_text.insert(text_editor->get_first_non_whitespace_column(line), delimiter));
+				text_editor->insert_text(delimiter, line, text_editor->get_first_non_whitespace_column(line));
 			}
 		}
 	}
@@ -1416,14 +1416,14 @@ Variant CodeTextEditor::get_edit_state() {
 void CodeTextEditor::set_edit_state(const Variant &p_state) {
 	Dictionary state = p_state;
 
-	/* update the row first as it sets the column to 0 */
-	text_editor->set_caret_line(state["row"]);
-	text_editor->set_caret_column(state["column"]);
+	// Update the row first as it sets the column to 0.
+	text_editor->set_caret_line(state["caret_line"]);
+	text_editor->set_caret_column(state["caret_column"]);
 	text_editor->set_v_scroll(state["scroll_position"]);
 	text_editor->set_h_scroll(state["h_scroll_position"]);
 
 	if (state.get("selection", false)) {
-		text_editor->select(state["selection_from_line"], state["selection_from_column"], state["selection_to_line"], state["selection_to_column"]);
+		text_editor->select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"]);
 	} else {
 		text_editor->deselect();
 	}
@@ -1455,15 +1455,13 @@ Variant CodeTextEditor::get_navigation_state() {
 
 	state["scroll_position"] = text_editor->get_v_scroll();
 	state["h_scroll_position"] = text_editor->get_h_scroll();
-	state["column"] = text_editor->get_caret_column();
-	state["row"] = text_editor->get_caret_line();
-	//todo
+	state["caret_column"] = text_editor->get_caret_column();
+	state["caret_line"] = text_editor->get_caret_line();
+	// todo for all carets...
 	state["selection"] = get_text_editor()->has_selection();
 	if (get_text_editor()->has_selection()) {
-		state["selection_from_line"] = text_editor->get_selection_from_line();
-		state["selection_from_column"] = text_editor->get_selection_from_column();
-		state["selection_to_line"] = text_editor->get_selection_to_line();
-		state["selection_to_column"] = text_editor->get_selection_to_column();
+		state["selection_origin_line"] = text_editor->get_selection_origin_line();
+		state["selection_origin_column"] = text_editor->get_selection_origin_column();
 	}
 
 	return state;
@@ -1674,13 +1672,12 @@ void CodeTextEditor::set_warning_count(int p_warning_count) {
 }
 
 void CodeTextEditor::toggle_bookmark() {
-	Vector<int> caret_edit_order = text_editor->get_caret_index_edit_order();
-	caret_edit_order.reverse();
+	Vector<int> sorted_carets = text_editor->get_sorted_carets();
 	int last_line = -1;
-	for (const int &c : caret_edit_order) {
-		int from = text_editor->has_selection(c) ? text_editor->get_selection_from_line(c) : text_editor->get_caret_line(c);
+	for (const int &c : sorted_carets) {
+		int from = text_editor->get_selection_from_line(c);
 		from += from == last_line ? 1 : 0;
-		int to = text_editor->has_selection(c) ? text_editor->get_selection_to_line(c) : text_editor->get_caret_line(c);
+		int to = text_editor->get_selection_to_line(c);
 		if (to < from) {
 			continue;
 		}

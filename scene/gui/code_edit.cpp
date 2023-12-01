@@ -707,8 +707,6 @@ void CodeEdit::_backspace_internal(int p_caret) {
 		return;
 	}
 
-	// todo difference between this and regular backspace?
-
 	begin_complex_operation();
 	begin_multicaret_edit();
 	for (int i = 0; i < get_caret_count(); i++) {
@@ -727,7 +725,7 @@ void CodeEdit::_backspace_internal(int p_caret) {
 		}
 
 		if (cl > 0 && _is_line_hidden(cl - 1)) {
-			unfold_line(get_caret_line(i) - 1);
+			unfold_line(cl - 1);
 		}
 
 		int prev_line = cc ? cl : cl - 1;
@@ -741,13 +739,8 @@ void CodeEdit::_backspace_internal(int p_caret) {
 				prev_column = cc - auto_brace_completion_pairs[idx].open_key.length();
 
 				if (_get_auto_brace_pair_close_at_pos(cl, cc) == idx) {
-					remove_text(prev_line, prev_column, cl, cc + auto_brace_completion_pairs[idx].close_key.length());
-				} else {
-					remove_text(prev_line, prev_column, cl, cc);
+					cc += auto_brace_completion_pairs[idx].close_key.length();
 				}
-				set_caret_line(prev_line, false, true, 0, i);
-				set_caret_column(prev_column, i == 0, i);
-				continue;
 			}
 		}
 
@@ -843,13 +836,17 @@ void CodeEdit::do_indent() {
 	}
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		int spaces_to_add = _calculate_spaces_till_next_right_indent(get_caret_column(i));
 		if (spaces_to_add > 0) {
 			insert_text_at_caret(String(" ").repeat(spaces_to_add), i);
 		}
 	}
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -863,42 +860,24 @@ void CodeEdit::indent_lines() {
 
 	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
 	for (Point2i line_range : line_ranges) {
-		// todo
-		// This value informs us by how much we changed selection position by indenting right.
-		// Default is 1 for tab indentation.
-		int selection_offset = 1;
-
-		int start_line = line_range.x;
-		int end_line = line_range.y;
-
-		for (int i = start_line; i <= end_line; i++) {
+		for (int i = line_range.x; i <= line_range.y; i++) {
 			const String line_text = get_line(i);
-			if (line_text.size() == 0 && has_selection(c)) {
+			if (line_text.size() == 0) {
+				// Ignore empty lines.
 				continue;
 			}
 
-			if (!indent_using_spaces) {
-				// todo insert text func?
-				set_line(i, '\t' + line_text);
-				continue;
+			if (indent_using_spaces) {
+				int spaces_to_add = _calculate_spaces_till_next_right_indent(get_first_non_whitespace_column(i));
+				insert_text(String(" ").repeat(spaces_to_add), i, 0);
+			} else {
+				insert_text("\t", i, 0);
 			}
-
-			// We don't really care where selection is - we just need to know indentation level at the beginning of the line.
-			// Since we will add this many spaces, we want to move the whole selection and caret by this much.
-			int spaces_to_add = _calculate_spaces_till_next_right_indent(get_first_non_whitespace_column(i));
-			set_line(i, String(" ").repeat(spaces_to_add) + line_text);
-			selection_offset = spaces_to_add;
 		}
-
-		// Fix selection and caret being off after shifting selection right.
-		if (has_selection(c)) {
-			select(start_line, get_selection_from_column(c) + selection_offset, get_selection_to_line(c), get_selection_to_column(c) + selection_offset, c);
-		}
-		set_caret_column(get_caret_column(c) + selection_offset, false, c);
 	}
+
 	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
 }
 
 void CodeEdit::unindent_lines() {
@@ -907,76 +886,30 @@ void CodeEdit::unindent_lines() {
 	}
 
 	begin_complex_operation();
+	begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &c : caret_edit_order) {
-		// Moving caret and selection after unindenting can get tricky because
-		// changing content of line can move caret and selection on its own (if new line ends before previous position of either)
-		// therefore we just remember initial values and at the end of the operation offset them by number of removed characters.
-		int removed_characters = 0;
-		int initial_selection_end_column = 0;
-		int initial_cursor_column = get_caret_column(c);
-
-		int start_line = get_caret_line(c);
-		int end_line = start_line;
-		if (has_selection(c)) {
-			start_line = get_selection_from_line(c);
-			end_line = get_selection_to_line(c);
-
-			// Ignore the last line if the selection is not past the first column.
-			initial_selection_end_column = get_selection_to_column(c);
-			if (initial_selection_end_column == 0) {
-				end_line--;
-			}
-		}
-
-		bool first_line_edited = false;
-		bool last_line_edited = false;
-
-		for (int i = start_line; i <= end_line; i++) {
-			String line_text = get_line(i);
-
-			if (line_text.begins_with("\t")) {
-				line_text = line_text.substr(1, line_text.length());
-
-				set_line(i, line_text);
-				removed_characters = 1;
-
-				first_line_edited = (i == start_line) ? true : first_line_edited;
-				last_line_edited = (i == end_line) ? true : last_line_edited;
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+	for (Point2i line_range : line_ranges) {
+		for (int i = line_range.x; i <= line_range.y; i++) {
+			const String line_text = get_line(i);
+			if (line_text.size() == 0) {
+				// Ignore empty lines.
 				continue;
 			}
 
-			if (line_text.begins_with(" ")) {
-				// When unindenting we aim to remove spaces before line that has selection no matter what is selected.
-				// Here we remove only enough spaces to align text to nearest full multiple of indentation_size.
-				// In case where selection begins at the start of indentation_size multiple we remove whole indentation level.
+			String line_text = get_line(i);
+
+			if (line_text.begins_with("\t")) {
+				remove_text(i, 0, i, 1);
+			} else if (line_text.begins_with(" ")) {
 				int spaces_to_remove = _calculate_spaces_till_next_left_indent(get_first_non_whitespace_column(i));
-				line_text = line_text.substr(spaces_to_remove, line_text.length());
-
-				set_line(i, line_text);
-				removed_characters = spaces_to_remove;
-
-				first_line_edited = (i == start_line) ? true : first_line_edited;
-				last_line_edited = (i == end_line) ? true : last_line_edited;
+				remove_text(i, 0, i, spaces_to_remove);
 			}
 		}
-
-		if (has_selection(c)) {
-			// Fix selection being off by one on the first line.
-			if (first_line_edited) {
-				select(get_selection_from_line(c), get_selection_from_column(c) - removed_characters, get_selection_to_line(c), initial_selection_end_column, c);
-			}
-
-			// Fix selection being off by one on the last line.
-			if (last_line_edited) {
-				select(get_selection_from_line(c), get_selection_from_column(c), get_selection_to_line(c), initial_selection_end_column - removed_characters, c);
-			}
-		}
-		set_caret_column(initial_cursor_column - removed_characters, false, c);
 	}
+
+	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
 }
 
 void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
@@ -1034,8 +967,8 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 			j += size_diff;
 		}
 
-		// todo how to preserve caret visual positions?
 		if (line_changed) {
+			// Use set line to preserve carets visual position. // todo param
 			set_line(i, line);
 		}
 	}
@@ -1067,8 +1000,12 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 	}
 
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		// When not splitting the line, we need to factor in indentation from the end of the current line.
 		const int cc = p_split_current_line ? get_caret_column(i) : get_line(get_caret_line(i)).length();
 		const int cl = get_caret_line(i);
@@ -1170,6 +1107,7 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 		}
 	}
 
+	end_multicaret_edit();
 	end_complex_operation();
 }
 
@@ -1745,8 +1683,7 @@ void CodeEdit::create_code_region() {
 	// Add start and end region tags.
 	int first_region_start = -1;
 	for (Point2i line_range : line_ranges) {
-		// todo use set text range?
-		set_line(line_range.y, get_line(line_range.y) + "\n" + code_region_end_string);
+		insert_text("\n" + code_region_end_string, line_range.y, get_line(line_range.y).length());
 		insert_line_at(line_range.x, code_region_start_string + " " + RTR("New Code Region"));
 		fold_line(line_range.x);
 	}
@@ -1754,8 +1691,6 @@ void CodeEdit::create_code_region() {
 	// Select name of the first region to allow quick edit.
 	remove_secondary_carets();
 	int tag_length = code_region_start_string.length() + RTR("New Code Region").length() + 1;
-	set_caret_line(first_region_start);
-	set_caret_column(tag_length);
 	select(first_region_start, code_region_start_string.length() + 1, first_region_start, tag_length);
 
 	end_multicaret_edit();
@@ -2153,8 +2088,12 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 
 	char32_t caret_last_completion_char = 0;
 	begin_complex_operation();
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &i : caret_edit_order) {
+	begin_multicaret_edit();
+
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
 		int caret_line = get_caret_line(i);
 
 		const String &insert_text = code_completion_options[code_completion_current_selected].insert_text;
@@ -2187,7 +2126,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 
 			// Replace.
 			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_remove_line, caret_col);
-			adjust_carets_after_edit(i, caret_line, caret_col - code_completion_base.length(), caret_remove_line, caret_col);
 			set_caret_column(get_caret_column(i) - code_completion_base.length(), false, i);
 			insert_text_at_caret(insert_text, i);
 		} else {
@@ -2204,7 +2142,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 
 			// Remove base completion text.
 			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_line, get_caret_column(i));
-			adjust_carets_after_edit(i, caret_line, get_caret_column(i) - code_completion_base.length(), caret_line, get_caret_column(i));
 			set_caret_column(get_caret_column(i) - code_completion_base.length(), false, i);
 
 			// Merge with text.
@@ -2230,12 +2167,10 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 		if (has_string_delimiter(String::chr(last_completion_char))) {
 			if (post_brace_pair != -1 && last_char_matches) {
 				remove_text(caret_line, get_caret_column(i), caret_line, get_caret_column(i) + 1);
-				adjust_carets_after_edit(i, caret_line, get_caret_column(i), caret_line, get_caret_column(i) + 1);
 			}
 		} else {
 			if (pre_brace_pair != -1 && pre_brace_pair != post_brace_pair && last_char_matches) {
 				remove_text(caret_line, get_caret_column(i), caret_line, get_caret_column(i) + 1);
-				adjust_carets_after_edit(i, caret_line, get_caret_column(i), caret_line, get_caret_column(i) + 1);
 			} else if (auto_brace_completion_enabled && pre_brace_pair != -1) {
 				insert_text_at_caret(auto_brace_completion_pairs[pre_brace_pair].close_key, i);
 				set_caret_column(get_caret_column(i) - auto_brace_completion_pairs[pre_brace_pair].close_key.length(), i == 0, i);
@@ -2246,13 +2181,14 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 			pre_brace_pair = _get_auto_brace_pair_open_at_pos(caret_line, get_caret_column(i) + 1);
 			if (pre_brace_pair != -1 && pre_brace_pair == _get_auto_brace_pair_close_at_pos(caret_line, get_caret_column(i) - 1)) {
 				remove_text(caret_line, get_caret_column(i) - 2, caret_line, get_caret_column(i));
-				adjust_carets_after_edit(i, caret_line, get_caret_column(i) - 2, caret_line, get_caret_column(i));
 				if (_get_auto_brace_pair_close_at_pos(caret_line, get_caret_column(i) - 1) != pre_brace_pair) {
 					set_caret_column(get_caret_column(i) - 1, i == 0, i);
 				}
 			}
 		}
 	}
+
+	end_multicaret_edit();
 	end_complex_operation();
 
 	cancel_code_completion();
@@ -2337,63 +2273,24 @@ void CodeEdit::set_symbol_lookup_word_as_valid(bool p_valid) {
 /* Text manipulation */
 void CodeEdit::duplicate_lines() {
 	begin_complex_operation();
+	begin_multicaret_edit();
 
-	Vector<int> caret_edit_order = get_caret_index_edit_order();
-	for (const int &caret_index : caret_edit_order) {
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets(false, false);
+	for (Point2i line_range : line_ranges) {
 		// The text that will be inserted. All lines in one string.
-		String insert_text;
+		String text_to_insert;
 
-		// The new line position of the caret after the operation.
-		int new_caret_line = get_caret_line(caret_index);
-		// The new column position of the caret after the operation.
-		int new_caret_column = get_caret_column(caret_index);
-		// The caret positions of the selection. Stays -1 if there is no selection.
-		int select_from_line = -1;
-		int select_to_line = -1;
-		int select_from_column = -1;
-		int select_to_column = -1;
-		// Number of lines of the selection.
-		int select_num_lines = -1;
-
-		if (has_selection(caret_index)) {
-			select_from_line = get_selection_from_line(caret_index);
-			select_to_line = get_selection_to_line(caret_index);
-			select_from_column = get_selection_from_column(caret_index);
-			select_to_column = get_selection_to_column(caret_index);
-			select_num_lines = select_to_line - select_from_line + 1;
-
-			for (int i = select_from_line; i <= select_to_line; i++) {
-				insert_text += "\n" + get_line(i);
-				unfold_line(i);
-			}
-			new_caret_line = select_to_line + select_num_lines;
-		} else {
-			insert_text = "\n" + get_line(new_caret_line);
-			new_caret_line++;
-
-			unfold_line(get_caret_line(caret_index));
+		for (int i = line_range.x; i <= line_range.y; i++) {
+			text_to_insert += get_line(i) + "\n";
+			unfold_line(i);
 		}
 
-		// The text will be inserted at the end of the current line.
-		set_caret_column(get_line(get_caret_line(caret_index)).length(), false, caret_index);
-
-		deselect(caret_index);
-
-		insert_text_at_caret(insert_text, caret_index);
-		set_caret_line(new_caret_line, false, true, 0, caret_index);
-		set_caret_column(new_caret_column, true, caret_index);
-
-		if (select_from_line != -1) {
-			// Advance the selection by the number of duplicated lines.
-			select_from_line += select_num_lines;
-			select_to_line += select_num_lines;
-
-			select(select_from_line, select_from_column, select_to_line, select_to_column, caret_index);
-		}
+		// Insert new text before the line.
+		insert_text(text_to_insert, line_range.x, 0);
 	}
 
+	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
 }
 
 /* Visual */
@@ -2764,7 +2661,11 @@ void CodeEdit::_gutter_clicked(int p_line, int p_gutter) {
 	if (p_gutter == line_number_gutter) {
 		remove_secondary_carets();
 		set_selection_mode(TextEdit::SelectionMode::SELECTION_MODE_LINE);
-		select(p_line, 0, p_line + 1, 0);
+		if (p_line == get_line_count() - 1) { // todo if end line is clamped, do automatically in select?
+			select(p_line, 0, p_line, INT_MAX);
+		} else {
+			select(p_line, 0, p_line + 1, 0);
+		}
 		return;
 	}
 
