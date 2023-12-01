@@ -1248,8 +1248,9 @@ void CodeTextEditor::delete_lines() {
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
 	for (int i = line_ranges.size() - 1; i >= 0; i--) {
+		// Remove last line of range separately to preserve carets.
 		text_editor->remove_line_at(line_ranges[i].y);
-		text_editor->unfold_line(MIN(line_ranges[i].y, text_editor->get_line_count() - 1));
+		text_editor->unfold_line(line_ranges[i].y);
 		if (line_ranges[i].x != line_ranges[i].y) {
 			text_editor->remove_text(line_ranges[i].x, 0, line_ranges[i].y, 0);
 		}
@@ -1257,59 +1258,43 @@ void CodeTextEditor::delete_lines() {
 
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
+	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::duplicate_selection() {
 	text_editor->begin_complex_operation();
 	text_editor->begin_multicaret_edit();
 
-	if (!text_editor->has_selection()) {
-		// todo copy lines instead?
-	}
-
+	// Duplicate lines first.
 	for (int i = 0; i < text_editor->get_caret_count(); i++) {
 		if (text_editor->multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
-		int c = i;
-
-		// todo
-		const int cursor_column = text_editor->get_caret_column(c);
-		int from_line = text_editor->get_caret_line(c);
-		int to_line = text_editor->get_caret_line(c);
-		int from_column = 0;
-		int to_column = 0;
-		int cursor_new_line = to_line + 1;
-		int cursor_new_column = text_editor->get_caret_column(c);
-		String new_text = "\n" + text_editor->get_line(from_line);
-		bool selection_active = false;
-
-		text_editor->set_caret_column(text_editor->get_line(from_line).length(), c == 0, c);
-		if (text_editor->has_selection(c)) {
-			from_column = text_editor->get_selection_from_column(c);
-			to_column = text_editor->get_selection_to_column(c);
-
-			from_line = text_editor->get_selection_from_line(c);
-			to_line = text_editor->get_selection_to_line(c);
-			cursor_new_line = to_line + text_editor->get_caret_line(c) - from_line;
-			cursor_new_column = to_column == cursor_column ? 2 * to_column - from_column : to_column;
-			new_text = text_editor->get_selected_text(c);
-			selection_active = true;
-
-			text_editor->set_caret_line(to_line, c == 0, true, 0, c);
-			text_editor->set_caret_column(to_column, c == 0, c);
+		// todo Only unhide lines?
+		for (int l = text_editor->get_selection_from_line(i); l <= text_editor->get_selection_to_line(i); l++) {
+			text_editor->unfold_line(l);
+		}
+		if (!text_editor->has_selection(i)) {
+			continue;
 		}
 
-		for (int i = from_line; i <= to_line; i++) {
-			text_editor->unfold_line(i);
+		String text_to_insert = text_editor->get_line(text_editor->get_caret_line(i)) + "\n";
+		// Insert new text before the line.
+		text_editor->insert_text(text_to_insert, text_editor->get_caret_line(i), 0);
+	}
+
+	// Duplicate selections.
+	for (int i = 0; i < text_editor->get_caret_count(); i++) {
+		if (text_editor->multicaret_edit_ignore_caret(i)) {
+			continue;
 		}
-		text_editor->deselect(c);
-		text_editor->insert_text_at_caret(new_text, c);
-		text_editor->set_caret_line(cursor_new_line, c == 0, true, 0, c);
-		text_editor->set_caret_column(cursor_new_column, c == 0, c);
-		if (selection_active) {
-			text_editor->select(to_line, to_column, 2 * to_line - from_line, to_line == from_line ? 2 * to_column - from_column : to_column, c);
+		if (!text_editor->has_selection(i)) {
+			continue;
 		}
+
+		String text_to_insert = text_editor->get_selected_text(i);
+		// Insert new text before the selection.
+		text_editor->insert_text(text_to_insert, text_editor->get_selection_from_line(i), text_editor->get_selection_from_column(i));
 	}
 
 	text_editor->end_multicaret_edit();

@@ -3509,22 +3509,25 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down = true) {
 	int next_line = is_last_line ? p_line + 1 : p_line;
 	int next_col = is_last_line ? 0 : get_line(p_line).length();
 	_remove_text(p_line, 0, next_line, next_col);
-	offset_carets_after(next_line, 0, p_line, 0);
 
-	if ((is_last_line && p_move_cursors_down) || (p_line == 0 && !p_move_cursors_down)) {
-		// Collapse carets instead.
+	if (is_last_line && p_move_cursors_down) {
+		// Collapse carets to end of line.
+		collapse_carets(next_line, next_col, p_line, 0);
+	} else if (p_line == 0 && !p_move_cursors_down) {
+		// Collapse carets to start of line.
 		collapse_carets(p_line, 0, next_line, next_col);
-	}
-
-	// Move carets to visually line up.
-	for (int i = 0; i < carets.size(); i++) {
-		if (get_caret_line(i) == p_line) {
-			set_caret_line(next_line, i == 0, true, 0, i);
+	} else {
+		// Move carets to visually line up.
+		for (int i = 0; i < carets.size(); i++) {
+			if (get_caret_line(i) == p_line) {
+				set_caret_line(next_line, i == 0, true, 0, i);
+			}
+			if (get_selection_origin_line(i) == p_line) {
+				set_selection_origin_line(i, next_line);
+			}
 		}
-		if (get_selection_origin_line(i) == p_line) {
-			set_selection_origin_line(i, next_line);
-		}
 	}
+	offset_carets_after(next_line, next_col, p_line, 0); // todo don't include oldcol? p_offset_old
 }
 
 void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
@@ -4822,6 +4825,7 @@ struct _CaretSortComparator {
 
 Vector<int> TextEdit::get_sorted_carets(bool p_include_ignored_carets) const {
 	// Returns caret indexes sorted by selection start or caret position from top to bottom of text.
+	// todo is v3 clean enough?
 	Vector<Vector3i> caret_line_col_indexes;
 	for (int i = 0; i < carets.size(); i++) {
 		if (!p_include_ignored_carets && multicaret_edit_ignore_caret(i)) {
@@ -5551,6 +5555,7 @@ Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bo
 
 	// todo use for text manipulation like toggle comments and indent. remove affected_lines
 	// Get a series of line ranges that cover all lines that have a caret or selection.
+	// For each Point2i range, x is the first line and y is the last line.
 	Vector<Point2i> ret;
 	int last_to_line = INT_MIN;
 
