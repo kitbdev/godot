@@ -897,8 +897,6 @@ void CodeEdit::unindent_lines() {
 				continue;
 			}
 
-			String line_text = get_line(i);
-
 			if (line_text.begins_with("\t")) {
 				remove_text(i, 0, i, 1);
 			} else if (line_text.begins_with(" ")) {
