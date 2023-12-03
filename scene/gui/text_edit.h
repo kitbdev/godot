@@ -471,7 +471,6 @@ private:
 	void _update_selection_mode_line();
 
 	void _pre_shift_selection(int p_caret);
-	void _post_shift_selection(int p_caret);
 
 	/* Line wrapping. */
 	LineWrappingMode line_wrapping_mode = LineWrappingMode::LINE_WRAPPING_NONE;
