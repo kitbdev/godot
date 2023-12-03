@@ -206,7 +206,7 @@ void FindReplaceBar::_replace() {
 	text_editor->begin_complex_operation();
 	if (selection_enabled && is_selection_only()) {
 		// Restrict search_current() to selected region.
-		text_editor->set_caret_line(selection_begin.width, false, true, 0, 0);
+		text_editor->set_caret_line(selection_begin.width, false, true, -1, 0);
 		text_editor->set_caret_column(selection_begin.height, true, 0);
 	}
 
@@ -276,10 +276,10 @@ void FindReplaceBar::_replace_all() {
 	text_editor->begin_complex_operation();
 
 	if (selection_enabled && is_selection_only()) {
-		text_editor->set_caret_line(selection_begin.width, false, true, 0, 0);
+		text_editor->set_caret_line(selection_begin.width, false, true, -1, 0);
 		text_editor->set_caret_column(selection_begin.height, true, 0);
 	} else {
-		text_editor->set_caret_line(0, false, true, 0, 0);
+		text_editor->set_caret_line(0, false, true, -1, 0);
 		text_editor->set_caret_column(0, true, 0);
 	}
 

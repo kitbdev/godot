@@ -350,16 +350,18 @@ void ScriptTextEditor::add_callback(const String &p_function, PackedStringArray 
 	int pos = script->get_language()->find_function(p_function, code);
 	code_editor->get_text_editor()->remove_secondary_carets();
 	if (pos == -1) {
+		// todo what is this?
 		//does not exist
 		code_editor->get_text_editor()->deselect();
 		pos = code_editor->get_text_editor()->get_line_count() + 2;
 		String func = script->get_language()->make_function("", p_function, p_args);
 		//code=code+func;
-		code_editor->get_text_editor()->set_caret_line(pos + 1);
-		code_editor->get_text_editor()->set_caret_column(1000000); //none shall be that big
+		// todo just use insert text?
+		code_editor->get_text_editor()->set_caret_line(pos + 1, true, true, -1);
+		code_editor->get_text_editor()->set_caret_column(INT_MAX);
 		code_editor->get_text_editor()->insert_text_at_caret("\n\n" + func);
 	}
-	code_editor->get_text_editor()->set_caret_line(pos);
+	code_editor->get_text_editor()->set_caret_line(pos, true, true, -1);
 	code_editor->get_text_editor()->set_caret_column(1);
 }
 
@@ -1987,7 +1989,7 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 				tx->deselect();
 				tx->remove_secondary_carets();
 				caret_clicked = 0;
-				tx->set_caret_line(row, false, false);
+				tx->set_caret_line(row, false, false, -1);
 				tx->set_caret_column(col);
 			}
 		}

@@ -754,7 +754,7 @@ void CodeEdit::_backspace_internal(int p_caret) {
 
 		remove_text(prev_line, prev_column, cl, cc);
 
-		set_caret_line(prev_line, false, true, 0, i);
+		set_caret_line(prev_line, false, true, -1, i);
 		set_caret_column(prev_column, i == 0, i);
 	}
 
@@ -1084,7 +1084,7 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 
 			if (p_above) {
 				if (cl > 0) {
-					set_caret_line(cl - 1, false, true, 0, i);
+					set_caret_line(cl - 1, false, true, -1, i);
 					set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 				} else {
 					set_caret_column(0, i == 0, i);
@@ -1100,7 +1100,7 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 		if (first_line) {
 			set_caret_line(0, i == 0, true, 0, i);
 		} else if (brace_indent) {
-			set_caret_line(get_caret_line(i) - 1, false, true, 0, i);
+			set_caret_line(get_caret_line(i) - 1, false, true, -1, i);
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 		}
 	}

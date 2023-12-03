@@ -3523,24 +3523,24 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		ERR_PRINT_ON;
 	}
 
-	// SUBCASE("[TextEdit] caret index edit order") { // todo sort instead
-	// 	Vector<int> caret_index_get_order;
-	// 	caret_index_get_order.push_back(1);
-	// 	caret_index_get_order.push_back(0);
+	SUBCASE("[TextEdit] caret sorting") { // todo sort instead
+		Vector<int> sorted_carets;
+		sorted_carets.push_back(0);
+		sorted_carets.push_back(1);
 
-	// 	CHECK(text_edit->add_caret(1, 0));
-	// 	CHECK(text_edit->get_caret_count() == 2);
-	// CHECK(text_edit->get_caret_index_edit_order() == caret_index_get_order);
+		CHECK(text_edit->add_caret(1, 0));
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_sorted_carets() == sorted_carets);
 
-	// 	text_edit->remove_secondary_carets();
-	// 	text_edit->set_caret_line(1);
-	// 	CHECK(text_edit->add_caret(0, 0));
-	// 	CHECK(text_edit->get_caret_count() == 2);
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(1);
+		CHECK(text_edit->add_caret(0, 0));
+		CHECK(text_edit->get_caret_count() == 2);
 
-	// 	caret_index_get_order.write[0] = 0;
-	// 	caret_index_get_order.write[1] = 1;
-	// CHECK(text_edit->get_caret_index_edit_order() == caret_index_get_order);
-	// }
+		sorted_carets.write[0] = 1;
+		sorted_carets.write[1] = 0;
+		CHECK(text_edit->get_sorted_carets() == sorted_carets);
+	}
 
 	SUBCASE("[TextEdit] add caret at carets") {
 		text_edit->remove_secondary_carets();
