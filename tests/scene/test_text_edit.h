@@ -330,7 +330,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->swap_lines(1, 0);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "swap\ntesting");
-			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args); // todo impl
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_set");
@@ -511,7 +511,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "temidsting\nswap");
 			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_caret_column() == 5); // todo caret move double?
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
@@ -622,6 +622,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column() == 9);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
+			// Cannot select when disabled.
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(0);
 			text_edit->set_selecting_enabled(false);
@@ -703,6 +704,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selected_text() == "test\ntest");
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			text_edit->select_word_under_caret();
 			CHECK_FALSE(text_edit->has_selection());
@@ -840,6 +842,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "t");
+			CHECK(text_edit->is_selection_direction_right());
 
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT | KeyModifierMask::ALT)
@@ -848,10 +851,12 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 #endif
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "test");
+			CHECK(text_edit->is_selection_direction_right());
 
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "tes");
+			CHECK(text_edit->is_selection_direction_right());
 
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT | KeyModifierMask::ALT)
@@ -872,11 +877,13 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "t");
+			CHECK_FALSE(text_edit->is_selection_direction_right());
 
 			SEND_GUI_KEY_EVENT(Key::LEFT)
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "");
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT)
 			CHECK_FALSE(text_edit->has_selection());
@@ -885,13 +892,14 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		}
 
 		SUBCASE("[TextEdit] mouse drag select") {
-			/* Set size for mouse input. */
+			// Set size for mouse input.
 			text_edit->set_size(Size2(200, 200));
 
 			text_edit->set_text("this is some text\nfor selection");
 			text_edit->grab_focus();
 			MessageQueue::get_singleton()->flush();
 
+			// Click and drag to make a selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 1), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->has_selection());
@@ -903,10 +911,13 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 5);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->is_selection_direction_right());
 
+			// Clicking clears selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 9), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 1), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButtonMask::LEFT, Key::NONE);
@@ -917,13 +928,14 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		}
 
 		SUBCASE("[TextEdit] mouse word select") {
-			/* Set size for mouse input. */
+			// Set size for mouse input.
 			text_edit->set_size(Size2(200, 200));
 
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
+			// Double click to select word.
 			SEND_GUI_DOUBLE_CLICK(text_edit->get_pos_at_line_column(0, 2), Key::NONE);
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "for");
@@ -934,6 +946,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 3);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 3);
+			CHECK(text_edit->is_selection_direction_right());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButtonMask::LEFT, Key::NONE);
@@ -946,13 +959,16 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 13);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 13);
+			CHECK(text_edit->is_selection_direction_right());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
+			// Clicking clears selection.
 			Point2i line_0 = text_edit->get_pos_at_line_column(0, 0);
 			line_0.y /= 2;
 			SEND_GUI_MOUSE_BUTTON_EVENT(line_0, MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			SEND_GUI_DOUBLE_CLICK(text_edit->get_pos_at_line_column(0, 2), Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
@@ -962,16 +978,17 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		}
 
 		SUBCASE("[TextEdit] mouse line select") {
-			/* Set size for mouse input. */
+			// Set size for mouse input.
 			text_edit->set_size(Size2(200, 200));
 
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
 
+			// Triple click to select line.
 			SEND_GUI_DOUBLE_CLICK(text_edit->get_pos_at_line_column(0, 2), Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 2), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == "for selection");
+			CHECK(text_edit->get_selected_text() == "for selection"); // todo last line so no \n?
 			CHECK(text_edit->get_selection_mode() == TextEdit::SELECTION_MODE_LINE);
 			CHECK(text_edit->get_selection_from_line() == 1);
 			CHECK(text_edit->get_selection_from_column() == 0);
@@ -979,12 +996,15 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 13);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(text_edit->is_selection_direction_right());
 
+			// Clicking clears selection.
 			Point2i line_0 = text_edit->get_pos_at_line_column(0, 0);
 			line_0.y /= 2;
 			SEND_GUI_MOUSE_BUTTON_EVENT(line_0, MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			SEND_GUI_DOUBLE_CLICK(text_edit->get_pos_at_line_column(0, 2), Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 2), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -995,12 +1015,13 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		}
 
 		SUBCASE("[TextEdit] mouse shift click select") {
-			/* Set size for mouse input. */
+			// Set size for mouse input.
 			text_edit->set_size(Size2(200, 200));
 
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
 
+			// Shift click to make a selection from the previos caret position.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE | KeyModifierMask::SHIFT);
 			CHECK(text_edit->has_selection());
@@ -1012,10 +1033,13 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 5);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->is_selection_direction_right());
 
+			// Clicking clears selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 9), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE | KeyModifierMask::SHIFT);
@@ -1029,40 +1053,89 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
 
+			// todo origin and direction checks in here.
+
+			// Select clamps input to full text.
 			text_edit->select(-1, -1, 500, 500);
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
+			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 0);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 13);
+			CHECK(text_edit->get_selection_from_line(0) == text_edit->get_selection_origin_line(0));
+			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_selection_origin_column(0));
+			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_caret_line(0));
+			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_caret_column(0));
 
 			text_edit->deselect();
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Select works in the other direction.
 			text_edit->select(500, 500, -1, -1);
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 13);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_selection_from_line(0) == text_edit->get_caret_line(0));
+			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_caret_column(0));
+			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_selection_origin_line(0));
+			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_selection_origin_column(0));
 
 			text_edit->deselect();
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Select part of a line.
 			text_edit->select(0, 4, 0, 8);
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
+			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 4);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 8);
+			CHECK(text_edit->get_selection_from_line(0) == text_edit->get_selection_origin_line(0));
+			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_selection_origin_column(0));
+			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_caret_line(0));
+			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_caret_column(0));
 
 			text_edit->deselect();
 			CHECK_FALSE(text_edit->has_selection());
 
+			// Select part of a line in the other direction.
 			text_edit->select(0, 8, 0, 4);
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 8);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			CHECK(text_edit->get_selection_from_line(0) == text_edit->get_caret_line(0));
+			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_caret_column(0));
+			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_selection_origin_line(0));
+			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_selection_origin_column(0));
 
+			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			CHECK_FALSE(text_edit->has_selection());
 			text_edit->select(0, 8, 0, 4);
 			CHECK_FALSE(text_edit->has_selection());
 			text_edit->set_selecting_enabled(true);
+		}
 
+		SUBCASE("[TextEdit] delete selection") {
+			text_edit->set_text("this is some text\nfor selection");
+			MessageQueue::get_singleton()->flush();
+
+			// Delete selection does nothing if not selected.
 			text_edit->select(0, 8, 0, 4);
 			CHECK(text_edit->has_selection());
-			SEND_GUI_ACTION("ui_text_caret_right");
+			SEND_GUI_ACTION("ui_text_caret_right"); // todo unrelated?
 			CHECK_FALSE(text_edit->has_selection());
 
 			text_edit->delete_selection();
@@ -1070,19 +1143,25 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 
-			text_edit->select(0, 8, 0, 4);
+			// Backspace removes selection.
+			text_edit->select(0, 4, 0, 8);
 			CHECK(text_edit->has_selection());
 			SEND_GUI_ACTION("ui_text_backspace");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
 
+			// Undo restores previous selection.
 			text_edit->undo();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 4);
 
+			// Redo restores caret.
 			text_edit->redo();
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
@@ -1095,19 +1174,26 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 
-			text_edit->select(0, 8, 0, 4);
+			text_edit->select(0, 4, 0, 8);
 			CHECK(text_edit->has_selection());
 
+			// Delete selection removes text, deselects, and moves caret.
 			text_edit->delete_selection();
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
 
+			// Undo delete works.
 			text_edit->undo();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 4);
 
+			// Redo delete works.
 			text_edit->redo();
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
@@ -1120,12 +1206,14 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 
+			// Can still delete if not editable.
 			text_edit->set_editable(false);
 			text_edit->delete_selection();
 			text_edit->set_editable(false);
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
 
+			// Cannot undo since it was not editable.
 			text_edit->undo();
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
@@ -1154,6 +1242,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->get_viewport()->gui_is_dragging());
 			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag me");
+			// todo check to make sure original caret was not moved.
 
 			line_0 = target_text_edit->get_pos_at_line_column(0, 0);
 			line_0.y /= 2;
@@ -1199,12 +1288,14 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
+			// Cannot backspace at start of text.
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
+			// Backspace at start of line removes the line.
 			text_edit->set_caret_line(2);
 			text_edit->set_caret_column(0);
 			MessageQueue::get_singleton()->flush();
@@ -1222,6 +1313,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Backspace removes a character.
 			((Array)lines_edited_args[0])[0] = 1;
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
@@ -1233,6 +1325,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Backspace when text is selected removes the selection.
 			text_edit->end_complex_operation();
 			text_edit->select(1, 0, 1, 3);
 			text_edit->backspace();
@@ -1245,6 +1338,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Cannot backspace if not editable.
 			text_edit->set_editable(false);
 			text_edit->backspace();
 			text_edit->set_editable(true);
@@ -1257,6 +1351,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
+			// Undo restores text to the previous end of complex operation.
 			text_edit->undo();
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "this is\nsom");
@@ -1278,6 +1373,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
+			// Cut without a selection removes the entire line.
 			ERR_PRINT_OFF;
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
@@ -1291,6 +1387,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Undo restores the cut text.
 			((Array)lines_edited_args[0])[0] = 0;
 			((Array)lines_edited_args[0])[1] = 1;
 			text_edit->undo();
@@ -1302,6 +1399,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Redo.
 			((Array)lines_edited_args[0])[0] = 1;
 			((Array)lines_edited_args[0])[1] = 0;
 			text_edit->redo();
@@ -1313,6 +1411,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Cut with a selection removes just the selection.
 			text_edit->set_text("this is\nsome\n");
 			MessageQueue::get_singleton()->flush();
 
@@ -1335,6 +1434,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
+			// Cut does not change the text if not editable.
 			text_edit->set_editable(false);
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
@@ -1345,6 +1445,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// todo cut on single line, and multiple carets.
 		}
 
 		SUBCASE("[TextEdit] copy") {
@@ -2541,7 +2643,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Normal right should deselect and place at selection start.
+			// Normal right should deselect and place at selection end.
 			SEND_GUI_ACTION("ui_text_caret_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
 			CHECK(text_edit->get_caret_line() == 0);
@@ -3540,6 +3642,124 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		sorted_carets.write[0] = 1;
 		sorted_carets.write[1] = 0;
 		CHECK(text_edit->get_sorted_carets() == sorted_carets);
+	}
+
+	SUBCASE("[TextEdit] merge carets") {
+		text_edit->set_text("this is some text\nfor selection");
+		MessageQueue::get_singleton()->flush();
+
+		// Don't merge carets that are not overlapping.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret(0, 6);
+		text_edit->add_caret(1, 6);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 0);
+		CHECK(text_edit->get_caret_column(1) == 6);
+		CHECK(text_edit->get_caret_line(2) == 1);
+		CHECK(text_edit->get_caret_column(2) == 6);
+
+		// Don't merge selections that are not overlapping.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret(0, 2);
+		text_edit->add_caret(1, 4);
+		text_edit->select(0, 4, 1, 2, 0);
+		text_edit->select(0, 2, 0, 3, 1);
+		text_edit->select(1, 4, 1, 8, 2);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->has_selection(1));
+		CHECK(text_edit->has_selection(2));
+
+		// Don't merge selections that are only touching.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret(1, 2);
+		text_edit->select(0, 4, 1, 2, 0);
+		text_edit->select(1, 2, 1, 5, 1);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->has_selection(1));
+
+		// Merge carets into selection.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(3);
+		text_edit->add_caret(0, 2);
+		text_edit->add_caret(1, 4);
+		text_edit->add_caret(1, 8);
+		text_edit->add_caret(1, 10);
+		text_edit->select(0, 2, 1, 8, 0);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_from_line(0) == 0);
+		CHECK(text_edit->get_selection_from_column(0) == 2);
+		CHECK(text_edit->get_selection_to_line(0) == 1);
+		CHECK(text_edit->get_selection_to_column(0) == 8);
+		CHECK_FALSE(text_edit->has_selection(1));
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 10);
+
+		// Merge partially overlapping selections.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(1);
+		text_edit->add_caret(0, 2);
+		text_edit->add_caret(0, 3);
+		text_edit->select(0, 2, 0, 6, 0);
+		text_edit->select(0, 4, 1, 3, 1);
+		text_edit->select(1, 0, 1, 5, 2);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_from_line(0) == 0);
+		CHECK(text_edit->get_selection_from_column(0) == 2);
+		CHECK(text_edit->get_selection_to_line(0) == 1);
+		CHECK(text_edit->get_selection_to_column(0) == 5);
+
+		// Merge smaller overlapping selection into a bigger one.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(1);
+		text_edit->add_caret(0, 2);
+		text_edit->add_caret(0, 3);
+		text_edit->select(0, 2, 0, 6, 0);
+		text_edit->select(0, 8, 1, 3, 1);
+		text_edit->select(0, 2, 1, 5, 2);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_from_line(0) == 0);
+		CHECK(text_edit->get_selection_from_column(0) == 2);
+		CHECK(text_edit->get_selection_to_line(0) == 1);
+		CHECK(text_edit->get_selection_to_column(0) == 5);
+
+		// Merge equal overlapping selections.
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(1);
+		text_edit->add_caret(0, 2);
+		text_edit->select(0, 2, 1, 6, 0);
+		text_edit->select(0, 2, 1, 6, 1);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_from_line(0) == 0);
+		CHECK(text_edit->get_selection_from_column(0) == 2);
+		CHECK(text_edit->get_selection_to_line(0) == 1);
+		CHECK(text_edit->get_selection_to_column(0) == 6);
+	}
+
+	SUBCASE("[TextEdit] collapse carets") { // ?
 	}
 
 	SUBCASE("[TextEdit] add caret at carets") {

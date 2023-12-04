@@ -1700,11 +1700,10 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				int line = pos.y;
 				int col = pos.x;
 
-				// Apply and Close IME.
-				if (has_ime_text()) {
-					_apply_ime();
-				}
+				// Apply and close IME.
+				_apply_ime();
 
+				// Gutters.
 				int left_margin = theme_cache.style_normal->get_margin(SIDE_LEFT);
 				for (int i = 0; i < gutters.size(); i++) {
 					if (!gutters[i].draw || gutters[i].width <= 0) {
@@ -1733,20 +1732,23 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				int prev_col = get_caret_column(caret);
 				int prev_line = get_caret_line(caret);
 
+				int mouse_over_selection_caret = get_selection_at(line, col, true);
+
 				const int triple_click_timeout = 600;
 				const int triple_click_tolerance = 5;
 				bool is_triple_click = (!mb->is_double_click() && (OS::get_singleton()->get_ticks_msec() - last_dblclk) < triple_click_timeout && mb->get_position().distance_to(last_dblclk_pos) < triple_click_tolerance);
 
-				if (!mb->is_double_click() && !is_triple_click) {
+				// todo test selecting off
+				if (!mb->is_double_click() && !is_triple_click || !selecting_enabled) {
 					if (mb->is_alt_pressed()) {
 						prev_line = line;
 						prev_col = col;
 
-						// Remove caret at clicked location.// todo
+						// Remove caret at clicked location.
 						if (get_caret_count() > 1) {
 							for (int i = 0; i < get_caret_count(); i++) {
 								// Deselect if clicked on caret or its selection.
-								if ((get_caret_column(i) == col && get_caret_line(i) == line) || is_mouse_over_selection(true, i)) {
+								if (selection_contains(i, line, col, true, false)) {
 									remove_caret(i);
 									last_dblclk = 0;
 									return;
@@ -1754,7 +1756,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 							}
 						}
 
-						if (is_mouse_over_selection()) {
+						if (mouse_over_selection_caret >= 0) {
+							// Did not remove selection under mouse, don't add a new caret.
 							return;
 						}
 
@@ -1764,50 +1767,54 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 							return;
 						}
 
-						last_dblclk = 0;
-					} else if (!mb->is_shift_pressed() && !is_mouse_over_selection()) {
+						last_dblclk = 0; // todo look into this
+					} else if (!mb->is_shift_pressed() && mouse_over_selection_caret == -1) {
+						// A regular click clears all other carets.
 						caret = 0;
 						remove_secondary_carets();
+						deselect();
+						mouse_over_selection_caret = -1;
+					} else if (!mb->is_shift_pressed() && drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
+						// Try to drag and drop.
+						// Don't update cursor until we know if it is a drag and drop attempt.
+						set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
+						selection_drag_attempt = true;
+						// todo index may change, position instead?
+						drag_and_drop_origin_caret_index = mouse_over_selection_caret;
+						last_dblclk = 0;
+						return;
 					}
-				}
 
-				if (!is_triple_click && !mb->is_double_click() && drag_and_drop_selection_enabled && is_mouse_over_selection()) {
-					// Don't update cursor until we know if it is a drag and drop attempt.
-					set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
-					selection_drag_attempt = true;
-					return;
-				}
+					set_caret_line(line, false, true, -1, caret);
+					set_caret_column(col, false, caret);
+					selection_drag_attempt = false;
 
-				set_caret_line(line, false, true, -1, caret);
-				set_caret_column(col, false, caret);
-				selection_drag_attempt = false;
-
-				if (selecting_enabled && mb->is_shift_pressed() && (get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line)) {
-					if (!has_selection(caret)) {
-						set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
-						select(prev_line, prev_col, line, col, caret);
+					if (selecting_enabled && mb->is_shift_pressed() && (get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line)) {
+						// Select from the old cursor.
+						if (!has_selection(caret)) {
+							select(prev_line, prev_col, line, col, caret);
+						}
+					} else if (caret == 0) { // todo any caret? needed?
+						// ? happens when mouse is not over a selection and not pressing shift and there is one caret
+						deselect();
 					}
-					merge_overlapping_carets();
-				} else if (caret == 0) {
-					deselect();
-					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
-				} else {
-					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
-				}
 
-				if (is_triple_click) {
+					// Regular selection mode.
+					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
+					_update_selection_mode_pointer(true);
+				} else if (is_triple_click) {
 					// Triple-click select line.
 					set_selection_mode(SelectionMode::SELECTION_MODE_LINE);
-					_update_selection_mode_line();
+					_update_selection_mode_line(true);
 					last_dblclk = 0;
-				} else if (mb->is_double_click() && text[get_caret_line(caret)].length()) {
+				} else if (mb->is_double_click()) {
 					// Double-click select word.
-					set_selection_mode(SelectionMode::SELECTION_MODE_WORD);
-					_update_selection_mode_word();
+					set_selection_mode(SelectionMode::SELECTION_MODE_WORD); // todo auto set in the update mode?
+					_update_selection_mode_word(true);
 					last_dblclk = OS::get_singleton()->get_ticks_msec();
 					last_dblclk_pos = mb->get_position();
 				}
-				queue_redraw();
+				queue_redraw(); // todo
 			}
 
 			if (is_middle_mouse_paste_enabled() && mb->get_button_index() == MouseButton::MIDDLE && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
@@ -1866,15 +1873,14 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 			if (mb->get_button_index() == MouseButton::LEFT) {
 				if (!drag_action && selection_drag_attempt && is_mouse_over_selection()) {
-					// This is not a drag and drop attempt.
+					// This is not a drag and drop attempt, update the cursor.
 					selection_drag_attempt = false;
 					remove_secondary_carets();
+					deselect();
 
 					Point2i pos = get_line_column_at_pos(get_local_mouse_pos());
 					set_caret_line(pos.y, false, true, -1, 0);
 					set_caret_column(pos.x, true, 0);
-
-					deselect();
 				}
 				dragging_minimap = false;
 				dragging_selection = false;
@@ -2573,24 +2579,24 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 			continue;
 		}
 
-		int caret_idx = i; //caret_edit_order[i];
-		if (get_caret_column(caret_idx) == 0 && get_caret_line(caret_idx) == 0 && !has_selection(caret_idx)) {
+		int caret_index = i; //caret_edit_order[i];
+		if (get_caret_column(caret_index) == 0 && get_caret_line(caret_index) == 0 && !has_selection(caret_index)) {
 			continue;
 		}
 
-		if (has_selection(caret_idx) || (!p_all_to_left && !p_word) || get_caret_column(caret_idx) == 0) {
-			backspace(caret_idx);
+		if (has_selection(caret_index) || (!p_all_to_left && !p_word) || get_caret_column(caret_index) == 0) {
+			backspace(caret_index);
 			continue;
 		}
 
 		if (p_all_to_left) {
 			// Delete everything to left of caret.
-			int caret_current_column = get_caret_column(caret_idx);
-			set_caret_column(0, caret_idx == 0, caret_idx);
-			_remove_text(get_caret_line(caret_idx), 0, get_caret_line(caret_idx), caret_current_column);
+			int caret_current_column = get_caret_column(caret_index);
+			set_caret_column(0, caret_index == 0, caret_index);
+			_remove_text(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
 
-			collapse_carets(get_caret_line(caret_idx), 0, get_caret_line(caret_idx), caret_current_column);
-			offset_carets_after(get_caret_line(caret_idx), caret_current_column, get_caret_line(caret_idx), 0);
+			collapse_carets(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
+			offset_carets_after(get_caret_line(caret_index), caret_current_column, get_caret_line(caret_index), 0);
 			continue;
 		}
 
@@ -2598,16 +2604,16 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 			// Delete next word to left of caret.
 
 			// Save columns here as the caret may change when resolving overlaps.
-			int from_column = get_caret_column(caret_idx);
-			int column = get_caret_column(caret_idx);
+			int from_column = get_caret_column(caret_index);
+			int column = get_caret_column(caret_index);
 			// Check for the case "<word><space><caret>" and ignore the space.
 			// No need to check for column being 0 since it is checked above.
-			if (is_whitespace(text[get_caret_line(caret_idx)][get_caret_column(caret_idx) - 1])) {
+			if (is_whitespace(text[get_caret_line(caret_index)][get_caret_column(caret_index) - 1])) {
 				column -= 1;
 			}
 
 			// Get a list with the indices of the word bounds of the given text line.
-			const PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(get_caret_line(caret_idx))->get_rid());
+			const PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(get_caret_line(caret_index))->get_rid());
 			if (words.is_empty() || column <= words[0]) {
 				// If "words" is empty, meaning no words are left, we can remove everything until the beginning of the line.
 				column = 0;
@@ -2621,12 +2627,12 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 				}
 			}
 
-			_remove_text(get_caret_line(caret_idx), column, get_caret_line(caret_idx), from_column);
+			_remove_text(get_caret_line(caret_index), column, get_caret_line(caret_index), from_column);
 
-			collapse_carets(get_caret_line(caret_idx), column, get_caret_line(caret_idx), from_column);
-			set_caret_line(get_caret_line(caret_idx), false, true, -1, caret_idx);
-			set_caret_column(column, caret_idx == 0, caret_idx);
-			offset_carets_after(get_caret_line(caret_idx), from_column, get_caret_line(caret_idx), column);
+			collapse_carets(get_caret_line(caret_index), column, get_caret_line(caret_index), from_column);
+			set_caret_line(get_caret_line(caret_index), false, true, -1, caret_index);
+			set_caret_column(column, caret_index == 0, caret_index);
+			offset_carets_after(get_caret_line(caret_index), from_column, get_caret_line(caret_index), column);
 		}
 	}
 
@@ -2645,32 +2651,32 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
-		int caret_idx = i;
-		if (has_selection(caret_idx)) {
-			delete_selection(caret_idx);
+		int caret_index = i;
+		if (has_selection(caret_index)) {
+			delete_selection(caret_index);
 			continue;
 		}
-		int curline_len = text[get_caret_line(caret_idx)].length();
+		int curline_len = text[get_caret_line(caret_index)].length();
 
-		if (get_caret_line(caret_idx) == text.size() - 1 && get_caret_column(caret_idx) == curline_len) {
+		if (get_caret_line(caret_index) == text.size() - 1 && get_caret_column(caret_index) == curline_len) {
 			continue; // Last line, last column: Nothing to do.
 		}
 
-		int next_line = get_caret_column(caret_idx) < curline_len ? get_caret_line(caret_idx) : get_caret_line(caret_idx) + 1;
+		int next_line = get_caret_column(caret_index) < curline_len ? get_caret_line(caret_index) : get_caret_line(caret_index) + 1;
 		int next_column;
 
 		if (p_all_to_right) {
-			if (get_caret_column(caret_idx) == curline_len) {
+			if (get_caret_column(caret_index) == curline_len) {
 				continue;
 			}
 
 			// Delete everything to right of caret.
 			next_column = curline_len;
-			next_line = get_caret_line(caret_idx);
-		} else if (p_word && get_caret_column(caret_idx) < curline_len - 1) {
+			next_line = get_caret_line(caret_index);
+		} else if (p_word && get_caret_column(caret_index) < curline_len - 1) {
 			// Delete next word to right of caret.
-			int line = get_caret_line(caret_idx);
-			int column = get_caret_column(caret_idx);
+			int line = get_caret_line(caret_index);
+			int column = get_caret_column(caret_index);
 
 			PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(line)->get_rid());
 			for (int j = 1; j < words.size(); j = j + 2) {
@@ -2685,15 +2691,15 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 		} else {
 			// Delete one character.
 			if (caret_mid_grapheme_enabled) {
-				next_column = get_caret_column(caret_idx) < curline_len ? (get_caret_column(caret_idx) + 1) : 0;
+				next_column = get_caret_column(caret_index) < curline_len ? (get_caret_column(caret_index) + 1) : 0;
 			} else {
-				next_column = get_caret_column(caret_idx) < curline_len ? TS->shaped_text_next_character_pos(text.get_line_data(get_caret_line(caret_idx))->get_rid(), (get_caret_column(caret_idx))) : 0;
+				next_column = get_caret_column(caret_index) < curline_len ? TS->shaped_text_next_character_pos(text.get_line_data(get_caret_line(caret_index))->get_rid(), (get_caret_column(caret_index))) : 0;
 			}
 		}
 
-		_remove_text(get_caret_line(caret_idx), get_caret_column(caret_idx), next_line, next_column);
-		collapse_carets(get_caret_line(caret_idx), get_caret_column(caret_idx), next_line, next_column, caret_idx);
-		offset_carets_after(next_line, next_column, get_caret_line(caret_idx), get_caret_column(caret_idx));
+		_remove_text(get_caret_line(caret_index), get_caret_column(caret_index), next_line, next_column);
+		collapse_carets(get_caret_line(caret_index), get_caret_column(caret_index), next_line, next_column, caret_index);
+		offset_carets_after(next_line, next_column, get_caret_line(caret_index), get_caret_column(caret_index));
 	}
 
 	end_action();
@@ -3332,7 +3338,7 @@ void TextEdit::set_line(int p_line, const String &p_new_text) {
 	int new_line, new_column;
 	_insert_text(p_line, 0, p_new_text, &new_line, &new_column);
 
-	offset_carets_after(p_line, old_column, new_line, new_column);
+	offset_carets_after(p_line, old_column + 1, new_line, new_column + 1);
 
 	if (keep_carets_visually) {
 		// Set the caret lines to update the column to match visually.
@@ -3457,7 +3463,7 @@ void TextEdit::insert_line_at(int p_line, const String &p_text) {
 
 	offset_carets_after(p_line, 0, new_line, new_column);
 
-	// todo this for all?
+	// todo this for all? or part of multicaret edit?
 	// Need to apply the adjustments to the undo / redo carets.
 	current_op.end_carets = carets;
 	queue_redraw();
@@ -3489,7 +3495,7 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 			}
 		}
 	}
-	offset_carets_after(next_line, next_col, p_line, 0); // todo don't include oldcol? p_offset_old
+	offset_carets_after(next_line, next_col, p_line, 0);
 }
 
 void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
@@ -4532,16 +4538,14 @@ bool TextEdit::is_dragging_cursor() const {
 bool TextEdit::is_mouse_over_selection(bool p_edges, int p_caret) const {
 	Point2i pos = get_line_column_at_pos(get_local_mouse_pos());
 	int line = pos.y;
-	int col = pos.x;
-
-	// todo return the index?
+	int column = pos.x;
 
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (p_caret != -1 && p_caret != i) {
 			continue;
 		}
 
-		if (selection_contains(i, line, col, p_edges)) {
+		if (selection_contains(i, line, column, p_edges)) {
 			return true;
 		}
 	}
@@ -4672,9 +4676,14 @@ void TextEdit::remove_caret(int p_caret) {
 }
 
 void TextEdit::remove_secondary_carets() {
+	if (get_caret_count() == 1) {
+		return;
+	}
+
 	_caret_changed();
 	Caret drag_caret;
 	if (drag_caret_index >= 0) {
+		// todo cancel drag instead?
 		drag_caret = carets[drag_caret_index];
 	}
 
@@ -4856,7 +4865,7 @@ void TextEdit::offset_carets_after(int p_old_line, int p_old_column, int p_new_l
 	if (edit_height == 0 && edit_size == 0) {
 		return;
 	}
-
+	// todo don't include oldcol? p_offset_old
 	// todo at or after when removing, only after when inserting?
 	// Intentionally includes carets in the multicaret_edit_ignore list.
 	for (int i = 0; i < carets.size(); i++) {
@@ -5076,8 +5085,6 @@ void TextEdit::merge_overlapping_carets() {
 
 	// Clear the queue and ignore list.
 	multicaret_edit_merge_queued = false;
-
-	// todo? just remove the ones removed?
 	multicaret_edit_ignore_carets.clear();
 }
 
@@ -5237,7 +5244,7 @@ int TextEdit::get_caret_wrap_index(int p_caret) const {
 }
 
 String TextEdit::get_word_under_caret(int p_caret) const {
-	ERR_FAIL_COND_V(p_caret >= carets.size(), "");
+	ERR_FAIL_COND_V(p_caret >= carets.size() || p_caret < -1, "");
 
 	StringBuilder selected_text;
 	for (int c = 0; c < carets.size(); c++) {
@@ -5415,26 +5422,20 @@ void TextEdit::select(int p_origin_line, int p_origin_column, int p_caret_line, 
 	p_caret_column = CLAMP(p_caret_column, 0, text[p_caret_line].length());
 	bool activate = p_origin_line != p_caret_line || p_origin_column != p_caret_column;
 
+	if (has_selection(p_caret) != activate) {
+		_selection_changed(p_caret);
+	}
+
 	carets.write[p_caret].selection.active = activate;
-
-	if (!activate) {
-		return;
-	}
-
-	if (p_origin_line == get_selection_origin_line(p_caret) && p_origin_column == get_selection_origin_column(p_caret) && p_caret_line == get_caret_line(p_caret) && p_caret_column == get_caret_column(p_caret) && activate == has_selection(p_caret)) {
-		return;
-	}
 
 	set_caret_line(p_caret_line, false, true, -1, p_caret);
 	set_caret_column(p_caret_column, false, p_caret);
 	set_selection_origin_line(p_origin_line, p_caret);
 	set_selection_origin_column(p_origin_column, p_caret);
-
-	_selection_changed(p_caret);
 }
 
 bool TextEdit::has_selection(int p_caret) const {
-	ERR_FAIL_COND_V(p_caret >= carets.size(), false);
+	ERR_FAIL_COND_V(p_caret >= carets.size() || p_caret < -1, false);
 	if (p_caret >= 0) {
 		return carets[p_caret].selection.active;
 	}
@@ -5447,20 +5448,20 @@ bool TextEdit::has_selection(int p_caret) const {
 }
 
 String TextEdit::get_selected_text(int p_caret) {
-	ERR_FAIL_COND_V(p_caret >= carets.size(), "");
+	ERR_FAIL_COND_V(p_caret >= carets.size() || p_caret < -1, "");
 
 	StringBuilder selected_text;
 	Vector<int> sorted_carets = get_sorted_carets();
 	for (int i = 0; i < sorted_carets.size(); i++) {
-		int caret_idx = sorted_carets[i];
-		if (p_caret != -1 && p_caret != caret_idx) {
+		int caret_index = sorted_carets[i];
+		if (p_caret != -1 && p_caret != caret_index) {
 			continue;
 		}
 
-		if (!has_selection(caret_idx)) {
+		if (!has_selection(caret_index)) {
 			continue;
 		}
-		selected_text += _base_get_text(get_selection_from_line(caret_idx), get_selection_from_column(caret_idx), get_selection_to_line(caret_idx), get_selection_to_column(caret_idx));
+		selected_text += _base_get_text(get_selection_from_line(caret_index), get_selection_from_column(caret_index), get_selection_to_line(caret_index), get_selection_to_column(caret_index));
 		if (p_caret == -1 && i != sorted_carets.size() - 1) {
 			selected_text += "\n";
 		}
@@ -5479,7 +5480,7 @@ bool TextEdit::selection_contains(int p_caret, int p_line, int p_column, bool p_
 
 // returns the caret index.
 int TextEdit::get_selection_at(int p_line, int p_column, bool p_include_edges) const {
-	for (int i = 0; i < carets.size(); i++) {
+	for (int i = 0; i < carets.size(); i++) { // todo needs drag caret?
 		if (selection_contains(i, p_line, p_column, p_include_edges, true)) {
 			return i;
 		}
@@ -5523,8 +5524,10 @@ Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bo
 }
 
 void TextEdit::set_selection_origin_line(int p_line, int p_caret, int p_wrap_index) {
+	if (!selecting_enabled) {
+		return;
+	}
 	ERR_FAIL_INDEX(p_caret, carets.size());
-	ERR_FAIL_COND(!has_selection(p_caret));
 	ERR_FAIL_INDEX(p_line, text.size());
 
 	bool caret_moved = get_selection_origin_line() != p_line;
@@ -5558,8 +5561,10 @@ void TextEdit::set_selection_origin_line(int p_line, int p_caret, int p_wrap_ind
 }
 
 void TextEdit::set_selection_origin_column(int p_column, int p_caret) {
+	if (!selecting_enabled) {
+		return;
+	}
 	ERR_FAIL_INDEX(p_caret, carets.size());
-	ERR_FAIL_COND(!has_selection(p_caret));
 
 	p_column = CLAMP(p_column, 0, get_line(get_selection_origin_line(p_caret)).length());
 
@@ -5576,13 +5581,11 @@ void TextEdit::set_selection_origin_column(int p_column, int p_caret) {
 
 int TextEdit::get_selection_origin_line(int p_caret) const {
 	ERR_FAIL_INDEX_V(p_caret, carets.size(), -1);
-	ERR_FAIL_COND_V(!has_selection(p_caret), -1);
 	return carets[p_caret].selection.origin_line;
 }
 
 int TextEdit::get_selection_origin_column(int p_caret) const {
 	ERR_FAIL_INDEX_V(p_caret, carets.size(), -1);
-	ERR_FAIL_COND_V(!has_selection(p_caret), -1);
 	return carets[p_caret].selection.origin_column;
 }
 
@@ -7149,12 +7152,12 @@ void TextEdit::_copy_internal(int p_caret) {
 	StringBuilder clipboard;
 	Vector<int> sorted_carets = get_sorted_carets();
 	for (int i = 0; i < get_caret_count(); i++) {
-		int caret_idx = sorted_carets[i];
-		if (p_caret != -1 && p_caret != caret_idx) {
+		int caret_index = sorted_carets[i];
+		if (p_caret != -1 && p_caret != caret_index) {
 			continue;
 		}
 
-		int cl = get_caret_line(caret_idx);
+		int cl = get_caret_line(caret_index);
 		if (text[cl].length() != 0) {
 			clipboard += _base_get_text(cl, 0, cl, text[cl].length());
 			clipboard += "\n";
@@ -7550,6 +7553,10 @@ void TextEdit::_cancel_drag_and_drop_text() {
 
 /* Selection */
 void TextEdit::_selection_changed(int p_caret) {
+	if (!selecting_enabled) {
+		return;
+	}
+
 	_cancel_drag_and_drop_text();
 	queue_redraw();
 
@@ -7592,34 +7599,38 @@ void TextEdit::_click_selection_held() {
 	}
 }
 
-void TextEdit::_update_selection_mode_pointer() {
+void TextEdit::_update_selection_mode_pointer(bool p_initial) {
 	dragging_selection = true;
 	Point2 mp = get_local_mouse_pos();
 
 	Point2i pos = get_line_column_at_pos(mp);
 	int line = pos.y;
-	int col = pos.x;
-	int caret_idx = get_caret_count() - 1;
+	int column = pos.x;
+	int caret_index = get_caret_count() - 1;
 
-	select(carets[caret_idx].selection.origin_line, carets[caret_idx].selection.origin_column, line, col, caret_idx);
+	if (p_initial && !has_selection(caret_index)) {
+		set_selection_origin_line(line, caret_index);
+		set_selection_origin_column(column, caret_index);
+	} else {
+		select(get_selection_origin_line(caret_index), get_selection_origin_column(caret_index), line, column, caret_index);
+	}
 
 	click_select_held->start();
 	merge_overlapping_carets();
 }
 
-void TextEdit::_update_selection_mode_word() {
+void TextEdit::_update_selection_mode_word(bool p_initial) {
 	dragging_selection = true;
 	Point2 mp = get_local_mouse_pos();
 
 	Point2i pos = get_line_column_at_pos(mp);
 	int line = pos.y;
-	int col = pos.x;
-	int caret_idx = get_caret_count() - 1;
+	int column = pos.x;
+	int caret_index = get_caret_count() - 1;
 
-	int caret_pos = CLAMP(col, 0, text[line].length());
+	int caret_pos = CLAMP(column, 0, text[line].length());
 	int beg = caret_pos;
 	int end = beg;
-	// todo make this a util function? maybe not seems its a problem with text server itself
 	PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(line)->get_rid());
 	for (int i = 0; i < words.size(); i = i + 2) {
 		if ((words[i] < caret_pos && words[i + 1] > caret_pos) || (i == words.size() - 2 && caret_pos == words[i + 1])) {
@@ -7629,14 +7640,19 @@ void TextEdit::_update_selection_mode_word() {
 		}
 	}
 
-	int origin_line = !has_selection() ? line : get_selection_origin_line();
-	bool is_new_selection_dir_right = line > origin_line || (line == origin_line && col > end);
-	// todo recalculate instead of storing with caret, this is the only place it's used. can't because selection origin would be changed... can have a word_origin? and recalc from that but...
-	int origin_col = is_new_selection_dir_right ? carets[caret_idx].selection.selected_word_beg : carets[caret_idx].selection.selected_word_end;
-	int caret_col = is_new_selection_dir_right ? end : beg;
+	if (p_initial && !has_selection(caret_index)) {
+		select(line, beg, line, end, caret_index);
+		carets.write[caret_index].selection.selected_word_beg = beg;
+		carets.write[caret_index].selection.selected_word_end = end;
+	} else {
+		int origin_line = get_selection_origin_line(caret_index);
+		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= carets[caret_index].selection.selected_word_beg);
+		int origin_col = is_new_selection_dir_right ? carets[caret_index].selection.selected_word_beg : carets[caret_index].selection.selected_word_end;
+		int caret_col = is_new_selection_dir_right ? end : beg;
 
-	select(origin_line, origin_col, line, caret_col, caret_idx);
-	adjust_viewport_to_caret(caret_idx); // todo check if in tree?
+		select(origin_line, origin_col, line, caret_col, caret_index);
+	}
+	adjust_viewport_to_caret(caret_index);
 
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
 		DisplayServer::get_singleton()->clipboard_set_primary(get_selected_text());
@@ -7646,23 +7662,22 @@ void TextEdit::_update_selection_mode_word() {
 	merge_overlapping_carets();
 }
 
-void TextEdit::_update_selection_mode_line() {
+void TextEdit::_update_selection_mode_line(bool p_initial) {
 	dragging_selection = true;
 	Point2 mp = get_local_mouse_pos();
 
 	Point2i pos = get_line_column_at_pos(mp);
 	int line = pos.y;
-	// int col = pos.x;
-	int caret_idx = get_caret_count() - 1;
+	int caret_index = get_caret_count() - 1;
 
-	int origin_line = !has_selection() ? line : get_selection_origin_line();
+	int origin_line = p_initial ? line : get_selection_origin_line();
 	bool line_below = line >= origin_line;
-	int origin_col = line_below ? 0 : get_line(line).length();
-	int caret_line = line_below ? line : line + 1;
+	int origin_col = line_below ? 0 : get_line(origin_line).length();
+	int caret_line = line_below ? line + 1 : line;
 	int caret_col = caret_line < text.size() ? 0 : get_line(text.size() - 1).length();
 
-	select(origin_line, origin_col, caret_line, caret_col, caret_idx);
-	adjust_viewport_to_caret(caret_idx);
+	select(origin_line, origin_col, caret_line, caret_col, caret_index);
+	adjust_viewport_to_caret(caret_index);
 
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
 		DisplayServer::get_singleton()->clipboard_set_primary(get_selected_text());
@@ -7677,13 +7692,14 @@ void TextEdit::_pre_shift_selection(int p_caret) {
 		return;
 	}
 
-	if (!has_selection(p_caret) || get_selection_mode() == SelectionMode::SELECTION_MODE_NONE) {
-		// Prepare selection to start at current caret position.
-		carets.write[p_caret].selection.active = true;
-		set_selection_origin_line(get_caret_line(p_caret), p_caret);
-		set_selection_origin_column(get_caret_column(p_caret), p_caret);
-	}
 	set_selection_mode(SelectionMode::SELECTION_MODE_SHIFT);
+	if (has_selection(p_caret)) {
+		return;
+	}
+	// Prepare selection to start at current caret position.
+	carets.write[p_caret].selection.active = true;
+	set_selection_origin_line(get_caret_line(p_caret), p_caret);
+	set_selection_origin_column(get_caret_column(p_caret), p_caret);
 }
 
 /* Line Wrapping */

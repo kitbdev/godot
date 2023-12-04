@@ -466,9 +466,9 @@ private:
 	void _emit_selection_changed();
 	void _click_selection_held();
 
-	void _update_selection_mode_pointer();
-	void _update_selection_mode_word();
-	void _update_selection_mode_line();
+	void _update_selection_mode_pointer(bool p_initial = false);
+	void _update_selection_mode_word(bool p_initial = false);
+	void _update_selection_mode_line(bool p_initial = false);
 
 	void _pre_shift_selection(int p_caret);
 
