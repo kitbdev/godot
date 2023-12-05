@@ -3419,11 +3419,11 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 	String to_line_text = get_line(p_to_line);
 	begin_complex_operation();
 	begin_multicaret_edit();
-	// Don't use set_line to avoid clamping and updating carets needlessly.
-	_remove_text(p_from_line, 0, p_from_line, text[p_from_line].length());
+	// Don't use set_line to avoid clamping and updating carets.
 	_remove_text(p_to_line, 0, p_to_line, text[p_to_line].length());
-	_insert_text(p_from_line, 0, to_line_text);
 	_insert_text(p_to_line, 0, from_line_text);
+	_remove_text(p_from_line, 0, p_from_line, text[p_from_line].length());
+	_insert_text(p_from_line, 0, to_line_text);
 
 	if (p_swap_carets) {
 		// Swap carets.
@@ -3519,11 +3519,10 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 		int new_line, new_column;
 		_insert_text(from_line, from_col, p_text, &new_line, &new_column);
 		_update_scrollbars(); // todo why? needed?
+		offset_carets_after(from_line, from_col, new_line, new_column);
 
 		set_caret_line(new_line, false, true, -1, i);
 		set_caret_column(new_column, i == 0, i);
-
-		offset_carets_after(from_line, from_col, new_line, new_column);
 	}
 
 	if (has_ime_text()) {
@@ -3564,7 +3563,7 @@ void TextEdit::remove_text(int p_from_line, int p_from_column, int p_to_line, in
 	end_complex_operation();
 }
 
-// todo use this everywhere set_line is used and in set_caret stuff, everywhere really
+// todo use this everywhere set_line is used and in set_caret stuff, everywhere really // or remove?
 void TextEdit::replace_text(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_grow_selection, bool p_insert_after_caret) {
 	//? to line and to column default to -1 = from line and column?
 	//? p_new_text default to String() ?
@@ -5346,7 +5345,9 @@ void TextEdit::select_word_under_caret(int p_caret) {
 		if (has_selection(c)) {
 			// Allow toggling selection by pressing the shortcut a second time.
 			// This is also usable as a general-purpose "deselect" shortcut after
-			// selecting anything
+			// selecting anything.
+			deselect(c);
+			continue;
 		}
 
 		int begin = 0;
@@ -5686,12 +5687,11 @@ void TextEdit::delete_selection(int p_caret) {
 		// todo not needed since selections cannot have carets in them...
 		// todo can selection ranges touch? then maybe...
 		collapse_carets(selection_from_line, selection_from_column, selection_to_line, selection_to_column, i);
+		offset_carets_after(selection_to_line, selection_to_column, selection_from_line, selection_from_column);
 
 		deselect(i);
 		set_caret_line(selection_from_line, false, false, -1, i);
 		set_caret_column(selection_from_column, i == 0, i);
-
-		offset_carets_after(selection_to_line, selection_to_column, selection_from_line, selection_from_column);
 	}
 	end_multicaret_edit();
 	end_complex_operation();
@@ -7100,11 +7100,10 @@ void TextEdit::_backspace_internal(int p_caret) {
 		}
 		_remove_text(prev_line, prev_column, cl, cc);
 		collapse_carets(prev_line, prev_column, cl, cc, i);
+		offset_carets_after(cl, cc, prev_line, prev_column);
 
 		set_caret_line(prev_line, false, true, -1, i);
 		set_caret_column(prev_column, i == 0, i);
-
-		offset_carets_after(cl, cc, prev_line, prev_column);
 	}
 	end_multicaret_edit();
 	end_complex_operation();
