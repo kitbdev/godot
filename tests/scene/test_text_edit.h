@@ -275,21 +275,22 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_set");
 
 			// Insert offsets carets after the edit.
+			((Array)lines_edited_args[0])[1] = 2;
 			text_edit->add_caret(1, 1);
 			text_edit->add_caret(1, 4);
 			text_edit->select(1, 4, 1, 6, 2);
-			text_edit->insert_text("\n ", 1, 2); // todo
+			text_edit->insert_text("\n ", 1, 2);
 			MessageQueue::get_singleton()->flush();
-			CHECK(text_edit->get_text() == "test\nin\n sertingird line");
+			CHECK(text_edit->get_text() == "test\nin\n midserting text");
 			CHECK(text_edit->get_caret_line(0) == 2);
 			CHECK(text_edit->get_caret_column(0) == 16);
 			CHECK(text_edit->get_caret_line(1) == 1);
-			CHECK(text_edit->get_caret_column(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 1);
 			CHECK(text_edit->get_caret_line(2) == 2);
-			CHECK(text_edit->get_caret_column(2) == 2);
+			CHECK(text_edit->get_caret_column(2) == 5);
 			CHECK(text_edit->has_selection(2));
 			CHECK(text_edit->get_selection_origin_line(2) == 2);
-			CHECK(text_edit->get_selection_origin_column(2) == 4);
+			CHECK(text_edit->get_selection_origin_column(2) == 3);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
@@ -322,6 +323,9 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// todo auto swap?
 
 			// Remove mulitple lines.
+			lines_edited_args.remove_at(0);
+			((Array)lines_edited_args[0])[1] = 1;
+			((Array)lines_edited_args[0])[0] = 2;
 			text_edit->set_caret_line(2);
 			text_edit->set_caret_column(10);
 			text_edit->remove_text(1, 9, 2, 2);
@@ -335,6 +339,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_set");
 
 			// Can remove even if not editable.
+			((Array)lines_edited_args[0])[0] = 1;
 			text_edit->set_editable(false);
 			text_edit->remove_text(1, 5, 1, 6);
 			MessageQueue::get_singleton()->flush();
@@ -381,14 +386,15 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->remove_text(1, 8, 1, 11);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "test\nremoving line");
+			// Caret 0 was merged into the selection.
 			CHECK(text_edit->get_caret_count() == 3);
 			CHECK(text_edit->has_selection(0));
 			CHECK(text_edit->get_caret_line(0) == 1);
 			CHECK(text_edit->get_caret_column(0) == 10);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
-			CHECK(text_edit->get_selection_origin_column(0) == 9);
+			CHECK(text_edit->get_selection_origin_column(0) == 8);
 			CHECK(text_edit->get_caret_line(1) == 1);
-			CHECK(text_edit->get_caret_column(1) == 12);
+			CHECK(text_edit->get_caret_column(1) == 11);
 			CHECK(text_edit->get_caret_line(2) == 1);
 			CHECK(text_edit->get_caret_column(2) == 2);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
@@ -398,6 +404,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			text_edit->remove_secondary_carets();
 		}
+
+		// todo replace text?
 
 		SUBCASE("[TextEdit] set and get line") {
 			// Set / Get line is 0 indexed.
@@ -731,7 +739,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "temidsting\nswap");
 			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_caret_column() == text_edit->get_line(0).length());
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selection_origin_line() == 0);
 			CHECK(text_edit->get_selection_origin_column() == 0);
@@ -1115,6 +1123,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Clicking clears selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_pos_at_line_column(0, 9), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 5); // todo is set to col7?
 
 			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);

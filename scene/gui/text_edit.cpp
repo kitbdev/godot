@@ -1773,7 +1773,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						caret = 0;
 						remove_secondary_carets();
 						deselect();
-						mouse_over_selection_caret = -1;
 					} else if (!mb->is_shift_pressed() && drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
 						// Try to drag and drop.
 						// Don't update cursor until we know if it is a drag and drop attempt.
@@ -1785,6 +1784,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						return;
 					}
 
+					// todo dont set if not selecting enabled?
 					set_caret_line(line, false, true, -1, caret);
 					set_caret_column(col, false, caret);
 					selection_drag_attempt = false;
@@ -1795,7 +1795,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 							select(prev_line, prev_col, line, col, caret);
 						}
 					} else if (caret == 0) { // todo any caret? needed?
-						// ? happens when mouse is not over a selection and not pressing shift and there is one caret
+						// ? happens when mouse is not over a selection and not pressing shift and there is one caret. can be dbl click...
 						deselect();
 					}
 
@@ -3560,7 +3560,7 @@ void TextEdit::remove_text(int p_from_line, int p_from_column, int p_to_line, in
 
 	_remove_text(p_from_line, p_from_column, p_to_line, p_to_column);
 	collapse_carets(p_from_line, p_from_column, p_to_line, p_to_column);
-	offset_carets_after(p_to_line, p_to_column, p_from_line, p_to_column);
+	offset_carets_after(p_to_line, p_to_column, p_from_line, p_from_column);
 
 	end_complex_operation();
 }
@@ -4937,6 +4937,7 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 			set_caret_line(collapse_line, false, true, -1, i);
 			set_caret_column(collapse_column, false, i);
 			multicaret_edit_ignore_carets.insert(i);
+			any_collapsed = true;
 		} else {
 			bool is_origin_in = is_line_col_in_range(get_selection_origin_line(i), get_selection_origin_column(i), p_from_line, p_from_column, p_to_line, p_to_column, true);
 
@@ -4950,9 +4951,11 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 			} else if (is_caret_in) {
 				// Only caret was inside.
 				select(get_selection_origin_line(i), get_selection_origin_column(i), collapse_line, collapse_column, i);
+				any_collapsed = true;
 			} else if (is_origin_in) {
 				// Only selection origin was inside.
 				select(collapse_line, collapse_column, get_caret_line(i), get_caret_column(i), i);
+				any_collapsed = true;
 			}
 		}
 	}
@@ -5600,7 +5603,7 @@ void TextEdit::set_selection_origin_column(int p_column, int p_caret) {
 
 	carets.write[p_caret].selection.origin_column = p_column;
 
-	carets.write[p_caret].selection.origin_last_fit_x = _get_column_x_offset_for_line(get_caret_column(p_caret), get_caret_line(p_caret), get_caret_column(p_caret));
+	carets.write[p_caret].selection.origin_last_fit_x = _get_column_x_offset_for_line(get_selection_origin_column(p_caret), get_selection_origin_line(p_caret), get_selection_origin_column(p_caret));
 
 	// Unselect if the selection origin moved to the caret.
 	if (has_selection(p_caret) && get_caret_line(p_caret) == get_selection_origin_line(p_caret) && get_caret_column(p_caret) == get_selection_origin_column(p_caret)) {
