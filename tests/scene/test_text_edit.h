@@ -1474,34 +1474,191 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
 		}
 
-		// Add readonly test?
-		SUBCASE("[TextEdit] text drag ") {
-			// todo
+		// Add readonly test? // todo rem?
+		SUBCASE("[TextEdit] text drag") {
+			text_edit->set_size(Size2(200, 200));
 			text_edit->set_text("drag test\ndrop here ''");
+			text_edit->grab_click_focus();
+			MessageQueue::get_singleton()->flush();
 
-			// Drag and drop selected text to mouse position. Drag should not affect carets.
-			// text_edit->select();
-
-			// Hold control when dropping to not delete selected text.
-
-			// Multiple caret drags entire selection.
-
-			// Drop onto same selection should do nothing.
-
-			// Drop onto a different selection should ... ?
-
-			// Cannot drag when not editable.
-			text_edit->set_editable(false);
-			text_edit->set_editable(true);
+			// Drag and drop selected text to mouse position.
+			text_edit->select(0, 0, 0, 4);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 11).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 11).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == " test\ndrop here 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 15);
+			CHECK(text_edit->get_selection_origin_line() == 1);
+			CHECK(text_edit->get_selection_origin_column() == 11);
 
 			// Undo.
-			// text_edit->undo();
-			// Redo.
-			// text_edit->redo();
+			text_edit->undo();
+			CHECK(text_edit->get_text() == "drag test\ndrop here ''");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
 
-			// Drag and drop disabled.
+			// Redo.
+			text_edit->redo();
+			CHECK(text_edit->get_text() == " test\ndrop here 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 15);
+			CHECK(text_edit->get_selection_origin_line() == 1);
+			CHECK(text_edit->get_selection_origin_column() == 11);
+
+			// Hold control when dropping to not delete selected text.
+			text_edit->select(1, 10, 1, 16);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 12).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "'drag'");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 0).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(0, 0).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::CMD_OR_CTRL);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop here 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 6);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+
+			// Multiple caret drags entire selection.
+			text_edit->select(0, 11, 0, 7, 0);
+			text_edit->add_caret(1, 2);
+			text_edit->select(1, 2, 1, 4, 1);
+			text_edit->add_caret(1, 12);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 3).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection(1));
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 12).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "test\nop");
+			// Carets aren't removed from dragging, only dropping.
+			CHECK(text_edit->get_caret_count() == 3);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 7);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 11);
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 1);
+			CHECK(text_edit->get_caret_column(1) == 4);
+			CHECK(text_edit->get_selection_origin_line(1) == 1);
+			CHECK(text_edit->get_selection_origin_column(1) == 2);
+			CHECK_FALSE(text_edit->has_selection(2));
+			CHECK(text_edit->get_caret_line(2) == 1);
+			CHECK(text_edit->get_caret_column(2) == 12);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 9).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 9).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 2);
+			CHECK(text_edit->get_caret_column() == 2);
+			CHECK(text_edit->get_selection_origin_line() == 1);
+			CHECK(text_edit->get_selection_origin_column() == 9);
+
+			// Drop onto same selection should do effectively nothing.
+			text_edit->select(1, 5, 1, 9);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "here");
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 9);
+			CHECK(text_edit->get_selection_origin_line() == 1);
+			CHECK(text_edit->get_selection_origin_column() == 5);
+
+			// Drop onto a different selection should ... ?
+			// todo
+
+			// Cancel drag and drop from Escape key.
+			text_edit->select(0, 1, 0, 5);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag");
+			SEND_GUI_KEY_EVENT(Key::ESCAPE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 1);
+
+			// Cancel drag and drop from caret move key input.
+			text_edit->select(0, 1, 0, 5);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag");
+			SEND_GUI_KEY_EVENT(Key::RIGHT);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 1);
+
+			// Cancel drag and drop from text key input.
+			text_edit->select(0, 1, 0, 5);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag");
+			SEND_GUI_KEY_EVENT(Key::A);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 1);
+
+			// Cannot drag when drag and drop selection is disabled.
 			text_edit->set_drag_and_drop_selection_enabled(false);
+			text_edit->select(0, 1, 0, 5);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
 			text_edit->set_drag_and_drop_selection_enabled(true);
+			CHECK(text_edit->get_text() == "'drag' test\ndrop heretest\nop 'drag'");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 1);
 		}
 
 		SUBCASE("[TextEdit] text drag to another text edit") {
@@ -1527,7 +1684,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Drag text between text edits.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 0).get_center(), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->is_mouse_over_selection());
-			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_pos_at_line_column(0, 7), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 7).get_center(), MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->get_viewport()->gui_is_dragging());
 			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag me");
 			CHECK(text_edit->has_selection());
@@ -1539,25 +1696,193 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			Point2i dest_point = target_text_edit->get_position() + Point2i(1, target_text_edit->get_line_height() / 2);
 			SEND_GUI_MOUSE_MOTION_EVENT(dest_point, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_line() == 0); // ? can check this?
 			CHECK(target_text_edit->get_caret_column() == 0);
-
 			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(dest_point, MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
 			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
 			CHECK(text_edit->get_text() == "");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
 			CHECK(target_text_edit->get_text() == "drag me");
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 7);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 0);
 
-			// todo
-			// hold control
-			// multiple selection
-			// onto selection
-			// cursor still on?
-			// drag when not editable
-			// drop when not editable
-			// drag when no dragndrop enabled
-			// drop when no dragndrop enabled
+			// Undo is separate per TextEdit.
+			text_edit->undo();
+			CHECK(text_edit->get_text() == "drag me");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 7);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+			CHECK(target_text_edit->get_text() == "drag me");
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 7);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 0);
 
-			// todo separate viewport drag and drop test
+			target_text_edit->undo();
+			CHECK(text_edit->get_text() == "drag me");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 7);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+			CHECK(target_text_edit->get_text() == "");
+			CHECK_FALSE(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 0);
+
+			// Redo is also separate.
+			text_edit->redo();
+			CHECK(text_edit->get_text() == "");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(target_text_edit->get_text() == "");
+			CHECK_FALSE(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 0);
+
+			target_text_edit->redo();
+			CHECK(text_edit->get_text() == "");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(target_text_edit->get_text() == "drag me");
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 7);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 0);
+
+			// Hold control to not remove selected text.
+			text_edit->set_text("drag test\ndrop test");
+			text_edit->select(0, 5, 0, 7);
+			text_edit->add_caret(0, 1);
+			text_edit->select(0, 1, 0, 0);
+			target_text_edit->select(0, 0, 0, 3);
+			target_text_edit->add_caret(0, 5);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 6).get_center(), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection(0));
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center(), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "d\nte");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 6).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::CMD_OR_CTRL);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "drag test\ndrop test");
+			CHECK(text_edit->get_caret_count() == 1); // todo remove all cursors?
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 7);
+			CHECK(target_text_edit->get_text() == "drag md\ntee");
+			CHECK(target_text_edit->get_caret_count() == 1);
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 1);
+			CHECK(target_text_edit->get_caret_column() == 3);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 6);
+
+			// Drop onto selected text deletes the selected text first.
+			text_edit->set_deselect_on_focus_loss_enabled(false);
+			target_text_edit->set_deselect_on_focus_loss_enabled(false);
+			text_edit->select(0, 5, 0, 9);
+			target_text_edit->select(0, 6, 0, 8);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 6).get_center(), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection(0));
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center(), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "test");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "drag \ndrop test");
+			CHECK(target_text_edit->get_caret_count() == 1);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 5);
+			CHECK(target_text_edit->get_text() == "drag test\ntee");
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 9);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 5);
+			text_edit->set_deselect_on_focus_loss_enabled(true);
+			target_text_edit->set_deselect_on_focus_loss_enabled(true);
+
+			// Cannot drop when drag and drop selection is disabled.
+			target_text_edit->set_drag_and_drop_selection_enabled(false);
+			text_edit->select(0, 1, 0, 5);
+			target_text_edit->deselect();
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "rag ");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "drag \ndrop test");
+			CHECK(target_text_edit->get_text() == "drag test\ntee");
+			CHECK(text_edit->has_selection());
+			CHECK_FALSE(target_text_edit->has_selection());
+			target_text_edit->set_drag_and_drop_selection_enabled(true);
+
+			// Cannot drop when not editable.
+			target_text_edit->set_editable(false);
+			text_edit->select(0, 1, 0, 5);
+			target_text_edit->deselect();
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "rag ");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "drag \ndrop test");
+			CHECK(target_text_edit->get_text() == "drag test\ntee");
+			CHECK(text_edit->has_selection());
+			CHECK_FALSE(target_text_edit->has_selection());
+			target_text_edit->set_editable(true);
+
+			// Can drag when not editable, but text will not be removed.
+			text_edit->set_editable(false);
+			text_edit->select(0, 0, 0, 4);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->is_mouse_over_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			CHECK(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "drag");
+			CHECK(text_edit->has_selection());
+			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 4).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 4).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
+			CHECK(text_edit->get_text() == "drag \ndrop test");
+			CHECK(target_text_edit->get_text() == "dragdrag test\ntee");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 8);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 4);
+			text_edit->set_editable(true);
+
+			// Add TextEdits in separate Viewports drag and drop test?
 
 			memdelete(target_text_edit);
 		}

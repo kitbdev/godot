@@ -2985,10 +2985,10 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 				set_caret_column(drop_at_column);
 				insert_text_at_caret(p_data);
 			}
-			select(drop_at_line, drop_at_column, get_caret_line(), get_caret_column());
-			grab_focus();
-			adjust_viewport_to_caret();
 		}
+		select(drop_at_line, drop_at_column, get_caret_line(), get_caret_column());
+		grab_focus();
+		adjust_viewport_to_caret();
 	}
 }
 
