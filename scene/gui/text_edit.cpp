@@ -1738,8 +1738,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				const int triple_click_tolerance = 5;
 				bool is_triple_click = (!mb->is_double_click() && (OS::get_singleton()->get_ticks_msec() - last_dblclk) < triple_click_timeout && mb->get_position().distance_to(last_dblclk_pos) < triple_click_tolerance);
 
-				// todo test selecting off
-				if (!mb->is_double_click() && !is_triple_click || !selecting_enabled) {
+				if (!mb->is_double_click() && !is_triple_click) {
 					if (mb->is_alt_pressed()) {
 						prev_line = line;
 						prev_col = col;
@@ -1799,11 +1798,9 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						deselect();
 					}
 
-					if (selecting_enabled) {
-						// Regular selection mode.
-						set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
-						_update_selection_mode_pointer(true);
-					}
+					// Regular selection mode.
+					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
+					_update_selection_mode_pointer(true);
 				} else if (is_triple_click) {
 					// Triple-click select line.
 					set_selection_mode(SelectionMode::SELECTION_MODE_LINE);
@@ -1816,7 +1813,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 					last_dblclk = OS::get_singleton()->get_ticks_msec();
 					last_dblclk_pos = mb->get_position();
 				}
-				queue_redraw(); // todo
+				queue_redraw();
 			}
 
 			if (is_middle_mouse_paste_enabled() && mb->get_button_index() == MouseButton::MIDDLE && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
@@ -1930,7 +1927,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				_update_minimap_drag();
 			}
 
-			if (!dragging_minimap && !has_ime_text() && selecting_enabled) {
+			if (!dragging_minimap && !has_ime_text()) {
 				switch (selecting_mode) {
 					case SelectionMode::SELECTION_MODE_POINTER: {
 						_update_selection_mode_pointer();
@@ -1980,11 +1977,9 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			Point2i pos = get_line_column_at_pos(get_local_mouse_pos());
 
 			if (drag_caret_index == -1) {
-				// Create a new caret for drag and drop.
-				begin_multicaret_edit();
-				drag_caret_index = add_caret(pos.y, pos.x);
-				end_multicaret_edit();
-				ERR_FAIL_COND_MSG(drag_caret_index == -1, "Failed to create caret for drag and drop.");
+				// Force create a new caret for drag and drop.
+				carets.push_back(Caret());
+				drag_caret_index = carets.size() - 1;
 			}
 
 			drag_caret_force_displayed = true;
@@ -5421,27 +5416,27 @@ void TextEdit::add_selection_for_next_occurrence() {
 }
 
 void TextEdit::select(int p_origin_line, int p_origin_column, int p_caret_line, int p_caret_column, int p_caret) {
+	ERR_FAIL_INDEX(p_caret, get_caret_count());
+
+	p_caret_line = CLAMP(p_caret_line, 0, text.size() - 1);
+	p_caret_column = CLAMP(p_caret_column, 0, text[p_caret_line].length());
+	set_caret_line(p_caret_line, false, true, -1, p_caret);
+	set_caret_column(p_caret_column, false, p_caret);
+
 	if (!selecting_enabled) {
 		return;
 	}
 
-	ERR_FAIL_INDEX(p_caret, get_caret_count());
-
 	p_origin_line = CLAMP(p_origin_line, 0, text.size() - 1);
 	p_origin_column = CLAMP(p_origin_column, 0, text[p_origin_line].length());
-	p_caret_line = CLAMP(p_caret_line, 0, text.size() - 1);
-	p_caret_column = CLAMP(p_caret_column, 0, text[p_caret_line].length());
-	bool activate = p_origin_line != p_caret_line || p_origin_column != p_caret_column;
-
-	set_caret_line(p_caret_line, false, true, -1, p_caret);
-	set_caret_column(p_caret_column, false, p_caret);
 	set_selection_origin_line(p_origin_line, p_caret);
 	set_selection_origin_column(p_origin_column, p_caret);
 
+	bool activate = p_origin_line != p_caret_line || p_origin_column != p_caret_column;
+	carets.write[p_caret].selection.active = activate;
 	if (has_selection(p_caret) != activate) {
 		_selection_changed(p_caret);
 	}
-	carets.write[p_caret].selection.active = activate;
 }
 
 bool TextEdit::has_selection(int p_caret) const {
@@ -5789,7 +5784,7 @@ int TextEdit::get_line_wrap_index_at_column(int p_line, int p_column) const {
 		return 0;
 	}
 
-	/* Loop through wraps in the line text until we get to the column. */
+	// Loop through wraps in the line text until we get to the column.
 	int wrap_index = 0;
 	int col = 0;
 	Vector<String> lines = get_line_wrapped_text(p_line);
@@ -7164,14 +7159,17 @@ void TextEdit::_cut_internal(int p_caret) {
 	if (p_caret == -1) {
 		line_ranges = get_line_ranges_from_carets(false, true, p_caret);
 	} else {
-		line_ranges.push_back(Point2(get_selection_from_line(p_caret), get_selection_to_line(p_caret)));
+		line_ranges.push_back(Point2(get_caret_line(p_caret), get_caret_line(p_caret)));
 	}
+	// todo line offset elsewhere
+	int line_offset = 0;
 	for (int i = line_ranges.size() - 1; i >= 0; i--) {
 		// Preserve cursors on the last line.
-		remove_line_at(line_ranges[i].y);
+		remove_line_at(line_ranges[i].y + line_offset);
 		if (line_ranges[i].x != line_ranges[i].y) {
-			remove_text(line_ranges[i].x, 0, line_ranges[i].y, 0);
+			remove_text(line_ranges[i].x + line_offset, 0, line_ranges[i].y + line_offset, 0);
 		}
+		line_offset = line_ranges[i].x - line_ranges[i].y - 1;
 	}
 	// todo make sure carets are placed right
 }
@@ -7516,7 +7514,6 @@ int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) con
 
 /* Caret */
 void TextEdit::_caret_changed(int p_caret) {
-	_cancel_drag_and_drop_text();
 	queue_redraw();
 
 	if (has_selection(p_caret)) {
@@ -7581,7 +7578,6 @@ int TextEdit::_get_column_x_offset_for_line(int p_char, int p_line, int p_column
 
 void TextEdit::_cancel_drag_and_drop_text() {
 	// Cancel the drag operation if drag originated from here.
-	// todo could instead force drag with no data and put the notif drag end code here?
 	if (get_viewport() && selection_drag_attempt) {
 		get_viewport()->gui_cancel_drag();
 	}
