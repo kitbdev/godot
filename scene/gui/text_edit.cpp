@@ -2000,8 +2000,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	Ref<InputEventKey> k = p_gui_input;
 
 	if (k.is_valid()) {
-		_cancel_drag_and_drop_text();
-
 		if (alt_input(p_gui_input)) {
 			accept_event();
 			return;
@@ -2014,6 +2012,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		if (k->get_keycode() == Key::CTRL || k->get_keycode() == Key::ALT || k->get_keycode() == Key::SHIFT || k->get_keycode() == Key::META || k->get_keycode() == Key::CAPSLOCK) {
 			return;
 		}
+
+		_cancel_drag_and_drop_text();
 
 		_reset_caret_blink_timer();
 
@@ -2931,6 +2931,7 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 		int drop_at_line = pos.y;
 		int drop_at_column = pos.x;
 		int selection_index = get_selection_at(drop_at_line, drop_at_column, !Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL));
+
 		if (selection_drag_attempt) {
 			// Drop from self.
 			selection_drag_attempt = false;
@@ -2955,40 +2956,19 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 				drop_at_line = get_caret_line(drag_caret_index);
 				drop_at_column = get_caret_column(drag_caret_index);
 			}
-
-			remove_secondary_carets();
-			set_caret_line(drop_at_line, true, false, -1);
-			set_caret_column(drop_at_column);
-			insert_text_at_caret(p_data);
-			end_complex_operation();
 		} else {
 			// Drop from elsewhere.
-			if (selection_index >= 0) {
-				// todo dont preserve, expand?
-				// Preserve selection mouse is over.
-				drop_at_line = get_selection_from_line(selection_index);
-				drop_at_column = get_selection_from_column(selection_index);
-				int selection_to_line = get_selection_to_line(selection_index);
-				int selection_to_column = get_selection_to_column(selection_index);
-				// Replace existing selection.
-				remove_secondary_carets();
-
-				set_caret_line(drop_at_line, false, false, -1);
-				set_caret_column(drop_at_column);
-				replace_text(p_data, drop_at_line, drop_at_column, selection_to_line, selection_to_column, false, false);
-				// select(selection_to_line, selection_to_column, drop_at_line, drop_at_column);
-				// insert_text_at_caret(p_data); // todo different than the func below... ew
-			} else {
-				remove_secondary_carets();
-				deselect();
-				set_caret_line(drop_at_line, true, false, -1);
-				set_caret_column(drop_at_column);
-				insert_text_at_caret(p_data);
-			}
+			begin_complex_operation();
+			deselect();
 		}
+		remove_secondary_carets();
+		set_caret_line(drop_at_line, true, false, -1);
+		set_caret_column(drop_at_column);
+		insert_text_at_caret(p_data);
 		select(drop_at_line, drop_at_column, get_caret_line(), get_caret_column());
 		grab_focus();
 		adjust_viewport_to_caret();
+		end_complex_operation();
 	}
 }
 
@@ -4669,6 +4649,10 @@ void TextEdit::remove_caret(int p_caret) {
 
 	_caret_changed(p_caret);
 	carets.remove_at(p_caret);
+
+	if (drag_caret_index >= 0 && p_caret == drag_caret_index) {
+		drag_caret_index = -1;
+	}
 }
 
 void TextEdit::remove_secondary_carets() {
@@ -4678,16 +4662,11 @@ void TextEdit::remove_secondary_carets() {
 
 	_caret_changed();
 	Caret drag_caret;
-	if (drag_caret_index >= 0) {
-		// todo cancel drag instead?
-		drag_caret = carets[drag_caret_index];
-	}
 
 	carets.resize(1);
 
 	if (drag_caret_index >= 0) {
-		carets.push_back(drag_caret);
-		drag_caret_index = carets.size() - 1;
+		drag_caret_index = -1;
 	}
 }
 
@@ -5466,10 +5445,10 @@ String TextEdit::get_selected_text(int p_caret) {
 		if (!has_selection(caret_index)) {
 			continue;
 		}
-		selected_text += _base_get_text(get_selection_from_line(caret_index), get_selection_from_column(caret_index), get_selection_to_line(caret_index), get_selection_to_column(caret_index));
-		if (p_caret == -1 && i != sorted_carets.size() - 1) {
+		if (p_caret == -1 && selected_text.get_string_length() != 0) {
 			selected_text += "\n";
 		}
+		selected_text += _base_get_text(get_selection_from_line(caret_index), get_selection_from_column(caret_index), get_selection_to_line(caret_index), get_selection_to_column(caret_index));
 	}
 
 	return selected_text.as_string();
