@@ -279,6 +279,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->add_caret(1, 1);
 			text_edit->add_caret(1, 4);
 			text_edit->select(1, 4, 1, 6, 2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
 			text_edit->insert_text("\n ", 1, 2);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "test\nin\n midserting text");
@@ -328,6 +330,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			((Array)lines_edited_args[0])[0] = 2;
 			text_edit->set_caret_line(2);
 			text_edit->set_caret_column(10);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
 			text_edit->remove_text(1, 9, 2, 2);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "test\nremoveingird line");
@@ -527,7 +531,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->swap_lines(1, 0);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "swap\ntesting");
-			SIGNAL_CHECK("lines_edited_from", lines_edited_args); // todo impl
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_set");
@@ -584,6 +588,53 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("text_set");
 			ERR_PRINT_ON;
+
+			// Carets are also swapped.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(2);
+			text_edit->select(0, 0, 0, 2);
+			text_edit->add_caret(1, 6);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			text_edit->swap_lines(0, 1);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testing\nswap");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 6);
+			lines_edited_args.reverse();
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+			text_edit->remove_secondary_carets();
+
+			// Swap non adjacent lines.
+			text_edit->insert_line_at(1, "new line");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(5);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testing\nnew line\nswap");
+			SIGNAL_DISCARD("caret_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("text_changed");
+			text_edit->swap_lines(0, 2);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "swap\nnew line\ntesting");
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 5);
+			((Array)lines_edited_args[1])[0] = 2;
+			((Array)lines_edited_args[1])[1] = 2;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
 		}
 
 		SUBCASE("[TextEdit] insert line at") {
@@ -685,7 +736,194 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			ERR_PRINT_ON;
 		}
 
-		SUBCASE("[TextEdit] insert line at caret") {
+		SUBCASE("[TextEdit] remove line at") {
+			((Array)lines_edited_args[1])[1] = 5;
+			text_edit->set_text("testing\nremove line at\n\tremove\nlines\n\ntest");
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testing\nremove line at\n\tremove\nlines\n\ntest");
+			SIGNAL_CHECK("text_set", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+
+			// Remove line handles multiple carets.
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(0);
+			text_edit->add_caret(2, 7);
+			text_edit->select(2, 1, 2, 7, 1);
+			text_edit->add_caret(3, 1);
+			text_edit->add_caret(4, 5);
+			text_edit->add_caret(1, 5);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(2, true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testing\nremove line at\nlines\n\ntest");
+			CHECK(text_edit->get_caret_count() == 5);
+			CHECK_FALSE(text_edit->has_selection(0)); // Same line.
+			CHECK(text_edit->get_caret_line(0) == 2);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->has_selection(1)); // Same line, clamped.
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 5);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 3); // In the default font, this is the same position.
+			CHECK_FALSE(text_edit->has_selection(2)); // Moved up.
+			CHECK(text_edit->get_caret_line(2) == 2);
+			CHECK(text_edit->get_caret_column(2) == 1);
+			CHECK_FALSE(text_edit->has_selection(3)); // Moved up.
+			CHECK(text_edit->get_caret_line(3) == 3);
+			CHECK(text_edit->get_caret_column(3) == 0);
+			CHECK_FALSE(text_edit->has_selection(4)); // Didn't move.
+			CHECK(text_edit->get_caret_line(4) == 1);
+			CHECK(text_edit->get_caret_column(4) == 5);
+			lines_edited_args.remove_at(0);
+			((Array)lines_edited_args[0])[0] = 3;
+			((Array)lines_edited_args[0])[1] = 2;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+			text_edit->remove_secondary_carets();
+
+			// Remove first line.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(5);
+			text_edit->add_caret(4, 4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(0, false);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at\nlines\n\ntest");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_caret_line(1) == 3);
+			CHECK(text_edit->get_caret_column(1) == 4);
+			((Array)lines_edited_args[0])[0] = 1;
+			((Array)lines_edited_args[0])[1] = 0;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+			text_edit->remove_secondary_carets();
+
+			// Remove empty line.
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(2, false);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at\nlines\ntest");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			((Array)lines_edited_args[0])[0] = 3;
+			((Array)lines_edited_args[0])[1] = 2;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+
+			// Remove last line.
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(2, true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at\nlines");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 5);
+			((Array)lines_edited_args[0])[0] = 2;
+			((Array)lines_edited_args[0])[1] = 1;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+
+			// Out of bounds.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			ERR_PRINT_OFF
+			text_edit->remove_line_at(2, true);
+			ERR_PRINT_ON
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at\nlines");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("text_set");
+
+			// Remove regular line with move caret up and not editable.
+			text_edit->set_editable(false);
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(1, false);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 1); // In the default font, this is the same position.
+			((Array)lines_edited_args[0])[0] = 1;
+			((Array)lines_edited_args[0])[1] = 0;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+			text_edit->set_editable(true);
+
+			// Undo.
+			text_edit->undo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at\nlines"); // todo
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 5);
+			((Array)lines_edited_args[0])[0] = 0;
+			((Array)lines_edited_args[0])[1] = 1;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+
+			// Redo.
+			text_edit->redo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "remove line at");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 1);
+			((Array)lines_edited_args[0])[0] = 1;
+			((Array)lines_edited_args[0])[1] = 0;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+
+			// Remove only line removes line content.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(10);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			text_edit->remove_line_at(0);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "");
+			CHECK(text_edit->get_line_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			((Array)lines_edited_args[0])[0] = 0;
+			((Array)lines_edited_args[0])[1] = 0;
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_set");
+		}
+
+		SUBCASE("[TextEdit] insert text at caret") {
 			lines_edited_args.pop_back();
 			((Array)lines_edited_args[0])[1] = 1;
 
@@ -703,6 +941,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Text is inserted at caret.
 			text_edit->set_caret_line(0, false);
 			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
 			((Array)lines_edited_args[0])[1] = 0;
@@ -1757,8 +1996,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Hold control to not remove selected text.
 			text_edit->set_text("drag test\ndrop test");
-			text_edit->set_deselect_on_focus_loss_enabled(false);
-			target_text_edit->set_deselect_on_focus_loss_enabled(false);
 			MessageQueue::get_singleton()->flush();
 			target_text_edit->select(0, 0, 0, 3, 0);
 			target_text_edit->add_caret(0, 5);
@@ -1777,10 +2014,12 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_KEY_UP_EVENT(Key::CMD_OR_CTRL);
 			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
 			CHECK(text_edit->get_text() == "drag test\ndrop test");
-			CHECK(text_edit->get_caret_count() == 1);
-			CHECK_FALSE(text_edit->has_selection()); // todo keeps selection instead? and remove secondary after
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 7);
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 7);
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 0);
 			CHECK(target_text_edit->get_text() == "drag md\ntee");
 			CHECK(target_text_edit->get_caret_count() == 1);
 			CHECK(target_text_edit->has_selection());
@@ -1790,6 +2029,9 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(target_text_edit->get_selection_origin_column() == 6);
 
 			// Drop onto selected text deletes the selected text first.
+			text_edit->set_deselect_on_focus_loss_enabled(false);
+			target_text_edit->set_deselect_on_focus_loss_enabled(false);
+			text_edit->remove_secondary_carets();
 			text_edit->select(0, 5, 0, 9);
 			target_text_edit->select(0, 6, 0, 8);
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -1806,49 +2048,55 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(target_text_edit->get_text() == "drag test\ntee");
+			CHECK(target_text_edit->get_text() == "drag mdtest\ntee");
 			CHECK(target_text_edit->has_selection());
 			CHECK(target_text_edit->get_caret_line() == 0);
-			CHECK(target_text_edit->get_caret_column() == 9);
+			CHECK(target_text_edit->get_caret_column() == 11);
 			CHECK(target_text_edit->get_selection_origin_line() == 0);
-			CHECK(target_text_edit->get_selection_origin_column() == 5);
+			CHECK(target_text_edit->get_selection_origin_column() == 7);
 			text_edit->set_deselect_on_focus_loss_enabled(true);
 			target_text_edit->set_deselect_on_focus_loss_enabled(true);
 
-			// Cannot drop when drag and drop selection is disabled.
+			// Can drop even when drag and drop selection is disabled.
 			target_text_edit->set_drag_and_drop_selection_enabled(false);
-			text_edit->select(0, 1, 0, 5);
+			text_edit->select(0, 4, 0, 5);
 			target_text_edit->deselect();
-			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 4).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->is_mouse_over_selection());
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "rag ");
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == " ");
 			CHECK(text_edit->has_selection());
 			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
-			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
 			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(text_edit->get_text() == "drag \ndrop test");
-			CHECK(target_text_edit->get_text() == "drag test\ntee");
-			CHECK(text_edit->has_selection());
-			CHECK_FALSE(target_text_edit->has_selection());
+			CHECK(text_edit->get_text() == "drag\ndrop test");
+			CHECK(target_text_edit->get_text() == "drag md test\ntee");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			CHECK(target_text_edit->has_selection());
+			CHECK(target_text_edit->get_caret_line() == 0);
+			CHECK(target_text_edit->get_caret_column() == 8);
+			CHECK(target_text_edit->get_selection_origin_line() == 0);
+			CHECK(target_text_edit->get_selection_origin_column() == 7);
 			target_text_edit->set_drag_and_drop_selection_enabled(true);
 
 			// Cannot drop when not editable.
 			target_text_edit->set_editable(false);
-			text_edit->select(0, 1, 0, 5);
+			text_edit->select(0, 1, 0, 4);
 			target_text_edit->deselect();
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->is_mouse_over_selection());
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
 			CHECK(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "rag ");
+			CHECK(text_edit->get_viewport()->gui_get_drag_data() == "rag");
 			CHECK(text_edit->has_selection());
 			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
 			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(text_edit->get_text() == "drag \ndrop test");
-			CHECK(target_text_edit->get_text() == "drag test\ntee");
+			CHECK(text_edit->get_text() == "drag\ndrop test");
+			CHECK(target_text_edit->get_text() == "drag md test\ntee");
 			CHECK(text_edit->has_selection());
 			CHECK_FALSE(target_text_edit->has_selection());
 			target_text_edit->set_editable(true);
@@ -1865,13 +2113,11 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_MOUSE_MOTION_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 4).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
 			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(target_text_edit->get_position() + target_text_edit->get_rect_at_line_column(0, 4).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::NONE, Key::NONE);
 			CHECK_FALSE(text_edit->get_viewport()->gui_is_dragging());
-			CHECK(text_edit->get_text() == "drag \ndrop test");
-			CHECK(target_text_edit->get_text() == "dragdrag test\ntee");
-			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "drag\ndrop test");
+			CHECK(target_text_edit->get_text() == "dragdrag md test\ntee");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
-			CHECK(text_edit->get_selection_origin_line() == 0);
-			CHECK(text_edit->get_selection_origin_column() == 0);
 			CHECK(target_text_edit->has_selection());
 			CHECK(target_text_edit->get_caret_line() == 0);
 			CHECK(target_text_edit->get_caret_column() == 8);
@@ -1928,7 +2174,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			((Array)lines_edited_args[0])[1] = 1;
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
-
 			CHECK(text_edit->get_text() == "this is\nsome");
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 4);
@@ -1940,7 +2185,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			((Array)lines_edited_args[0])[0] = 1;
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
-
 			CHECK(text_edit->get_text() == "this is\nsom");
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 3);
@@ -1953,7 +2197,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(1, 0, 1, 3);
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
-
 			CHECK(text_edit->get_text() == "this is\n");
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 0);
@@ -1966,7 +2209,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->backspace();
 			text_edit->set_editable(true);
 			MessageQueue::get_singleton()->flush();
-
 			CHECK(text_edit->get_text() == "this is\n");
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 0);
@@ -1983,27 +2225,27 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// todo backspace adjusts carets and merges if now at same pos
 		}
 
 		SUBCASE("[TextEdit] cut") {
+			// Cut without a selection removes the entire line.
 			text_edit->set_text("this is\nsome\n");
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(6);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Cut without a selection removes the entire line.
 			ERR_PRINT_OFF;
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
 			ERR_PRINT_ON; // Can't check display server content.
-
 			((Array)lines_edited_args[0])[0] = 1;
-			CHECK(text_edit->get_text() == "some\n");
+			CHECK(text_edit->get_text() == "some\n"); //todo getting \nsome\n?
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
@@ -2037,7 +2279,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Cut with a selection removes just the selection.
 			text_edit->set_text("this is\nsome\n");
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");

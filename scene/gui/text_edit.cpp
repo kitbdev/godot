@@ -1774,16 +1774,14 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 						deselect();
 					} else if (!mb->is_shift_pressed() && drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
 						// Try to drag and drop.
-						// Don't update cursor until we know if it is a drag and drop attempt.
 						set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
 						selection_drag_attempt = true;
-						// todo index may change, position instead?
 						drag_and_drop_origin_caret_index = mouse_over_selection_caret;
 						last_dblclk = 0;
+						// Don't update cursor until we know if it is not drag and drop.
 						return;
 					}
 
-					// todo dont set if not selecting enabled?
 					set_caret_line(line, false, true, -1, caret);
 					set_caret_column(col, false, caret);
 					selection_drag_attempt = false;
@@ -3300,7 +3298,7 @@ void TextEdit::set_line(int p_line, const String &p_new_text) {
 	// todo param?
 	bool keep_carets_visually = true;
 	if (keep_carets_visually) {
-		// Set the carets to update their last offset x
+		// Set the carets to update their last offset x.
 		for (int i = 0; i < get_caret_count(); i++) {
 			if (is_line_col_in_range(get_caret_line(i), get_caret_column(i), p_line, 0, p_line, old_column)) {
 				set_caret_column(get_caret_column(i), false, i);
@@ -3416,7 +3414,7 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 			}
 			if (get_selection_origin_line(i) == p_from_line || get_selection_origin_line(i) == p_to_line) {
 				int origin_new_line = get_selection_origin_line(i) == p_from_line ? p_to_line : p_from_line;
-				int origin_column = get_caret_column(i);
+				int origin_column = get_selection_origin_column(i);
 				set_selection_origin_line(origin_new_line, i);
 				set_selection_origin_column(origin_column, i);
 			}
@@ -3440,39 +3438,63 @@ void TextEdit::insert_line_at(int p_line, const String &p_text) {
 
 	offset_carets_after(p_line, 0, new_line, new_column);
 
-	// todo this for all? or part of multicaret edit?
+	// todo this for all? or part of multicaret edit? or remove?
 	// Need to apply the adjustments to the undo / redo carets.
 	current_op.end_carets = carets;
-	queue_redraw();
 }
 
 void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
-	// Remove line.
-	bool is_last_line = p_line == get_line_count() - 1;
-	int next_line = is_last_line ? p_line + 1 : p_line;
-	int next_col = is_last_line ? 0 : get_line(p_line).length();
-	_remove_text(p_line, 0, next_line, next_col);
+	if (get_line_count() == 1) {
+		// Only one line, just remove contents.
+		int line_length = get_line(p_line).length();
+		_remove_text(p_line, 0, p_line, line_length);
+		collapse_carets(p_line, 0, p_line, line_length);
+		return;
+	}
 
-	if (is_last_line && p_move_cursors_down) {
-		// Collapse carets to end of line.
-		collapse_carets(next_line, next_col, p_line, 0);
-	} else if (p_line == 0 && !p_move_cursors_down) {
-		// Collapse carets to start of line.
-		collapse_carets(p_line, 0, next_line, next_col);
-	} else {
-		// Move carets to visually line up.
-		for (int i = 0; i < get_caret_count(); i++) {
+	bool is_last_line = p_line == get_line_count() - 1;
+	int from_line = is_last_line ? p_line - 1 : p_line;
+	int next_line = is_last_line ? p_line : p_line + 1;
+	int from_column = is_last_line ? get_line(from_line).length() : 0;
+	int next_column = is_last_line ? get_line(next_line).length() : 0;
+
+	if ((!is_last_line && p_move_cursors_down) || (p_line != 0 && !p_move_cursors_down)) {
+		// Set the carets to update their last offset x.
+		for (int i = 0; i < get_caret_count(); i++) { // todo needed?
 			if (get_caret_line(i) == p_line) {
-				set_caret_line(next_line, i == 0, true, 0, i);
+				set_caret_column(get_caret_column(i), false, i);
 			}
 			if (has_selection(i) && get_selection_origin_line(i) == p_line) {
-				set_selection_origin_line(next_line, i, true, 0);
+				set_selection_origin_column(get_selection_origin_column(i), i);
 			}
 		}
 	}
-	offset_carets_after(next_line, next_col, p_line, 0);
+
+	// Remove line.
+	_remove_text(from_line, from_column, next_line, next_column);
+
+	begin_multicaret_edit();
+	if ((is_last_line && p_move_cursors_down) || (p_line == 0 && !p_move_cursors_down)) {
+		// Collapse carets.
+		collapse_carets(from_line, from_column, next_line, next_column);
+	} else {
+		// Move carets to visually line up.
+		int target_line = p_move_cursors_down ? p_line : p_line - 1;
+		for (int i = 0; i < get_caret_count(); i++) {
+			if (get_caret_line(i) == p_line) {
+				set_caret_line(target_line, i == 0, true, 0, i);
+			}
+			if (has_selection(i) && get_selection_origin_line(i) == p_line) {
+				set_selection_origin_line(target_line, i, true, 0);
+			}
+		}
+		// todo add to ignore list
+		queue_merge_carets();
+	}
+	offset_carets_after(next_line, next_column, from_line, from_column);
+	end_multicaret_edit();
 }
 
 void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
@@ -4880,13 +4902,13 @@ void TextEdit::offset_carets_after(int p_old_line, int p_old_column, int p_new_l
 void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_ignore_caret) {
 	// Collapse carets in the selected range(inclusive) to the from position.
 
-	int collapse_line = p_from_line;
-	int collapse_column = p_from_column;
+	// Clamp the collapse to position, but not the from and to positions.
+	int collapse_line = CLAMP(p_from_line, 0, text.size() - 1);
+	;
+	int collapse_column = CLAMP(p_from_column, 0, text[p_from_line].length());
+	;
 
-	p_from_line = CLAMP(p_from_line, 0, text.size() - 1);
-	p_from_column = CLAMP(p_from_column, 0, text[p_from_line].length());
-	p_to_line = CLAMP(p_to_line, 0, text.size() - 1);
-	p_to_column = CLAMP(p_to_column, 0, text[p_to_line].length());
+	// Swap the lines if they are in the wrong order.
 	if (p_from_line > p_to_line) {
 		SWAP(p_from_line, p_to_line);
 		SWAP(p_from_column, p_to_column);
@@ -6731,8 +6753,8 @@ void TextEdit::_bind_methods() {
 	// ClassDB::bind_method(D_METHOD("get_selection_column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_origin_line", "caret_index"), &TextEdit::get_selection_origin_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_origin_column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
-	ClassDB::bind_method(D_METHOD("set_selection_origin_line", "line", "caret_index", "can_be_hidden", "wrap_index"), &TextEdit::get_selection_origin_line, DEFVAL(0), DEFVAL(false), DEFVAL(-1));
-	ClassDB::bind_method(D_METHOD("set_selection_origin_column", "column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("set_selection_origin_line", "line", "caret_index", "can_be_hidden", "wrap_index"), &TextEdit::set_selection_origin_line, DEFVAL(0), DEFVAL(false), DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("set_selection_origin_column", "column", "caret_index"), &TextEdit::set_selection_origin_column, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("get_selection_from_line", "caret_index"), &TextEdit::get_selection_from_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_from_column", "caret_index"), &TextEdit::get_selection_from_column, DEFVAL(0));
