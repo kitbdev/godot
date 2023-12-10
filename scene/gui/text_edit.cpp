@@ -2276,26 +2276,14 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
-		bool first_line = false;
-		if (!p_split_current_line) {
+		if (p_split_current_line) {
+			insert_text_at_caret("\n", i);
+		} else {
+			int line = get_caret_line(i);
+			insert_text("\n", line, p_above ? 0 : text[line].length());
 			deselect(i);
-			if (p_above) {
-				if (get_caret_line(i) > 0) {
-					set_caret_line(get_caret_line(i) - 1, false, true, -1, i);
-					set_caret_column(text[get_caret_line(i)].length(), i == 0, i);
-				} else {
-					set_caret_column(0, i == 0, i);
-					first_line = true;
-				}
-			} else {
-				set_caret_column(text[get_caret_line(i)].length(), i == 0, i);
-			}
-		}
-
-		insert_text_at_caret("\n", i);
-
-		if (first_line) {
-			set_caret_line(0, i == 0, true, 0, i);
+			set_caret_line(p_above ? line : line + 1, false, true, -1, i);
+			set_caret_column(0, i == 0, i);
 		}
 	}
 
@@ -2559,7 +2547,7 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 			continue;
 		}
 
-		int caret_index = i; //caret_edit_order[i];
+		int caret_index = i; //caret_edit_order[i]; // todo
 		if (get_caret_column(caret_index) == 0 && get_caret_line(caret_index) == 0 && !has_selection(caret_index)) {
 			continue;
 		}
@@ -2572,8 +2560,8 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 		if (p_all_to_left) {
 			// Delete everything to left of caret.
 			int caret_current_column = get_caret_column(caret_index);
-			set_caret_column(0, caret_index == 0, caret_index);
 			_remove_text(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
+			set_caret_column(0, caret_index == 0, caret_index);
 
 			collapse_carets(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
 			offset_carets_after(get_caret_line(caret_index), caret_current_column, get_caret_line(caret_index), 0);
@@ -4086,6 +4074,7 @@ void TextEdit::undo() {
 
 	current_op.version = op.prev_version;
 	if (undo_stack_pos->get().chain_backward) {
+		// This was part of a complex operation, undo until the chain forward at the start of the complex operation.
 		while (true) {
 			ERR_BREAK(!undo_stack_pos->prev());
 			undo_stack_pos = undo_stack_pos->prev();
@@ -4139,6 +4128,7 @@ void TextEdit::redo() {
 	_do_text_op(op, false);
 	current_op.version = op.version;
 	if (undo_stack_pos->get().chain_forward) {
+		// This was part of a complex operation, redo until the chain backward at the end of the complex operation.
 		while (true) {
 			ERR_BREAK(!undo_stack_pos->next());
 			undo_stack_pos = undo_stack_pos->next();
@@ -7654,6 +7644,9 @@ void TextEdit::_update_selection_mode_pointer(bool p_initial) {
 	if (p_initial && !has_selection(caret_index)) {
 		set_selection_origin_line(line, caret_index);
 		set_selection_origin_column(column, caret_index);
+		// Set the word begin and end to the column in case the mode changes later.
+		selected_word_begin_column = column;
+		selected_word_end_column = column;
 	} else {
 		select(get_selection_origin_line(caret_index), get_selection_origin_column(caret_index), line, column, caret_index);
 	}
@@ -7684,13 +7677,14 @@ void TextEdit::_update_selection_mode_word(bool p_initial) {
 	}
 
 	if (p_initial && !has_selection(caret_index)) {
+		// Only set the selection origin if there is no selection, otherwise we want to expand the selection.
 		select(line, beg, line, end, caret_index);
-		carets.write[caret_index].selection.selected_word_beg = beg;
-		carets.write[caret_index].selection.selected_word_end = end;
+		selected_word_begin_column = beg;
+		selected_word_end_column = end;
 	} else {
 		int origin_line = get_selection_origin_line(caret_index);
-		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= carets[caret_index].selection.selected_word_beg);
-		int origin_col = is_new_selection_dir_right ? carets[caret_index].selection.selected_word_beg : carets[caret_index].selection.selected_word_end;
+		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= selected_word_begin_column);
+		int origin_col = is_new_selection_dir_right ? selected_word_begin_column : selected_word_end_column;
 		int caret_col = is_new_selection_dir_right ? end : beg;
 
 		select(origin_line, origin_col, line, caret_col, caret_index);
@@ -7713,7 +7707,7 @@ void TextEdit::_update_selection_mode_line(bool p_initial) {
 	int line = pos.y;
 	int caret_index = get_caret_count() - 1;
 
-	int origin_line = p_initial ? line : get_selection_origin_line();
+	int origin_line = p_initial && !has_selection(caret_index) ? line : get_selection_origin_line();
 	bool line_below = line >= origin_line;
 	int origin_col = line_below ? 0 : get_line(origin_line).length();
 	int caret_line = line_below ? line + 1 : line;
@@ -7721,6 +7715,12 @@ void TextEdit::_update_selection_mode_line(bool p_initial) {
 
 	select(origin_line, origin_col, caret_line, caret_col, caret_index);
 	adjust_viewport_to_caret(caret_index);
+
+	if (p_initial) {
+		// Set the word begin and end to the start and end of the origin line in case it changes later.
+		selected_word_begin_column = 0;
+		selected_word_end_column = get_line(origin_line).length();
+	}
 
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
 		DisplayServer::get_singleton()->clipboard_set_primary(get_selected_text());
@@ -8244,7 +8244,7 @@ void TextEdit::_remove_text(int p_from_line, int p_from_column, int p_to_line, i
 		current_op = op;
 		return; // Set as current op, return.
 	}
-	// See if it can be merged.
+	// See if it can be merged. // todo remove merge, make part of action. and some things can stop being complex?
 	if (current_op.from_line == p_to_line && current_op.from_column == p_to_column) {
 		// Backspace or similar.
 		current_op.text = txt + current_op.text;
