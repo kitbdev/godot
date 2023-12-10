@@ -869,6 +869,7 @@ public:
 	void clamp_carets(int p_line);
 
 	void merge_overlapping_carets();
+	void check_overlapping_carets(); // todo
 	void queue_merge_carets();
 	void begin_multicaret_edit();
 	void end_multicaret_edit();
@@ -879,7 +880,6 @@ public:
 	bool is_caret_visible(int p_caret = 0) const;
 	Point2 get_caret_draw_pos(int p_caret = 0) const;
 
-	void set_caret(int p_line, int p_column, int p_caret = 0, bool p_adjust_viewport = true, bool p_can_be_hidden = true);
 	void set_caret_line(int p_line, bool p_adjust_viewport = true, bool p_can_be_hidden = true, int p_wrap_index = 0, int p_caret = 0);
 	int get_caret_line(int p_caret = 0) const;
 

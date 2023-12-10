@@ -1829,29 +1829,14 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 				_apply_ime();
 
-				bool selection_clicked = false;
 				if (is_move_caret_on_right_click_enabled()) {
-					if (has_selection()) {
-						for (int i = 0; i < get_caret_count(); i++) {
-							int from_line = get_selection_from_line(i);
-							int to_line = get_selection_to_line(i);
-							int from_column = get_selection_from_column(i);
-							int to_column = get_selection_to_column(i);
-
-							if (line >= from_line && line <= to_line && (line != from_line || col >= from_column) && (line != to_line || col <= to_column)) {
-								// Right click in one of the selected text
-								selection_clicked = true;
-								break;
-							}
-						}
-					}
+					bool selection_clicked = get_selection_at(line, col, true) >= 0;
 					if (!selection_clicked) {
 						deselect();
 						remove_secondary_carets();
 						set_caret_line(line, false, false, -1);
 						set_caret_column(col);
 					}
-					merge_overlapping_carets();
 				}
 
 				if (context_menu_enabled) {
@@ -1917,8 +1902,8 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			mpos.x = get_size().x - mpos.x;
 		}
 
-		// Ignore if dragging.
 		if (mm->get_button_mask().has_flag(MouseButtonMask::LEFT) && get_viewport()->gui_get_drag_data() == Variant()) {
+			// Update if not in drag and drop.
 			_reset_caret_blink_timer();
 
 			if (draw_minimap && !dragging_selection) {
@@ -3403,20 +3388,17 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 	if (p_swap_carets) {
 		// Swap carets.
 		for (int i = 0; i < get_caret_count(); i++) {
+			bool selected = has_selection(i);
 			if (get_caret_line(i) == p_from_line || get_caret_line(i) == p_to_line) {
 				int caret_new_line = get_caret_line(i) == p_from_line ? p_to_line : p_from_line;
 				int caret_column = get_caret_column(i);
 				set_caret_line(caret_new_line, false, true, -1, i);
 				set_caret_column(caret_column, false, i);
 			}
-			if (!has_selection(i)) {
-				continue;
-			}
-			if (get_selection_origin_line(i) == p_from_line || get_selection_origin_line(i) == p_to_line) {
+			if (selected && get_selection_origin_line(i) == p_from_line || get_selection_origin_line(i) == p_to_line) {
 				int origin_new_line = get_selection_origin_line(i) == p_from_line ? p_to_line : p_from_line;
 				int origin_column = get_selection_origin_column(i);
-				set_selection_origin_line(origin_new_line, i);
-				set_selection_origin_column(origin_column, i);
+				select(origin_new_line, origin_column, get_caret_line(i), get_caret_column(i), i);
 			}
 		}
 		// If only part of a selection was changed, it may now overlap.
@@ -3433,14 +3415,15 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 void TextEdit::insert_line_at(int p_line, const String &p_text) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
+	// Use a complex operation so subsequent calls aren't merged together.
+	begin_complex_operation();
+
 	int new_line, new_column;
 	_insert_text(p_line, 0, p_text + "\n", &new_line, &new_column);
 
 	offset_carets_after(p_line, 0, new_line, new_column);
 
-	// todo this for all? or part of multicaret edit? or remove?
-	// Need to apply the adjustments to the undo / redo carets.
-	current_op.end_carets = carets;
+	end_complex_operation();
 }
 
 void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
@@ -3448,11 +3431,15 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 
 	if (get_line_count() == 1) {
 		// Only one line, just remove contents.
+		begin_complex_operation();
 		int line_length = get_line(p_line).length();
 		_remove_text(p_line, 0, p_line, line_length);
 		collapse_carets(p_line, 0, p_line, line_length);
+		end_complex_operation();
 		return;
 	}
+
+	begin_complex_operation();
 
 	bool is_last_line = p_line == get_line_count() - 1;
 	int from_line = is_last_line ? p_line - 1 : p_line;
@@ -3483,11 +3470,13 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 		// Move carets to visually line up.
 		int target_line = p_move_cursors_down ? p_line : p_line - 1;
 		for (int i = 0; i < get_caret_count(); i++) {
+			bool selected = has_selection(i);
 			if (get_caret_line(i) == p_line) {
 				set_caret_line(target_line, i == 0, true, 0, i);
 			}
-			if (has_selection(i) && get_selection_origin_line(i) == p_line) {
+			if (selected && get_selection_origin_line(i) == p_line) {
 				set_selection_origin_line(target_line, i, true, 0);
+				select(get_selection_origin_line(i), get_selection_origin_column(i), get_caret_line(i), get_caret_column(i), i);
 			}
 		}
 		// todo add to ignore list
@@ -3495,6 +3484,7 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 	}
 	offset_carets_after(next_line, next_column, from_line, from_column);
 	end_multicaret_edit();
+	end_complex_operation();
 }
 
 void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
@@ -4077,7 +4067,7 @@ void TextEdit::undo() {
 	_push_current_op();
 
 	if (undo_stack_pos == nullptr) {
-		if (!undo_stack.size()) {
+		if (undo_stack.is_empty()) {
 			return; // Nothing to undo.
 		}
 
@@ -4120,6 +4110,7 @@ void TextEdit::undo() {
 	}
 
 	carets = undo_stack_pos->get().start_carets;
+	// todo force unhide carets (and in redo)
 
 	if (dirty_carets) {
 		_caret_changed();
@@ -5008,10 +4999,10 @@ void TextEdit::merge_overlapping_carets() {
 		bool merge_carets;
 		if (!has_selection(first_caret) || !has_selection(second_caret)) {
 			// Merge if touching.
-			// todo maybe not?
 			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) <= get_selection_to_column(first_caret));
 		} else {
-			// Merge if overlapping.
+			// Merge two selections if overlapping.
+			// todo maybe not?
 			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) < get_selection_to_column(first_caret));
 		}
 
@@ -5092,6 +5083,37 @@ void TextEdit::queue_merge_carets() {
 	multicaret_edit_merge_queued = true;
 }
 
+void TextEdit::check_overlapping_carets() { // todo use?
+	if (!is_in_mulitcaret_edit()) {
+		merge_overlapping_carets();
+		return;
+	}
+	multicaret_edit_ignore_carets.clear(); // todo only for merged carets now?
+	Vector<int> sorted_carets = get_sorted_carets(true);
+	for (int i = 0; i < sorted_carets.size() - 1; i++) {
+		int first_caret = sorted_carets[i];
+		int second_caret = sorted_carets[i + 1];
+
+		bool merge_carets;
+		if (!has_selection(first_caret) || !has_selection(second_caret)) {
+			// Merge if touching.
+			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) <= get_selection_to_column(first_caret));
+		} else {
+			// Merge two selections if overlapping.
+			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) < get_selection_to_column(first_caret));
+		}
+		if (merge_carets) {
+			// todo check
+			// Ignore lower one that will be removed.
+			// todo wont work in sequence then... matters?
+			// multicaret_edit_ignore_carets.insert(first_caret < second_caret ? first_caret : second_caret);
+			// ignore higher one since we assume we're in a loop?
+			multicaret_edit_ignore_carets.insert(second_caret);
+			queue_merge_carets();
+		}
+	}
+}
+
 // Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
 void TextEdit::begin_multicaret_edit() {
 	multicaret_edit_count++;
@@ -5130,18 +5152,6 @@ bool TextEdit::is_caret_visible(int p_caret) const {
 Point2 TextEdit::get_caret_draw_pos(int p_caret) const {
 	ERR_FAIL_INDEX_V(p_caret, carets.size(), Point2(0, 0));
 	return carets[p_caret].draw_pos;
-}
-
-void TextEdit::set_caret(int p_line, int p_column, int p_caret, bool p_adjust_viewport, bool p_can_be_hidden) {
-	// todo remove?
-	// Set the line and column. Doesn't try to adjust column like set caret line would.
-	// ERR_FAIL_INDEX(p_caret, carets.size());
-	// p_line = CLAMP(p_line, 0, text.size() - 1);
-	// p_column = CLAMP(p_column, 0, get_line(get_caret_line(p_caret)).length());
-
-	// bool caret_moved = get_caret_line(p_caret) != p_line;
-	// carets.write[p_caret].line = p_line;
-	// get_next_visible_line_offset_from(p_line, 0);
 }
 
 void TextEdit::set_caret_line(int p_line, bool p_adjust_viewport, bool p_can_be_hidden, int p_wrap_index, int p_caret) {
@@ -6563,8 +6573,10 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("swap_lines", "from_line", "to_line", "swap_carets"), &TextEdit::swap_lines, DEFVAL(true));
 
 	ClassDB::bind_method(D_METHOD("insert_line_at", "line", "text"), &TextEdit::insert_line_at);
+	ClassDB::bind_method(D_METHOD("remove_line_at", "line", "move_carets_down"), &TextEdit::remove_line_at, DEFVAL(true));
 	ClassDB::bind_method(D_METHOD("insert_text_at_caret", "text", "caret_index"), &TextEdit::insert_text_at_caret, DEFVAL(-1));
 
+	ClassDB::bind_method(D_METHOD("insert_text", "text", "line", "column"), &TextEdit::insert_text);
 	ClassDB::bind_method(D_METHOD("remove_text", "from_line", "from_column", "to_line", "to_column"), &TextEdit::remove_text);
 
 	ClassDB::bind_method(D_METHOD("get_last_unhidden_line"), &TextEdit::get_last_unhidden_line);

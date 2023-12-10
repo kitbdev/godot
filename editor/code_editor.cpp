@@ -1247,14 +1247,20 @@ void CodeTextEditor::delete_lines() {
 	text_editor->begin_multicaret_edit();
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
+	int line_offset = 0;
 	for (int i = line_ranges.size() - 1; i >= 0; i--) {
 		// Remove last line of range separately to preserve carets.
-		text_editor->remove_line_at(line_ranges[i].y);
-		text_editor->unfold_line(line_ranges[i].y);
+		text_editor->remove_line_at(line_ranges[i].y + line_offset);
+		text_editor->unfold_line(line_ranges[i].y + line_offset);
 		if (line_ranges[i].x != line_ranges[i].y) {
-			text_editor->remove_text(line_ranges[i].x, 0, line_ranges[i].y, 0);
+			text_editor->remove_text(line_ranges[i].x + line_offset, 0, line_ranges[i].y + line_offset, 0);
 		}
+		// todo test
+		line_offset = line_ranges[i].x - line_ranges[i].y - 1;
 	}
+
+	// Deselect all.
+	text_editor->deselect();
 
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
