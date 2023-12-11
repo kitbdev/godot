@@ -36,6 +36,15 @@
 #include "tests/test_macros.h"
 
 namespace TestCodeEdit {
+static inline Array build_array() { // todo use these
+	return Array();
+}
+template <typename... Targs>
+static inline Array build_array(Variant item, Targs... Fargs) {
+	Array a = build_array(Fargs...);
+	a.push_front(item);
+	return a;
+}
 
 TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 	CodeEdit *code_edit = memnew(CodeEdit);
