@@ -589,7 +589,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 0);
 			CHECK(text_edit->get_caret_column(1) == 6);
-			SIGNAL_CHECK("lines_edited_from", lines_edited_args); // todo broked?
+			lines_edited_args.reverse();
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_set");
@@ -881,7 +882,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Undo.
 			text_edit->undo();
 			MessageQueue::get_singleton()->flush();
-			CHECK(text_edit->get_text() == "remove line at\nlines"); // todo
+			CHECK(text_edit->get_text() == "remove line at\nlines");
 			CHECK(text_edit->get_caret_line(0) == 1);
 			CHECK(text_edit->get_caret_column(0) == 2);
 			SIGNAL_CHECK("lines_edited_from", reverse_nested(lines_edited_args));
@@ -1669,10 +1670,9 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
 
-			// Delete selection does nothing if not selected.
-			text_edit->select(0, 8, 0, 4);
-			CHECK(text_edit->has_selection());
-			SEND_GUI_ACTION("ui_text_caret_right"); // todo unrelated?
+			// Delete selection does nothing if there is no selection.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(8);
 			CHECK_FALSE(text_edit->has_selection());
 
 			text_edit->delete_selection();
@@ -2346,7 +2346,36 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// todo cut on single line, and multiple carets.
+			// Cut line with multiple carets.
+			// text_edit->set_caret_line(0);
+			// text_edit->set_caret_column(6);
+			// text_edit->add_caret(0, 2); // todo
+			// MessageQueue::get_singleton()->flush();
+			// SIGNAL_DISCARD("caret_changed");
+
+			// ERR_PRINT_OFF;
+			// text_edit->cut();
+			// MessageQueue::get_singleton()->flush();
+			// ERR_PRINT_ON; // Can't check display server content.
+			// CHECK(text_edit->get_text() == "this \nsome\n");
+			// CHECK(text_edit->get_caret_line() == 0);
+			// CHECK(text_edit->get_caret_column() == 5);
+			// SIGNAL_CHECK("caret_changed", empty_signal_args);
+			// SIGNAL_CHECK("text_changed", empty_signal_args);
+			// SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// // Cut on the only line just removes the contents.
+			// // todo
+			// ERR_PRINT_OFF;
+			// text_edit->cut();
+			// MessageQueue::get_singleton()->flush();
+			// ERR_PRINT_ON; // Can't check display server content.
+			// CHECK(text_edit->get_text() == "this \nsome\n");
+			// CHECK(text_edit->get_caret_line() == 0);
+			// CHECK(text_edit->get_caret_column() == 5);
+			// SIGNAL_CHECK("caret_changed", empty_signal_args);
+			// SIGNAL_CHECK("text_changed", empty_signal_args);
+			// SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] copy") {
