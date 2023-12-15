@@ -4715,6 +4715,8 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 			}
 		}
 
+		// todo need to add first, so hitting escape keeps caret 0 at original pos
+
 		// Move the caret up or down one visible line.
 		int caret_wrap_index = get_caret_wrap_index(i);
 		int selection_origin_wrap_index = get_line_wrap_index_at_column(selection_origin_line, selection_origin_column);
