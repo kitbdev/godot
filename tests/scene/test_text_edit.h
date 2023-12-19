@@ -2945,7 +2945,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0), build_array(0, 0));
 
-			SEND_GUI_ACTION("ui_text_backspace_word"); // TODO fix caret issue
+			SEND_GUI_ACTION("ui_text_backspace_word");
 			CHECK(text_edit->get_viewport()->is_input_handled());
 			CHECK(text_edit->get_text() == " st test");
 			CHECK(text_edit->get_caret_count() == 2);
@@ -3156,6 +3156,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(0, 0, 0, 4);
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(4);
+			// todo multiple caret overlapping
 
 			text_edit->add_caret(1, 4);
 			text_edit->select(1, 0, 1, 4, 1);
@@ -3168,7 +3169,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
 
 			// With selection should be a normal delete.
 			SEND_GUI_ACTION("ui_text_delete_all_to_right");
@@ -3189,7 +3190,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(text_edit->get_line(0).length());
 			text_edit->set_caret_column(text_edit->get_line(1).length(), false, 1);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");

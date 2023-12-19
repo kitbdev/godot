@@ -2541,47 +2541,44 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 	}
 
 	start_action(EditAction::ACTION_BACKSPACE);
+	begin_multicaret_edit();
 
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 
-		int caret_index = i; //caret_edit_order[i]; // todo
-		if (get_caret_column(caret_index) == 0 && get_caret_line(caret_index) == 0 && !has_selection(caret_index)) {
+		if (get_caret_column(i) == 0 && get_caret_line(i) == 0 && !has_selection(i)) {
 			continue;
 		}
 
-		if (has_selection(caret_index) || (!p_all_to_left && !p_word) || get_caret_column(caret_index) == 0) {
-			backspace(caret_index);
+		if (has_selection(i) || (!p_all_to_left && !p_word) || get_caret_column(i) == 0) {
+			backspace(i);
 			continue;
 		}
 
 		if (p_all_to_left) {
-			// Delete everything to left of caret.
-			int caret_current_column = get_caret_column(caret_index);
-			_remove_text(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
-			set_caret_column(0, caret_index == 0, caret_index);
-
-			collapse_carets(get_caret_line(caret_index), 0, get_caret_line(caret_index), caret_current_column);
-			offset_carets_after(get_caret_line(caret_index), caret_current_column, get_caret_line(caret_index), 0);
+			// Remove everything to left of caret to the start of the line.
+			int caret_current_column = get_caret_column(i);
+			_remove_text(get_caret_line(i), 0, get_caret_line(i), caret_current_column);
+			collapse_carets(get_caret_line(i), 0, get_caret_line(i), caret_current_column);
+			set_caret_column(0, i == 0, i);
+			offset_carets_after(get_caret_line(i), caret_current_column, get_caret_line(i), 0);
 			continue;
 		}
 
 		if (p_word) {
-			// Delete next word to left of caret.
-
-			// Save columns here as the caret may change when resolving overlaps.
-			int from_column = get_caret_column(caret_index);
-			int column = get_caret_column(caret_index);
+			// Remove text to the start of the word left of the caret.
+			int from_column = get_caret_column(i);
+			int column = get_caret_column(i);
 			// Check for the case "<word><space><caret>" and ignore the space.
 			// No need to check for column being 0 since it is checked above.
-			if (is_whitespace(text[get_caret_line(caret_index)][get_caret_column(caret_index) - 1])) {
+			if (is_whitespace(text[get_caret_line(i)][get_caret_column(i) - 1])) {
 				column -= 1;
 			}
 
 			// Get a list with the indices of the word bounds of the given text line.
-			const PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(get_caret_line(caret_index))->get_rid());
+			const PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(get_caret_line(i))->get_rid());
 			if (words.is_empty() || column <= words[0]) {
 				// If "words" is empty, meaning no words are left, we can remove everything until the beginning of the line.
 				column = 0;
@@ -2595,15 +2592,14 @@ void TextEdit::_do_backspace(bool p_word, bool p_all_to_left) {
 				}
 			}
 
-			_remove_text(get_caret_line(caret_index), column, get_caret_line(caret_index), from_column);
-
-			collapse_carets(get_caret_line(caret_index), column, get_caret_line(caret_index), from_column);
-			set_caret_line(get_caret_line(caret_index), false, true, -1, caret_index);
-			set_caret_column(column, caret_index == 0, caret_index);
-			offset_carets_after(get_caret_line(caret_index), from_column, get_caret_line(caret_index), column);
+			_remove_text(get_caret_line(i), column, get_caret_line(i), from_column);
+			collapse_carets(get_caret_line(i), column, get_caret_line(i), from_column);
+			set_caret_column(column, i == 0, i);
+			offset_carets_after(get_caret_line(i), from_column, get_caret_line(i), column);
 		}
 	}
 
+	end_multicaret_edit();
 	end_action();
 }
 
@@ -2613,38 +2609,38 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 	}
 
 	start_action(EditAction::ACTION_DELETE);
-
 	begin_multicaret_edit();
+
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
-		int caret_index = i;
-		if (has_selection(caret_index)) {
-			delete_selection(caret_index);
+
+		if (has_selection(i)) {
+			delete_selection(i);
 			continue;
 		}
-		int curline_len = text[get_caret_line(caret_index)].length();
 
-		if (get_caret_line(caret_index) == text.size() - 1 && get_caret_column(caret_index) == curline_len) {
+		int curline_len = text[get_caret_line(i)].length();
+		if (get_caret_line(i) == text.size() - 1 && get_caret_column(i) == curline_len) {
 			continue; // Last line, last column: Nothing to do.
 		}
 
-		int next_line = get_caret_column(caret_index) < curline_len ? get_caret_line(caret_index) : get_caret_line(caret_index) + 1;
+		int next_line = get_caret_column(i) < curline_len ? get_caret_line(i) : get_caret_line(i) + 1;
 		int next_column;
 
 		if (p_all_to_right) {
-			if (get_caret_column(caret_index) == curline_len) {
+			if (get_caret_column(i) == curline_len) {
 				continue;
 			}
 
 			// Delete everything to right of caret.
 			next_column = curline_len;
-			next_line = get_caret_line(caret_index);
-		} else if (p_word && get_caret_column(caret_index) < curline_len - 1) {
+			next_line = get_caret_line(i);
+		} else if (p_word && get_caret_column(i) < curline_len - 1) {
 			// Delete next word to right of caret.
-			int line = get_caret_line(caret_index);
-			int column = get_caret_column(caret_index);
+			int line = get_caret_line(i);
+			int column = get_caret_column(i);
 
 			PackedInt32Array words = TS->shaped_text_get_word_breaks(text.get_line_data(line)->get_rid());
 			for (int j = 1; j < words.size(); j = j + 2) {
@@ -2659,19 +2655,19 @@ void TextEdit::_delete(bool p_word, bool p_all_to_right) {
 		} else {
 			// Delete one character.
 			if (caret_mid_grapheme_enabled) {
-				next_column = get_caret_column(caret_index) < curline_len ? (get_caret_column(caret_index) + 1) : 0;
+				next_column = get_caret_column(i) < curline_len ? (get_caret_column(i) + 1) : 0;
 			} else {
-				next_column = get_caret_column(caret_index) < curline_len ? TS->shaped_text_next_character_pos(text.get_line_data(get_caret_line(caret_index))->get_rid(), (get_caret_column(caret_index))) : 0;
+				next_column = get_caret_column(i) < curline_len ? TS->shaped_text_next_character_pos(text.get_line_data(get_caret_line(i))->get_rid(), (get_caret_column(i))) : 0;
 			}
 		}
 
-		_remove_text(get_caret_line(caret_index), get_caret_column(caret_index), next_line, next_column);
-		collapse_carets(get_caret_line(caret_index), get_caret_column(caret_index), next_line, next_column, caret_index);
-		offset_carets_after(next_line, next_column, get_caret_line(caret_index), get_caret_column(caret_index));
+		_remove_text(get_caret_line(i), get_caret_column(i), next_line, next_column);
+		collapse_carets(get_caret_line(i), get_caret_column(i), next_line, next_column, i);
+		offset_carets_after(next_line, next_column, get_caret_line(i), get_caret_column(i));
 	}
 
-	end_action();
 	end_multicaret_edit();
+	end_action();
 }
 
 void TextEdit::_move_caret_document_start(bool p_select) {
