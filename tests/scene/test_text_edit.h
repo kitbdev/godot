@@ -1369,7 +1369,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
-			text_edit->set_selecting_enabled(true);
+			text_edit->set_selecting_enabled(true); // todo multiple carets, only last one is affected, can be merged?
 		}
 
 		SUBCASE("[TextEdit] mouse word select") {
@@ -1597,9 +1597,11 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		SUBCASE("[TextEdit] select and deselect") {
 			text_edit->set_text("this is some text\nfor selection");
 			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
 
 			// Select clamps input to full text.
 			text_edit->select(-1, -1, 500, 500);
+			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
 			CHECK(text_edit->is_selection_direction_right(0));
@@ -1611,12 +1613,16 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_selection_origin_column(0));
 			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_caret_line(0));
 			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_caret_column(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			text_edit->deselect();
+			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(text_edit->has_selection());
+			SIGNAL_CHECK_FALSE("caret_changed");
 
 			// Select works in the other direction.
 			text_edit->select(500, 500, -1, -1);
+			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
 			CHECK_FALSE(text_edit->is_selection_direction_right(0));
@@ -1628,12 +1634,16 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_caret_column(0));
 			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_selection_origin_line(0));
 			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_selection_origin_column(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			text_edit->deselect();
+			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(text_edit->has_selection());
+			SIGNAL_CHECK_FALSE("caret_changed");
 
 			// Select part of a line.
 			text_edit->select(0, 4, 0, 8);
+			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
 			CHECK(text_edit->is_selection_direction_right(0));
@@ -1645,12 +1655,16 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_selection_origin_column(0));
 			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_caret_line(0));
 			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_caret_column(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			text_edit->deselect();
+			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(text_edit->has_selection());
+			SIGNAL_CHECK_FALSE("caret_changed");
 
 			// Select part of a line in the other direction.
 			text_edit->select(0, 8, 0, 4);
+			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
 			CHECK_FALSE(text_edit->is_selection_direction_right(0));
@@ -1662,12 +1676,15 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_from_column(0) == text_edit->get_caret_column(0));
 			CHECK(text_edit->get_selection_to_line(0) == text_edit->get_selection_origin_line(0));
 			CHECK(text_edit->get_selection_to_column(0) == text_edit->get_selection_origin_column(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			// Cannot select when disabled.
 			text_edit->set_selecting_enabled(false);
 			CHECK_FALSE(text_edit->has_selection());
 			text_edit->select(0, 8, 0, 4);
+			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(text_edit->has_selection());
+			SIGNAL_CHECK_FALSE("caret_changed");
 			text_edit->set_selecting_enabled(true);
 		}
 
@@ -2195,7 +2212,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(0);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
@@ -2213,8 +2229,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(0);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-
 			lines_edited_args[0] = build_array(2, 1);
+
 			text_edit->backspace();
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "this is\nsome");
@@ -2269,9 +2285,17 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// todo redo
+			// Redo.
+			text_edit->redo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "this is\n");
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// todo backspace adjusts carets and merges them if now at same pos
+			// See ui_text_backspace for more backspace tests.
 		}
 
 		SUBCASE("[TextEdit] cut") {
@@ -2352,35 +2376,55 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
 			// Cut line with multiple carets.
-			// text_edit->set_caret_line(0);
-			// text_edit->set_caret_column(6);
-			// text_edit->add_caret(0, 2); // todo
-			// MessageQueue::get_singleton()->flush();
-			// SIGNAL_DISCARD("caret_changed");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(3);
+			text_edit->add_caret(0, 2);
+			text_edit->add_caret(0, 4);
+			text_edit->add_caret(2, 0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 0), build_array(1, 0));
 
-			// ERR_PRINT_OFF;
-			// text_edit->cut();
-			// MessageQueue::get_singleton()->flush();
-			// ERR_PRINT_ON; // Can't check display server content.
-			// CHECK(text_edit->get_text() == "this \nsome\n");
-			// CHECK(text_edit->get_caret_line() == 0);
-			// CHECK(text_edit->get_caret_column() == 5);
-			// SIGNAL_CHECK("caret_changed", empty_signal_args);
-			// SIGNAL_CHECK("text_changed", empty_signal_args);
-			// SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			ERR_PRINT_OFF;
+			text_edit->cut();
+			MessageQueue::get_singleton()->flush();
+			ERR_PRINT_ON; // Can't check display server content.
+			CHECK(text_edit->get_text() == "some");
+			CHECK(text_edit->get_caret_count() == 3);
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 2); // In the default font, this is the same position.
+			// The previous caret at index 1 was merged.
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 3); // In the default font, this is the same position.
+			CHECK_FALSE(text_edit->has_selection(2));
+			CHECK(text_edit->get_caret_line(2) == 0);
+			CHECK(text_edit->get_caret_column(2) == 4);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// // Cut on the only line just removes the contents.
-			// // todo
-			// ERR_PRINT_OFF;
-			// text_edit->cut();
-			// MessageQueue::get_singleton()->flush();
-			// ERR_PRINT_ON; // Can't check display server content.
-			// CHECK(text_edit->get_text() == "this \nsome\n");
-			// CHECK(text_edit->get_caret_line() == 0);
-			// CHECK(text_edit->get_caret_column() == 5);
-			// SIGNAL_CHECK("caret_changed", empty_signal_args);
-			// SIGNAL_CHECK("text_changed", empty_signal_args);
-			// SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			// Cut on the only line removes the contents.
+			text_edit->remove_secondary_carets();
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			ERR_PRINT_OFF;
+			text_edit->cut();
+			MessageQueue::get_singleton()->flush();
+			ERR_PRINT_ON; // Can't check display server content.
+			CHECK(text_edit->get_text() == "");
+			CHECK(text_edit->get_line_count() == 1);
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] copy") {
@@ -3817,64 +3861,111 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		SUBCASE("[TextEdit] ui_text_caret_word_left") {
 			text_edit->set_text("\nthis is some test text.\nthis is some test text.");
 			text_edit->set_caret_line(1);
-			text_edit->set_caret_column(7);
-
-			text_edit->add_caret(2, 7);
-			CHECK(text_edit->get_caret_count() == 2);
+			text_edit->set_caret_column(15);
+			text_edit->add_caret(2, 10);
+			text_edit->select(1, 10, 1, 15);
+			text_edit->select(2, 15, 2, 10, 1);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Shift should select.
+			// Deselect to start of previous word when selection is right to left.
+			// Select to start of next word when selection is left to right.
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::ALT | KeyModifierMask::SHIFT);
 #else
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT);
 #endif
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(text_edit->get_selected_text(0) == "is");
+			CHECK(text_edit->get_caret_count() == 2);
+
 			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "me ");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 13);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 10);
+			CHECK(text_edit->is_selection_direction_right(0));
 
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 5);
-			CHECK(text_edit->get_selected_text(1) == "is");
 			CHECK(text_edit->has_selection(1));
-			// todo selection dir
-
-			SIGNAL_CHECK("caret_changed", empty_signal_args);
-			SIGNAL_CHECK_FALSE("text_changed");
-			SIGNAL_CHECK_FALSE("lines_edited_from");
-
-			// Should still move caret with selection.
-			SEND_GUI_ACTION("ui_text_caret_word_left");
-			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 0);
-			CHECK_FALSE(text_edit->has_selection(0));
-
+			CHECK(text_edit->get_selected_text(1) == "some te");
 			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 0);
-			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_column(1) == 8);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 15);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Normal word left.
+			// Select to start of word with shift.
+			text_edit->deselect();
+			text_edit->set_caret_column(7);
+			text_edit->set_caret_column(16, false, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+#ifdef MACOS_ENABLED
+			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::ALT | KeyModifierMask::SHIFT);
+#else
+			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT);
+#endif
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "is");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 5);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 7);
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "tes");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 13);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 16);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Deselect and move caret to start of next word without shift.
 			SEND_GUI_ACTION("ui_text_caret_word_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 8);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 
+			// Moves to end of previous line when at start of line. Does nothing at start of text.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(0);
+			text_edit->set_caret_column(0, false, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_ACTION("ui_text_caret_word_left");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 1);
 			CHECK(text_edit->get_caret_column(1) == 23);
-			CHECK_FALSE(text_edit->has_selection(1));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -3884,248 +3975,417 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_text("\nthis is some test text.\nthis is some test text.");
 			text_edit->set_caret_line(1);
 			text_edit->set_caret_column(7);
-			text_edit->select(1, 2, 1, 7);
-
-			text_edit->add_caret(2, 7);
-			text_edit->select(2, 2, 2, 7, 1);
-			CHECK(text_edit->get_caret_count() == 2);
-
+			text_edit->select(1, 3, 1, 7);
+			text_edit->add_caret(2, 3);
+			text_edit->select(2, 7, 2, 3, 1);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Normal left should deselect and place at selection start.
-			SEND_GUI_ACTION("ui_text_caret_left");
-			CHECK(text_edit->get_viewport()->is_input_handled());
-
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 2);
-			CHECK_FALSE(text_edit->has_selection(0));
-
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 2);
-			CHECK_FALSE(text_edit->has_selection(1));
-
-			SIGNAL_CHECK("caret_changed", empty_signal_args);
-			SIGNAL_CHECK_FALSE("text_changed");
-			SIGNAL_CHECK_FALSE("lines_edited_from");
-
-			// With shift should select.
+			// Remove one character from selection when selection is left to right.
+			// Add one character to selection when selection is right to left.
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT);
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 1);
-			CHECK(text_edit->get_selected_text(0) == "h");
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "s i");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 6);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 3);
+			CHECK(text_edit->is_selection_direction_right(0));
 
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 1);
-			CHECK(text_edit->get_selected_text(1) == "h");
 			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "is is");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 2);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 7);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// All ready at select left, should only deselect.
+			// Deselect and put caret at selection start without shift.
 			SEND_GUI_ACTION("ui_text_caret_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 1);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
-
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 1);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 3);
 			CHECK_FALSE(text_edit->has_selection(1));
-
-			SIGNAL_CHECK_FALSE("caret_changed");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 2);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Normal left.
+			// Move caret one character to the left.
 			SEND_GUI_ACTION("ui_text_caret_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 1);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 
+			// Select one character to the left with shift and no existing selection.
+			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "h");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 1);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 2);
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "t");
 			CHECK(text_edit->get_caret_line(1) == 2);
 			CHECK(text_edit->get_caret_column(1) == 0);
-			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 1);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Left at col 0 should go up a line.
+			// Moves to end of previous line when at start of line. Does nothing at start of text.
+			text_edit->deselect();
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(0);
+			text_edit->set_caret_column(0, false, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
 			SEND_GUI_ACTION("ui_text_caret_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
-
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 1);
 			CHECK(text_edit->get_caret_column(1) == 23);
-			CHECK_FALSE(text_edit->has_selection(1));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Selects to end of previous line when at start of line.
+			text_edit->remove_secondary_carets();
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(0);
+			text_edit->select(1, 1, 1, 0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "\nt");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 1);
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Merge selections when they overlap.
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(4);
+			text_edit->select(1, 6, 1, 4);
+			text_edit->add_caret(1, 8);
+			text_edit->select(1, 8, 1, 6, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			CHECK(text_edit->get_caret_count() == 2);
+
+			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "s is ");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 3);
+			CHECK(text_edit->get_selection_origin_line(0) == 1);
+			CHECK(text_edit->get_selection_origin_column(0) == 8);
+			CHECK_FALSE(text_edit->is_selection_direction_right(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 		}
 
 		SUBCASE("[TextEdit] ui_text_caret_word_right") {
-			text_edit->set_text("this is some test text\n\nthis is some test text\n");
+			text_edit->set_text("this is some test text\n\nthis is some test text");
 			text_edit->set_caret_line(0);
-			text_edit->set_caret_column(13);
-
-			text_edit->add_caret(2, 13);
-			CHECK(text_edit->get_caret_count() == 2);
-
+			text_edit->set_caret_column(15);
+			text_edit->add_caret(2, 10);
+			text_edit->select(0, 10, 0, 15);
+			text_edit->select(2, 15, 2, 10, 1);
 			MessageQueue::get_singleton()->flush();
-
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Shift should select.
+			// Select to end of next word when selection is right to left.
+			// Deselect to end of previous word when selection is left to right.
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::ALT | KeyModifierMask::SHIFT);
 #else
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT);
 #endif
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 17);
-			CHECK(text_edit->get_selected_text(0) == "test");
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "me test");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 17);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 10);
+			CHECK(text_edit->is_selection_direction_right(0));
 
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == " te");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 12);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 15);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Select to end of word with shift.
+			text_edit->deselect();
+			text_edit->set_caret_column(13);
+			text_edit->set_caret_column(15, false, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+#ifdef MACOS_ENABLED
+			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::ALT | KeyModifierMask::SHIFT);
+#else
+			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::CMD_OR_CTRL | KeyModifierMask::SHIFT);
+#endif
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "test");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 17);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 13);
+			CHECK(text_edit->is_selection_direction_right(0));
+
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "st");
 			CHECK(text_edit->get_caret_line(1) == 2);
 			CHECK(text_edit->get_caret_column(1) == 17);
-			CHECK(text_edit->get_selected_text(1) == "test");
-			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 15);
+			CHECK(text_edit->is_selection_direction_right(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Should still move caret with selection.
+			// Deselect and move caret to end of next word without shift.
 			SEND_GUI_ACTION("ui_text_caret_word_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 22);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
-
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 22);
+			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 2);
 			CHECK(text_edit->get_caret_column(1) == 22);
-			CHECK_FALSE(text_edit->has_selection(1));
-
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Normal word right.
+			// Moves to start of next line when at end of line. Does nothing at end of text.
 			SEND_GUI_ACTION("ui_text_caret_word_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 0);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
-
-			CHECK(text_edit->get_caret_line(1) == 3);
-			CHECK(text_edit->get_caret_column(1) == 0);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
 			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 22);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 		}
 
 		SUBCASE("[TextEdit] ui_text_caret_right") {
-			text_edit->set_text("this is some test text\n\nthis is some test text\n");
+			text_edit->set_text("this is some test text\n\nthis is some test text");
 			text_edit->set_caret_line(0);
-			text_edit->set_caret_column(16);
-			text_edit->select(0, 16, 0, 20);
-
-			text_edit->add_caret(2, 16);
-			text_edit->select(2, 16, 2, 20, 1);
-			CHECK(text_edit->get_caret_count() == 2);
-
+			text_edit->set_caret_column(19);
+			text_edit->select(0, 15, 0, 19);
+			text_edit->add_caret(2, 15);
+			text_edit->select(2, 19, 2, 15, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			// Normal right should deselect and place at selection end.
-			SEND_GUI_ACTION("ui_text_caret_right");
-			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 20);
-			CHECK_FALSE(text_edit->has_selection(0));
-
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 20);
-			CHECK_FALSE(text_edit->has_selection(1));
-
-			SIGNAL_CHECK("caret_changed", empty_signal_args);
-			SIGNAL_CHECK_FALSE("text_changed");
-			SIGNAL_CHECK_FALSE("lines_edited_from");
-
-			// With shift should select.
+			// Remove one character from selection when selection is right to left.
+			// Add one character to selection when selection is left to right.
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT);
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 21);
-			CHECK(text_edit->get_selected_text(0) == "x");
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "st te");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 20);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 15);
+			CHECK(text_edit->is_selection_direction_right(0));
 
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 21);
-			CHECK(text_edit->get_selected_text(1) == "x");
 			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "t t");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 16);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 19);
+			CHECK_FALSE(text_edit->is_selection_direction_right(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// All ready at select right, should only deselect.
+			// Deselect and put caret at selection end without shift.
 			SEND_GUI_ACTION("ui_text_caret_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 21);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
-
-			CHECK(text_edit->get_caret_line(1) == 2);
-			CHECK(text_edit->get_caret_column(1) == 21);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 20);
 			CHECK_FALSE(text_edit->has_selection(1));
-			SIGNAL_CHECK_FALSE("caret_changed");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 19);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Normal right.
+			// Move caret one character to the right.
 			SEND_GUI_ACTION("ui_text_caret_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 0);
-			CHECK(text_edit->get_caret_column() == 22);
+			CHECK(text_edit->get_caret_count() == 2);
 			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 21);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 20);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 
+			// Select one character to the right with shift and no existing selection.
+			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "t");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 22);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 21);
+			CHECK(text_edit->is_selection_direction_right(0));
+
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_selected_text(1) == "x");
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 21);
+			CHECK(text_edit->get_selection_origin_line(1) == 2);
+			CHECK(text_edit->get_selection_origin_column(1) == 20);
+			CHECK(text_edit->is_selection_direction_right(1));
+
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Moves to start of next line when at end of line. Does nothing at end of text.
+			text_edit->deselect();
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(22);
+			text_edit->set_caret_column(22, false, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_ACTION("ui_text_caret_right");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 2);
 			CHECK(text_edit->get_caret_column(1) == 22);
-			CHECK_FALSE(text_edit->has_selection(1));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
-			// Right at end col should go down a line.
-			SEND_GUI_ACTION("ui_text_caret_right");
-			CHECK(text_edit->get_viewport()->is_input_handled());
-			CHECK(text_edit->get_caret_line() == 1);
-			CHECK(text_edit->get_caret_column() == 0);
-			CHECK_FALSE(text_edit->has_selection(0));
+			// Selects to start of next line when at end of line.
+			text_edit->remove_secondary_carets();
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(22);
+			text_edit->select(0, 21, 0, 22);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
 
-			CHECK(text_edit->get_caret_line(1) == 3);
-			CHECK(text_edit->get_caret_column(1) == 0);
-			CHECK_FALSE(text_edit->has_selection(1));
+			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == "t\n");
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 21);
+			CHECK(text_edit->is_selection_direction_right(0));
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Merge selections when they overlap.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(4);
+			text_edit->select(0, 4, 0, 6);
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 6, 0, 8, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			CHECK(text_edit->get_caret_count() == 2);
+
+			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT);
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_selected_text(0) == " is s");
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 9);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 4);
+			CHECK(text_edit->is_selection_direction_right(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -4143,7 +4403,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_count() == 2);
 
 			MessageQueue::get_singleton()->flush();
-
 			CHECK(text_edit->is_line_wrapped(0));
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
@@ -4524,7 +4783,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 
-			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
 
 			SEND_GUI_KEY_EVENT(Key::A);
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4547,7 +4806,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 			text_edit->set_editable(true);
 
-			lines_edited_args = build_array(build_array(1, 1), build_array(1, 1), build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0), build_array(1, 1), build_array(1, 1));
 
 			text_edit->select(0, 0, 0, 1);
 			text_edit->select(1, 0, 1, 1, 1);
@@ -4584,7 +4843,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_overtype_mode_enabled(false);
 			CHECK_FALSE(text_edit->is_overtype_mode_enabled());
 
-			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
 
 			SEND_GUI_KEY_EVENT(Key::TAB);
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4984,13 +5243,15 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		MessageQueue::get_singleton()->flush();
 		SIGNAL_CHECK_FALSE("caret_changed");
 
-		// Selection
-		text_edit->select(0, 0, 2, 4);
+		// Select.
+		text_edit->select(2, 4, 0, 0);
+
+		// Cannot add in selection.
 		CHECK(text_edit->add_caret(0, 0) == -1);
 		CHECK(text_edit->add_caret(2, 4) == -1);
 		CHECK(text_edit->add_caret(1, 2) == -1);
 
-		// Out of bounds
+		// Cannot add when out of bounds
 		CHECK(text_edit->add_caret(-1, 0) == -1);
 		CHECK(text_edit->add_caret(5, 0) == -1);
 		CHECK(text_edit->add_caret(0, 100) == -1);
@@ -5033,22 +5294,47 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		ERR_PRINT_ON;
 	}
 
-	SUBCASE("[TextEdit] caret sorting") { // todo sort instead
-		Vector<int> sorted_carets;
-		sorted_carets.push_back(0);
-		sorted_carets.push_back(1);
+	SUBCASE("[TextEdit] caret sorting") {
+		Vector<int> sorted_carets = { 0, 1, 2 };
 
-		CHECK(text_edit->add_caret(1, 0));
-		CHECK(text_edit->get_caret_count() == 2);
+		// Ascending order.
+		text_edit->remove_secondary_carets();
+		text_edit->add_caret(0, 1);
+		text_edit->add_caret(1, 0);
 		CHECK(text_edit->get_sorted_carets() == sorted_carets);
 
+		// Descending order.
+		sorted_carets = { 2, 1, 0 };
 		text_edit->remove_secondary_carets();
 		text_edit->set_caret_line(1);
-		CHECK(text_edit->add_caret(0, 0));
-		CHECK(text_edit->get_caret_count() == 2);
+		text_edit->add_caret(0, 1);
+		text_edit->add_caret(0, 0);
+		CHECK(text_edit->get_sorted_carets() == sorted_carets);
 
-		sorted_carets.write[0] = 1;
-		sorted_carets.write[1] = 0;
+		// Mixed order.
+		sorted_carets = { 0, 2, 1, 3 };
+		text_edit->remove_secondary_carets();
+		text_edit->set_caret_line(0);
+		text_edit->add_caret(1, 0);
+		text_edit->add_caret(0, 1);
+		text_edit->add_caret(1, 1);
+		CHECK(text_edit->get_sorted_carets() == sorted_carets);
+
+		// Overlapping carets.
+		sorted_carets = { 0, 1, 3, 2 };
+		text_edit->remove_secondary_carets();
+		text_edit->add_caret(0, 1);
+		text_edit->add_caret(1, 2);
+		text_edit->add_caret(0, 2);
+		text_edit->set_caret_column(1, false, 3);
+		CHECK(text_edit->get_sorted_carets() == sorted_carets);
+
+		// Sorted by selection start.
+		sorted_carets = { 1, 0 };
+		text_edit->remove_secondary_carets();
+		text_edit->select(1, 3, 1, 5);
+		text_edit->add_caret(2, 0);
+		text_edit->select(1, 0, 2, 0, 1);
 		CHECK(text_edit->get_sorted_carets() == sorted_carets);
 	}
 
@@ -5133,7 +5419,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_line(0) == 0);
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
-		CHECK(text_edit->get_selection_to_column(0) == 5);
+		CHECK(text_edit->get_selection_to_column(0) == 5); // todo
 
 		// Merge smaller overlapping selection into a bigger one.
 		text_edit->remove_secondary_carets();
@@ -5167,7 +5453,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_to_column(0) == 6);
 	}
 
-	SUBCASE("[TextEdit] collapse carets") { // ?
+	SUBCASE("[TextEdit] collapse carets") { // todo needed or private?
 	}
 
 	SUBCASE("[TextEdit] add caret at carets") {

@@ -3350,7 +3350,7 @@ void CodeEdit::_lines_edited_from(int p_from_line, int p_to_line) {
 
 void CodeEdit::_text_set() {
 	lines_edited_from = 0;
-	lines_edited_to = 9999;
+	lines_edited_to = 9999; // todo maxint. also this is not used...
 	_text_changed();
 }
 
@@ -3359,17 +3359,27 @@ void CodeEdit::_text_changed() {
 		return;
 	}
 
-	int lc = get_line_count();
-	line_number_digits = 1;
-	while (lc /= 10) {
-		line_number_digits++;
-	}
-
 	if (theme_cache.font.is_valid()) {
+		// Update gutter size to fit line numbers.
+		int lc = get_line_count();
+		line_number_digits = 1;
+		while (lc /= 10) {
+			line_number_digits++;
+		}
 		set_gutter_width(line_number_gutter, (line_number_digits + 1) * theme_cache.font->get_char_size('0', theme_cache.font_size).width);
 	}
 
-	lc = get_line_count();
+	// (?) Send breakpoint_toggled signal if the line was removed.
+	// todo what vscode does is clamp it to the last line
+	// todo look into breakpoints generally
+
+	// todo why is breakpointed_lines a hashmap instead of a hashset? its always true...
+	// todo and it is only really used here...
+
+	// todo why not just update this stuff immediately in lines edited from?
+	// maybe because if a line is removed and re-added then it shouldnt be affected?
+
+	int lc = get_line_count();
 	List<int> breakpoints;
 	for (const KeyValue<int, bool> &E : breakpointed_lines) {
 		breakpoints.push_back(E.key);
@@ -3384,7 +3394,7 @@ void CodeEdit::_text_changed() {
 
 		int next_line = line + lines_edited_changed;
 		if (next_line > -1 && next_line < lc && is_line_breakpointed(next_line)) {
-			emit_signal(SNAME("breakpoint_toggled"), next_line);
+			emit_signal(SNAME("breakpoint_toggled"), next_line); // todo called twice potentially?
 			breakpointed_lines[next_line] = true;
 			continue;
 		}

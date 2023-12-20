@@ -5185,7 +5185,7 @@ void TextEdit::set_caret_line(int p_line, bool p_adjust_viewport, bool p_can_be_
 		}
 	} else {
 		// Clamp the column.
-		n_col = MIN(get_caret_column(), get_line(p_line).length());
+		n_col = MIN(get_caret_column(p_caret), get_line(p_line).length());
 	}
 	caret_moved = (caret_moved || get_caret_column(p_caret) != n_col);
 	carets.write[p_caret].column = n_col;
@@ -5550,8 +5550,7 @@ void TextEdit::set_selection_origin_line(int p_line, int p_caret, bool p_can_be_
 		}
 	}
 
-	bool caret_moved = get_selection_origin_line() != p_line;
-
+	bool caret_moved = get_selection_origin_line(p_caret) != p_line;
 	carets.write[p_caret].selection.origin_line = p_line;
 
 	int n_col;
@@ -5570,7 +5569,7 @@ void TextEdit::set_selection_origin_line(int p_line, int p_caret, bool p_can_be_
 		}
 	} else {
 		// Clamp the column.
-		n_col = MIN(get_selection_origin_column(), get_line(p_line).length());
+		n_col = MIN(get_selection_origin_column(p_caret), get_line(p_line).length());
 	}
 	caret_moved = (caret_moved || get_selection_origin_column(p_caret) != n_col);
 	carets.write[p_caret].selection.origin_column = n_col;
@@ -6291,7 +6290,7 @@ void TextEdit::merge_gutters(int p_from_line, int p_to_line) {
 			text.set_line_gutter_item_color(p_to_line, i, text.get_line_gutter_item_color(p_from_line, i));
 		}
 
-		if (text.get_line_gutter_metadata(p_from_line, i) != "") {
+		if (text.get_line_gutter_metadata(p_from_line, i) != "") { // todo is this a good variant check?
 			text.set_line_gutter_metadata(p_to_line, i, text.get_line_gutter_metadata(p_from_line, i));
 		}
 
@@ -7126,11 +7125,13 @@ void TextEdit::_backspace_internal(int p_caret) {
 		int prev_line = cc ? cl : cl - 1;
 		int prev_column = cc ? (cc - 1) : (text[cl - 1].length());
 
+		// todo why only here and nowhere else...
 		merge_gutters(prev_line, cl);
 
 		if (_is_line_hidden(cl)) {
-			_set_line_as_hidden(prev_line, true); // todo
+			_set_line_as_hidden(prev_line, true); // todo what is this about
 		}
+		// todo use remove_text instead?
 		_remove_text(prev_line, prev_column, cl, cc);
 		collapse_carets(prev_line, prev_column, cl, cc, i);
 		offset_carets_after(cl, cc, prev_line, prev_column);
