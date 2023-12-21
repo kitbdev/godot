@@ -36,7 +36,7 @@
 #include "tests/test_macros.h"
 
 namespace TestCodeEdit {
-static inline Array build_array() { // todo use these
+static inline Array build_array() { // Todo use these.
 	return Array();
 }
 template <typename... Targs>
@@ -63,7 +63,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] set line as breakpoint") {
-			/* Out of bounds. */
+			// Out of bounds.
 			ERR_PRINT_OFF;
 
 			code_edit->set_line_as_breakpoint(-1, true);
@@ -120,13 +120,13 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* breakpoint on lines that still exist are kept. */
+			// Breakpoint on lines that still exist are kept.
 			code_edit->set_text("");
 			MessageQueue::get_singleton()->flush();
 			CHECK(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
 
-			/* breakpoint on lines that are removed should also be removed. */
+			// Breakpoint on lines that are removed should also be removed.
 			code_edit->clear_breakpointed_lines();
 			SIGNAL_DISCARD("breakpoint_toggled")
 
@@ -156,13 +156,13 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* breakpoint on lines that still exist are removed. */
+			// Breakpoint on lines that still exist are removed.
 			code_edit->clear();
 			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* breakpoint on lines that are removed should also be removed. */
+			// Breakpoint on lines that are removed should also be removed.
 			code_edit->clear_breakpointed_lines();
 			SIGNAL_DISCARD("breakpoint_toggled")
 
@@ -187,12 +187,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			Array args;
 			args.push_back(arg1);
 
-			/* No text moves breakpoint. */
+			// No text moves breakpoint.
 			code_edit->set_line_as_breakpoint(0, true);
 			CHECK(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Normal. */
+			// Normal.
 			((Array)args[0])[0] = 0;
 			Array arg2;
 			arg2.push_back(1);
@@ -204,7 +204,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			((Array)args[0])[0] = 1;
 			((Array)args[1])[0] = 2;
 			SEND_GUI_ACTION("ui_text_newline_blank");
@@ -213,7 +213,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_breakpointed(2));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Above. */
+			// Above.
 			((Array)args[0])[0] = 2;
 			((Array)args[1])[0] = 3;
 			SEND_GUI_ACTION("ui_text_newline_above");
@@ -229,20 +229,20 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			Array args;
 			args.push_back(arg1);
 
-			/* Having text does not move breakpoint. */
+			// Having text does not move breakpoint.
 			code_edit->insert_text_at_caret("text");
 			code_edit->set_line_as_breakpoint(0, true);
 			CHECK(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Normal. */
+			// Normal.
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_breakpointed(0));
 			CHECK_FALSE(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line_count() == 3);
@@ -250,7 +250,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK_FALSE(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
 
-			/* Above does move. */
+			// Above does move.
 			((Array)args[0])[0] = 0;
 			Array arg2;
 			arg2.push_back(1);
@@ -258,7 +258,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_above");
-			CHECK(code_edit->get_line_count() == 4);
+			CHECK(code_edit->get_line_count() == 4); // Todo fix (3).
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			CHECK(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK("breakpoint_toggled", args);
@@ -277,12 +277,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 
 			code_edit->set_caret_line(2);
 
-			/* backspace onto line does not remove breakpoint */
+			// Backspace onto line does not remove breakpoint.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
 
-			/* backspace on breakpointed line removes it */
+			// Backspace on breakpointed line removes it.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			ERR_PRINT_OFF;
@@ -290,7 +290,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			ERR_PRINT_ON;
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Backspace above breakpointed line moves it. */
+			// Backspace above breakpointed line moves it.
 			((Array)args[0])[0] = 2;
 
 			code_edit->set_text("\n\n");
@@ -323,13 +323,13 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			SIGNAL_CHECK("breakpoint_toggled", args);
 			code_edit->set_caret_line(1);
 
-			/* Delete onto breakpointed lines does not remove it. */
+			// Delete onto breakpointed lines does not remove it.
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
 
-			/* Delete moving breakpointed line up removes it. */
+			// Delete moving breakpointed line up removes it.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 1);
@@ -338,7 +338,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			ERR_PRINT_ON;
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Delete above breakpointed line moves it. */
+			// Delete above breakpointed line moves it.
 			((Array)args[0])[0] = 2;
 
 			code_edit->set_text("\n\n");
@@ -376,7 +376,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Should handle breakpoint move when deleting selection by adding less text then removed. */
+			// Should handle breakpoint move when deleting selection by adding less text then removed.
 			((Array)args[0])[0] = 9;
 
 			code_edit->set_text("\n\n\n\n\n\n\n\n\n");
@@ -396,7 +396,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_breakpointed(4));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Should handle breakpoint move when deleting selection by adding more text then removed. */
+			// Should handle breakpoint move when deleting selection by adding more text then removed.
 			((Array)args[0])[0] = 9;
 			((Array)args[1])[0] = 14;
 
@@ -429,7 +429,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			SIGNAL_CHECK("breakpoint_toggled", args);
 
-			/* Undo does not restore breakpoint. */
+			// Undo does not restore breakpoint.
 			code_edit->undo();
 			CHECK_FALSE(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK_FALSE("breakpoint_toggled");
@@ -448,7 +448,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] set line as bookmarks") {
-			/* Out of bounds. */
+			// Out of bounds.
 			ERR_PRINT_OFF;
 
 			code_edit->set_line_as_bookmarked(-1, true);
@@ -482,12 +482,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			code_edit->set_line_as_bookmarked(0, true);
 			CHECK(code_edit->is_line_bookmarked(0));
 
-			/* bookmarks on lines that still exist are kept. */
+			// Bookmarks on lines that still exist are kept.
 			code_edit->set_text("");
 			MessageQueue::get_singleton()->flush();
 			CHECK(code_edit->is_line_bookmarked(0));
 
-			/* bookmarks on lines that are removed should also be removed. */
+			// Bookmarks on lines that are removed should also be removed.
 			code_edit->clear_bookmarked_lines();
 
 			code_edit->set_text("test\nline");
@@ -507,12 +507,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			code_edit->set_line_as_bookmarked(0, true);
 			CHECK(code_edit->is_line_bookmarked(0));
 
-			/* bookmarks on lines that still exist are removed. */
+			// Bookmarks on lines that still exist are removed.
 			code_edit->clear();
 			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(code_edit->is_line_bookmarked(0));
 
-			/* bookmarks on lines that are removed should also be removed. */
+			// Bookmarks on lines that are removed should also be removed.
 			code_edit->clear_bookmarked_lines();
 
 			code_edit->set_text("test\nline");
@@ -528,23 +528,23 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] bookmarks and new lines no text") {
-			/* No text moves bookmarks. */
+			// No text moves bookmarks.
 			code_edit->set_line_as_bookmarked(0, true);
 			CHECK(code_edit->is_line_bookmarked(0));
 
-			/* Normal. */
+			// Normal.
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK_FALSE(code_edit->is_line_bookmarked(0));
 			CHECK(code_edit->is_line_bookmarked(1));
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line_count() == 3);
 			CHECK_FALSE(code_edit->is_line_bookmarked(1));
 			CHECK(code_edit->is_line_bookmarked(2));
 
-			/* Above. */
+			// Above.
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line_count() == 4);
 			CHECK_FALSE(code_edit->is_line_bookmarked(2));
@@ -552,25 +552,25 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] bookmarks and new lines with text") {
-			/* Having text does not move bookmark. */
+			// Having text does not move bookmark.
 			code_edit->insert_text_at_caret("text");
 			code_edit->set_line_as_bookmarked(0, true);
 			CHECK(code_edit->is_line_bookmarked(0));
 
-			/* Normal. */
+			// Normal.
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_bookmarked(0));
 			CHECK_FALSE(code_edit->is_line_bookmarked(1));
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line_count() == 3);
 			CHECK(code_edit->is_line_bookmarked(0));
 			CHECK_FALSE(code_edit->is_line_bookmarked(1));
 
-			/* Above does move. */
+			// Above does move.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line_count() == 4);
@@ -585,11 +585,11 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 
 			code_edit->set_caret_line(2);
 
-			/* backspace onto line does not remove bookmark */
+			// Backspace onto line does not remove bookmark.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(code_edit->is_line_bookmarked(1));
 
-			/* backspace on bookmarked line removes it */
+			// Backspace on bookmarked line removes it.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK_FALSE(code_edit->is_line_bookmarked(0));
 			ERR_PRINT_OFF;
@@ -603,12 +603,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_bookmarked(1));
 			code_edit->set_caret_line(1);
 
-			/* Delete onto bookmarked lines does not remove it. */
+			// Delete onto bookmarked lines does not remove it.
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_bookmarked(1));
 
-			/* Delete moving bookmarked line up removes it. */
+			// Delete moving bookmarked line up removes it.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 1);
@@ -638,7 +638,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(code_edit->is_line_bookmarked(0));
 
-			/* Undo does not restore bookmark. */
+			// Undo does not restore bookmark.
 			code_edit->undo();
 			CHECK_FALSE(code_edit->is_line_bookmarked(1));
 		}
@@ -654,7 +654,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] set line as executing lines") {
-			/* Out of bounds. */
+			// Out of bounds.
 			ERR_PRINT_OFF;
 
 			code_edit->set_line_as_executing(-1, true);
@@ -688,12 +688,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			code_edit->set_line_as_executing(0, true);
 			CHECK(code_edit->is_line_executing(0));
 
-			/* executing on lines that still exist are kept. */
+			// Executing on lines that still exist are kept.
 			code_edit->set_text("");
 			MessageQueue::get_singleton()->flush();
 			CHECK(code_edit->is_line_executing(0));
 
-			/* executing on lines that are removed should also be removed. */
+			// Executing on lines that are removed should also be removed.
 			code_edit->clear_executing_lines();
 
 			code_edit->set_text("test\nline");
@@ -713,12 +713,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			code_edit->set_line_as_executing(0, true);
 			CHECK(code_edit->is_line_executing(0));
 
-			/* executing on lines that still exist are removed. */
+			// Executing on lines that still exist are removed.
 			code_edit->clear();
 			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(code_edit->is_line_executing(0));
 
-			/* executing on lines that are removed should also be removed. */
+			// Executing on lines that are removed should also be removed.
 			code_edit->clear_executing_lines();
 
 			code_edit->set_text("test\nline");
@@ -734,23 +734,23 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] executing lines and new lines no text") {
-			/* No text moves executing lines. */
+			// No text moves executing lines.
 			code_edit->set_line_as_executing(0, true);
 			CHECK(code_edit->is_line_executing(0));
 
-			/* Normal. */
+			// Normal.
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK_FALSE(code_edit->is_line_executing(0));
 			CHECK(code_edit->is_line_executing(1));
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line_count() == 3);
 			CHECK_FALSE(code_edit->is_line_executing(1));
 			CHECK(code_edit->is_line_executing(2));
 
-			/* Above. */
+			// Above.
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line_count() == 4);
 			CHECK_FALSE(code_edit->is_line_executing(2));
@@ -758,25 +758,25 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 		}
 
 		SUBCASE("[CodeEdit] executing lines and new lines with text") {
-			/* Having text does not move executing lines. */
+			// Having text does not move executing lines.
 			code_edit->insert_text_at_caret("text");
 			code_edit->set_line_as_executing(0, true);
 			CHECK(code_edit->is_line_executing(0));
 
-			/* Normal. */
+			// Normal.
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_executing(0));
 			CHECK_FALSE(code_edit->is_line_executing(1));
 
-			/* Non-Breaking. */
+			// Non-Breaking.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line_count() == 3);
 			CHECK(code_edit->is_line_executing(0));
 			CHECK_FALSE(code_edit->is_line_executing(1));
 
-			/* Above does move. */
+			// Above does move.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line_count() == 4);
@@ -791,11 +791,11 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 
 			code_edit->set_caret_line(2);
 
-			/* backspace onto line does not remove executing lines. */
+			// Backspace onto line does not remove executing lines.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(code_edit->is_line_executing(1));
 
-			/* backspace on executing line removes it */
+			// Backspace on executing line removes it.
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK_FALSE(code_edit->is_line_executing(0));
 			ERR_PRINT_OFF;
@@ -809,12 +809,12 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			CHECK(code_edit->is_line_executing(1));
 			code_edit->set_caret_line(1);
 
-			/* Delete onto executing lines does not remove it. */
+			// Delete onto executing lines does not remove it.
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 2);
 			CHECK(code_edit->is_line_executing(1));
 
-			/* Delete moving executing line up removes it. */
+			// Delete moving executing line up removes it.
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_delete");
 			CHECK(code_edit->get_line_count() == 1);
@@ -844,7 +844,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 			MessageQueue::get_singleton()->flush();
 			CHECK_FALSE(code_edit->is_line_executing(0));
 
-			/* Undo does not restore executing lines. */
+			// Undo does not restore executing lines.
 			code_edit->undo();
 			CHECK_FALSE(code_edit->is_line_executing(1));
 		}
@@ -900,23 +900,23 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 
 	SUBCASE("[CodeEdit] add and remove delimiters") {
 		SUBCASE("[CodeEdit] add and remove string delimiters") {
-			/* Add a delimiter.*/
+			// Add a delimiter.
 			code_edit->add_string_delimiter("\"", "\"", false);
 			CHECK(code_edit->has_string_delimiter("\""));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
 			ERR_PRINT_OFF;
 
-			/* Adding a duplicate start key is not allowed. */
+			// Adding a duplicate start key is not allowed.
 			code_edit->add_string_delimiter("\"", "\'", false);
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Adding a duplicate end key is allowed. */
+			// Adding a duplicate end key is allowed.
 			code_edit->add_string_delimiter("'", "\"", false);
 			CHECK(code_edit->has_string_delimiter("'"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
 
-			/* Both start and end keys have to be symbols. */
+			// Both start and end keys have to be symbols.
 			code_edit->add_string_delimiter("f", "\"", false);
 			CHECK_FALSE(code_edit->has_string_delimiter("f"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
@@ -933,24 +933,24 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK_FALSE(code_edit->has_string_delimiter("f"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
 
-			/* Blank start keys are not allowed */
+			// Blank start keys are not allowed.
 			code_edit->add_string_delimiter("", "#", false);
 			CHECK_FALSE(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
 
 			ERR_PRINT_ON;
 
-			/* Blank end keys are allowed. */
+			// Blank end keys are allowed.
 			code_edit->add_string_delimiter("#", "", false);
 			CHECK(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 3);
 
-			/* Remove a delimiter. */
+			// Remove a delimiter.
 			code_edit->remove_string_delimiter("#");
 			CHECK_FALSE(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
 
-			/* Set should override existing, and test multiline */
+			// Set should override existing, and test multiline.
 			TypedArray<String> delimiters;
 			delimiters.push_back("^^ ^^");
 
@@ -959,30 +959,30 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->has_string_delimiter("^^"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* clear should remove all. */
+			// Clear should remove all.
 			code_edit->clear_string_delimiters();
 			CHECK_FALSE(code_edit->has_string_delimiter("^^"));
 			CHECK(code_edit->get_string_delimiters().size() == 0);
 		}
 
 		SUBCASE("[CodeEdit] add and remove comment delimiters") {
-			/* Add a delimiter.*/
+			// Add a delimiter.
 			code_edit->add_comment_delimiter("\"", "\"", false);
 			CHECK(code_edit->has_comment_delimiter("\""));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
 			ERR_PRINT_OFF;
 
-			/* Adding a duplicate start key is not allowed. */
+			// Adding a duplicate start key is not allowed.
 			code_edit->add_comment_delimiter("\"", "\'", false);
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Adding a duplicate end key is allowed. */
+			// Adding a duplicate end key is allowed.
 			code_edit->add_comment_delimiter("'", "\"", false);
 			CHECK(code_edit->has_comment_delimiter("'"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
 
-			/* Both start and end keys have to be symbols. */
+			// Both start and end keys have to be symbols.
 			code_edit->add_comment_delimiter("f", "\"", false);
 			CHECK_FALSE(code_edit->has_comment_delimiter("f"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
@@ -999,24 +999,24 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK_FALSE(code_edit->has_comment_delimiter("f"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
 
-			/* Blank start keys are not allowed. */
+			// Blank start keys are not allowed.
 			code_edit->add_comment_delimiter("", "#", false);
 			CHECK_FALSE(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
 
 			ERR_PRINT_ON;
 
-			/* Blank end keys are allowed. */
+			// Blank end keys are allowed.
 			code_edit->add_comment_delimiter("#", "", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 3);
 
-			/* Remove a delimiter. */
+			// Remove a delimiter.
 			code_edit->remove_comment_delimiter("#");
 			CHECK_FALSE(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
 
-			/* Set should override existing, and test multiline. */
+			// Set should override existing, and test multiline.
 			TypedArray<String> delimiters;
 			delimiters.push_back("^^ ^^");
 
@@ -1025,7 +1025,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->has_comment_delimiter("^^"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* clear should remove all. */
+			// Clear should remove all.
 			code_edit->clear_comment_delimiters();
 			CHECK_FALSE(code_edit->has_comment_delimiter("^^"));
 			CHECK(code_edit->get_comment_delimiters().size() == 0);
@@ -1038,7 +1038,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 
 			ERR_PRINT_OFF;
 
-			/* Disallow adding a string with the same start key as comment. */
+			// Disallow adding a string with the same start key as comment.
 			code_edit->add_string_delimiter("#", "", false);
 			CHECK_FALSE(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 0);
@@ -1047,29 +1047,29 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->has_string_delimiter("\""));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Disallow adding a comment with the same start key as string. */
+			// Disallow adding a comment with the same start key as string.
 			code_edit->add_comment_delimiter("\"", "", false);
 			CHECK_FALSE(code_edit->has_comment_delimiter("\""));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
 			ERR_PRINT_ON;
 
-			/* Cannot remove string with remove comment. */
+			// Cannot remove string with remove comment.
 			code_edit->remove_comment_delimiter("\"");
 			CHECK(code_edit->has_string_delimiter("\""));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Cannot remove comment with remove string. */
+			// Cannot remove comment with remove string.
 			code_edit->remove_string_delimiter("#");
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Clear comments leave strings. */
+			// Clear comments leave strings.
 			code_edit->clear_comment_delimiters();
 			CHECK(code_edit->has_string_delimiter("\""));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Clear string leave comments. */
+			// Clear string leave comments.
 			code_edit->add_comment_delimiter("#", "", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
@@ -1082,75 +1082,75 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 
 	SUBCASE("[CodeEdit] single line delimiters") {
 		SUBCASE("[CodeEdit] single line string delimiters") {
-			/* Blank end key should set lineonly to true. */
+			// Blank end key should set lineonly to true.
 			code_edit->add_string_delimiter("#", "", false);
 			CHECK(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Insert line above, line with string then line below. */
+			// Insert line above, line with string then line below.
 			code_edit->insert_text_at_caret(" \n#\n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in string. */
+			// Check column before start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column after start key is in string and start / end positions are correct. */
+			// Check column after start key is in string and start / end positions are correct.
 			CHECK(code_edit->is_in_string(1, 1) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == Point2(2, 1));
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check region metadata. */
+			// Check region metadata.
 			int idx = code_edit->is_in_string(1, 1);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "");
 
-			/* Check nested strings are handled correctly. */
+			// Check nested strings are handled correctly.
 			code_edit->set_text(" \n#  # \n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before first start key is not in string. */
+			// Check column before first start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column after the first start key is in string and start / end positions are correct. */
+			// Check column after the first start key is in string and start / end positions are correct.
 			CHECK(code_edit->is_in_string(1, 1) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == Point2(6, 1));
 
-			/* Check column after the second start key returns data for the first. */
+			// Check column after the second start key returns data for the first.
 			CHECK(code_edit->is_in_string(1, 5) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 5) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 5) == Point2(6, 1));
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check is in string with no column returns true if entire line is comment excluding whitespace. */
+			// Check is in string with no column returns true if entire line is comment excluding whitespace.
 			code_edit->set_text(" \n  #  # \n ");
 			CHECK(code_edit->is_in_string(1) != -1);
 
 			code_edit->set_text(" \n  text #  # \n ");
 			CHECK(code_edit->is_in_string(1) == -1);
 
-			/* Removing delimiter should update. */
+			// Removing delimiter should update.
 			code_edit->set_text(" \n  #  # \n ");
 
 			code_edit->remove_string_delimiter("#");
@@ -1159,7 +1159,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 
 			CHECK(code_edit->is_in_string(1) == -1);
 
-			/* Adding and clear should update. */
+			// Adding and clear should update.
 			code_edit->add_string_delimiter("#", "", false);
 			CHECK(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
@@ -1173,75 +1173,75 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 		}
 
 		SUBCASE("[CodeEdit] single line comment delimiters") {
-			/* Blank end key should set lineonly to true. */
+			// Blank end key should set lineonly to true.
 			code_edit->add_comment_delimiter("#", "", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Insert line above, line with comment then line below. */
+			// Insert line above, line with comment then line below.
 			code_edit->insert_text_at_caret(" \n#\n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column after start key is in comment and start / end positions are correct. */
+			// Check column after start key is in comment and start / end positions are correct.
 			CHECK(code_edit->is_in_comment(1, 1) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == Point2(2, 1));
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check region metadata. */
+			// Check region metadata.
 			int idx = code_edit->is_in_comment(1, 1);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "");
 
-			/* Check nested comments are handled correctly. */
+			// Check nested comments are handled correctly.
 			code_edit->set_text(" \n#  # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before first start key is not in comment. */
+			// Check column before first start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column after the first start key is in comment and start / end positions are correct. */
+			// Check column after the first start key is in comment and start / end positions are correct.
 			CHECK(code_edit->is_in_comment(1, 1) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == Point2(6, 1));
 
-			/* Check column after the second start key returns data for the first. */
+			// Check column after the second start key returns data for the first.
 			CHECK(code_edit->is_in_comment(1, 5) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 5) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 5) == Point2(6, 1));
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check is in comment with no column returns true if entire line is comment excluding whitespace. */
+			// Check is in comment with no column returns true if entire line is comment excluding whitespace.
 			code_edit->set_text(" \n  #  # \n ");
 			CHECK(code_edit->is_in_comment(1) != -1);
 
 			code_edit->set_text(" \n  text #  # \n ");
 			CHECK(code_edit->is_in_comment(1) == -1);
 
-			/* Removing delimiter should update. */
+			// Removing delimiter should update.
 			code_edit->set_text(" \n  #  # \n ");
 
 			code_edit->remove_comment_delimiter("#");
@@ -1250,7 +1250,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 
 			CHECK(code_edit->is_in_comment(1) == -1);
 
-			/* Adding and clear should update. */
+			// Adding and clear should update.
 			code_edit->add_comment_delimiter("#", "", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
@@ -1264,57 +1264,57 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 		}
 
 		SUBCASE("[CodeEdit] single line mixed delimiters") {
-			/* Blank end key should set lineonly to true. */
-			/* Add string delimiter. */
+			// Blank end key should set lineonly to true.
+			// Add string delimiter.
 			code_edit->add_string_delimiter("&", "", false);
 			CHECK(code_edit->has_string_delimiter("&"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Add comment delimiter. */
+			// Add comment delimiter.
 			code_edit->add_comment_delimiter("#", "", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Nest a string delimiter inside a comment. */
+			// Nest a string delimiter inside a comment.
 			code_edit->set_text(" \n#  & \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before first start key is not in comment. */
+			// Check column before first start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column after the first start key is in comment and start / end positions are correct. */
+			// Check column after the first start key is in comment and start / end positions are correct.
 			CHECK(code_edit->is_in_comment(1, 1) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == Point2(6, 1));
 
-			/* Check column after the second start key returns data for the first, and does not state string. */
+			// Check column after the second start key returns data for the first, and does not state string.
 			CHECK(code_edit->is_in_comment(1, 5) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 5) == Point2(1, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 5) == Point2(6, 1));
 			CHECK(code_edit->is_in_string(1, 5) == -1);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Remove the comment delimiter. */
+			// Remove the comment delimiter.
 			code_edit->remove_comment_delimiter("#");
 			CHECK_FALSE(code_edit->has_comment_delimiter("$"));
 			CHECK(code_edit->get_comment_delimiters().size() == 0);
 
-			/* The "first" comment region is no longer valid. */
+			// The "first" comment region is no longer valid.
 			CHECK(code_edit->is_in_comment(1, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 1) == OUTSIDE_DELIMETER);
 
-			/* The "second" region as string is now valid. */
+			// The "second" region as string is now valid.
 			CHECK(code_edit->is_in_string(1, 5) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 5) == Point2(4, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 5) == Point2(6, 1));
@@ -1326,183 +1326,183 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			code_edit->clear_string_delimiters();
 			code_edit->clear_comment_delimiters();
 
-			/* Add string delimiter. */
+			// Add string delimiter.
 			code_edit->add_string_delimiter("#", "#", false);
 			CHECK(code_edit->has_string_delimiter("#"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* First test over a single line. */
+			// First test over a single line.
 			code_edit->set_text(" \n #  # \n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in string. */
+			// Check column before start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column before closing delimiter is in string. */
+			// Check column before closing delimiter is in string.
 			CHECK(code_edit->is_in_string(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(5, 1));
 
-			/* Check column after end key is not in string. */
+			// Check column after end key is not in string.
 			CHECK(code_edit->is_in_string(1, 6) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 6) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 6) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check the region metadata. */
+			// Check the region metadata.
 			int idx = code_edit->is_in_string(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test over a multiple blank lines. */
+			// Next test over a multiple blank lines.
 			code_edit->set_text(" \n # \n\n # \n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in string. */
+			// Check column before start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in string. */
+			// Check column just after start key is in string.
 			CHECK(code_edit->is_in_string(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(2, 3));
 
-			/* Check blank middle line. */
+			// Check blank middle line.
 			CHECK(code_edit->is_in_string(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(2, 3));
 
-			/* Check column just before end key is in string. */
+			// Check column just before end key is in string.
 			CHECK(code_edit->is_in_string(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(2, 3));
 
-			/* Check column after end key is not in string. */
+			// Check column after end key is not in string.
 			CHECK(code_edit->is_in_string(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* Next test over a multiple non-blank lines. */
+			// Next test over a multiple non-blank lines.
 			code_edit->set_text(" \n # \n \n # \n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in string. */
+			// Check column before start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in string. */
+			// Check column just after start key is in string.
 			CHECK(code_edit->is_in_string(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(2, 3));
 
-			/* Check middle line. */
+			// Check middle line.
 			CHECK(code_edit->is_in_string(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(2, 3));
 
-			/* Check column just before end key is in string. */
+			// Check column just before end key is in string.
 			CHECK(code_edit->is_in_string(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(2, 3));
 
-			/* Check column after end key is not in string. */
+			// Check column after end key is not in string.
 			CHECK(code_edit->is_in_string(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_string(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test nested strings. */
+			// Next test nested strings.
 			code_edit->add_string_delimiter("^", "^", false);
 			CHECK(code_edit->has_string_delimiter("^"));
 			CHECK(code_edit->get_string_delimiters().size() == 2);
 
 			code_edit->set_text(" \n # ^\n \n^ # \n ");
 
-			/* Check line above is not in string. */
+			// Check line above is not in string.
 			CHECK(code_edit->is_in_string(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in string. */
+			// Check column before start key is not in string.
 			CHECK(code_edit->is_in_string(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in string. */
+			// Check column just after start key is in string.
 			CHECK(code_edit->is_in_string(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(3, 3));
 
-			/* Check middle line. */
+			// Check middle line.
 			CHECK(code_edit->is_in_string(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(3, 3));
 
-			/* Check column just before end key is in string. */
+			// Check column just before end key is in string.
 			CHECK(code_edit->is_in_string(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(3, 3));
 
-			/* Check column after end key is not in string. */
+			// Check column after end key is not in string.
 			CHECK(code_edit->is_in_string(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in string. */
+			// Check line after is not in string.
 			CHECK(code_edit->is_in_string(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_string(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test no end key. */
+			// Next test no end key.
 			code_edit->set_text(" \n # \n ");
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_string(1, 2);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(-1, -1));
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in string with no column returns true if entire line is string excluding whitespace. */
+			// Check is in string with no column returns true if entire line is string excluding whitespace.
 			code_edit->set_text(" \n # \n\n #\n ");
 			CHECK(code_edit->is_in_string(1) != -1);
 			CHECK(code_edit->is_in_string(2) != -1);
@@ -1528,183 +1528,183 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 		}
 
 		SUBCASE("[CodeEdit] multiline comment delimiters") {
-			/* Add comment delimiter. */
+			// Add comment delimiter.
 			code_edit->add_comment_delimiter("#", "#", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* First test over a single line. */
+			// First test over a single line.
 			code_edit->set_text(" \n #  # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column before closing delimiter is in comment. */
+			// Check column before closing delimiter is in comment.
 			CHECK(code_edit->is_in_comment(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(5, 1));
 
-			/* Check column after end key is not in comment. */
+			// Check column after end key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 6) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 6) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 6) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(2, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(2, 1) == OUTSIDE_DELIMETER);
 
-			/* Check the region metadata. */
+			// Check the region metadata.
 			int idx = code_edit->is_in_comment(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test over a multiple blank lines. */
+			// Next test over a multiple blank lines.
 			code_edit->set_text(" \n # \n\n # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in comment. */
+			// Check column just after start key is in comment.
 			CHECK(code_edit->is_in_comment(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(2, 3));
 
-			/* Check blank middle line. */
+			// Check blank middle line.
 			CHECK(code_edit->is_in_comment(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(2, 3));
 
-			/* Check column just before end key is in comment. */
+			// Check column just before end key is in comment.
 			CHECK(code_edit->is_in_comment(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(2, 3));
 
-			/* Check column after end key is not in comment. */
+			// Check column after end key is not in comment.
 			CHECK(code_edit->is_in_comment(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* Next test over a multiple non-blank lines. */
+			// Next test over a multiple non-blank lines.
 			code_edit->set_text(" \n # \n \n # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in comment. */
+			// Check column just after start key is in comment.
 			CHECK(code_edit->is_in_comment(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(2, 3));
 
-			/* Check middle line. */
+			// Check middle line.
 			CHECK(code_edit->is_in_comment(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(2, 3));
 
-			/* Check column just before end key is in comment. */
+			// Check column just before end key is in comment.
 			CHECK(code_edit->is_in_comment(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(2, 3));
 
-			/* Check column after end key is not in comment. */
+			// Check column after end key is not in comment.
 			CHECK(code_edit->is_in_comment(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_comment(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test nested comments. */
+			// Next test nested comments.
 			code_edit->add_comment_delimiter("^", "^", false);
 			CHECK(code_edit->has_comment_delimiter("^"));
 			CHECK(code_edit->get_comment_delimiters().size() == 2);
 
 			code_edit->set_text(" \n # ^\n \n^ # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in comment. */
+			// Check column just after start key is in comment.
 			CHECK(code_edit->is_in_comment(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(3, 3));
 
-			/* Check middle line. */
+			// Check middle line.
 			CHECK(code_edit->is_in_comment(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(3, 3));
 
-			/* Check column just before end key is in comment. */
+			// Check column just before end key is in comment.
 			CHECK(code_edit->is_in_comment(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(3, 3));
 
-			/* Check column after end key is not in comment. */
+			// Check column after end key is not in comment.
 			CHECK(code_edit->is_in_comment(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_comment(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Next test no end key. */
+			// Next test no end key.
 			code_edit->set_text(" \n # \n ");
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			idx = code_edit->is_in_comment(1, 2);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(-1, -1));
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in comment with no column returns true if entire line is comment excluding whitespace. */
+			// Check is in comment with no column returns true if entire line is comment excluding whitespace.
 			code_edit->set_text(" \n # \n\n #\n ");
 			CHECK(code_edit->is_in_comment(1) != -1);
 			CHECK(code_edit->is_in_comment(2) != -1);
@@ -1730,60 +1730,60 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 		}
 
 		SUBCASE("[CodeEdit] multiline mixed delimiters") {
-			/* Add comment delimiter. */
+			// Add comment delimiter.
 			code_edit->add_comment_delimiter("#", "#", false);
 			CHECK(code_edit->has_comment_delimiter("#"));
 			CHECK(code_edit->get_comment_delimiters().size() == 1);
 
-			/* Add string delimiter. */
+			// Add string delimiter.
 			code_edit->add_string_delimiter("^", "^", false);
 			CHECK(code_edit->has_string_delimiter("^"));
 			CHECK(code_edit->get_string_delimiters().size() == 1);
 
-			/* Nest a string inside a comment. */
+			// Nest a string inside a comment.
 			code_edit->set_text(" \n # ^\n \n^ # \n ");
 
-			/* Check line above is not in comment. */
+			// Check line above is not in comment.
 			CHECK(code_edit->is_in_comment(0, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(0, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(0, 1) == OUTSIDE_DELIMETER);
 
-			/* Check column before start key is not in comment. */
+			// Check column before start key is not in comment.
 			CHECK(code_edit->is_in_comment(1, 0) == -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 0) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(1, 0) == OUTSIDE_DELIMETER);
 
-			/* Check column just after start key is in comment. */
+			// Check column just after start key is in comment.
 			CHECK(code_edit->is_in_comment(1, 2) != -1);
 			CHECK(code_edit->get_delimiter_start_position(1, 2) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(1, 2) == Point2(3, 3));
 
-			/* Check middle line. */
+			// Check middle line.
 			CHECK(code_edit->is_in_comment(2, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(2, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(2, 0) == Point2(3, 3));
 
-			/* Check column just before end key is in comment. */
+			// Check column just before end key is in comment.
 			CHECK(code_edit->is_in_comment(3, 0) != -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 0) == Point2(2, 1));
 			CHECK(code_edit->get_delimiter_end_position(3, 0) == Point2(3, 3));
 
-			/* Check column after end key is not in comment. */
+			// Check column after end key is not in comment.
 			CHECK(code_edit->is_in_comment(3, 3) == -1);
 			CHECK(code_edit->get_delimiter_start_position(3, 3) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(3, 3) == OUTSIDE_DELIMETER);
 
-			/* Check line after is not in comment. */
+			// Check line after is not in comment.
 			CHECK(code_edit->is_in_comment(4, 1) == -1);
 			CHECK(code_edit->get_delimiter_start_position(4, 1) == OUTSIDE_DELIMETER);
 			CHECK(code_edit->get_delimiter_end_position(4, 1) == OUTSIDE_DELIMETER);
 
-			/* check the region metadata. */
+			// Check the region metadata.
 			int idx = code_edit->is_in_comment(1, 2);
 			CHECK(code_edit->get_delimiter_start_key(idx) == "#");
 			CHECK(code_edit->get_delimiter_end_key(idx) == "#");
 
-			/* Check is in comment with no column returns true as inner delimiter should not be counted. */
+			// Check is in comment with no column returns true as inner delimiter should not be counted.
 			CHECK(code_edit->is_in_comment(1) != -1);
 			CHECK(code_edit->is_in_comment(2) != -1);
 			CHECK(code_edit->is_in_comment(3) != -1);
@@ -1815,7 +1815,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_indent_using_spaces(true);
 		CHECK(code_edit->is_indent_using_spaces());
 
-		/* Only the first char is registered. */
+		// Only the first char is registered.
 		TypedArray<String> auto_indent_prefixes;
 		auto_indent_prefixes.push_back("::");
 		auto_indent_prefixes.push_back("s");
@@ -1833,7 +1833,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_auto_indent_enabled(true);
 		code_edit->set_indent_using_spaces(false);
 
-		/* Do nothing if not editable. */
+		// Do nothing if not editable.
 		code_edit->set_editable(false);
 
 		code_edit->do_indent();
@@ -1844,54 +1844,54 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		code_edit->set_editable(true);
 
-		/* Simple indent. */
+		// Simple indent.
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\t");
 
-		/* Check input action. */
+		// Check input action.
 		SEND_GUI_ACTION("ui_text_indent");
 		CHECK(code_edit->get_line(0) == "\t\t");
 
-		/* Insert in place. */
+		// Insert in place.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "test\t");
 
-		/* Indent lines does entire line and works without selection. */
+		// Indent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->indent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
 
-		/* Selection does entire line. */
+		// Selection does entire line.
 		code_edit->set_text("test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 
-		/* Handles multiple lines. */
+		// Handles multiple lines.
 		code_edit->set_text("test\ntext");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "\ttext");
 
-		/* Do not indent line if last col is zero. */
+		// Do not indent line if last col is zero.
 		code_edit->set_text("test\ntext");
 		code_edit->select(0, 0, 1, 0);
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Indent even if last column of first line. */
+		// Indent even if last column of first line.
 		code_edit->set_text("test\ntext");
 		code_edit->select(0, 4, 1, 0);
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Check selection is adjusted. */
+		// Check selection is adjusted.
 		code_edit->set_text("test");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->do_indent();
@@ -1906,7 +1906,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_auto_indent_enabled(true);
 		code_edit->set_indent_using_spaces(true);
 
-		/* Do nothing if not editable. */
+		// Do nothing if not editable.
 		code_edit->set_editable(false);
 
 		code_edit->do_indent();
@@ -1917,60 +1917,60 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		code_edit->set_editable(true);
 
-		/* Simple indent. */
+		// Simple indent.
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    ");
 
-		/* Check input action. */
+		// Check input action.
 		SEND_GUI_ACTION("ui_text_indent");
 		CHECK(code_edit->get_line(0) == "        ");
 
-		/* Insert in place. */
+		// Insert in place.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "test    ");
 
-		/* Indent lines does entire line and works without selection. */
+		// Indent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->indent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Selection does entire line. */
+		// Selection does entire line.
 		code_edit->set_text("test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* single indent only add required spaces. */
+		// Single indent only add required spaces.
 		code_edit->set_text(" test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Handles multiple lines. */
+		// Handles multiple lines.
 		code_edit->set_text("test\ntext");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "    text");
 
-		/* Do not indent line if last col is zero. */
+		// Do not indent line if last col is zero.
 		code_edit->set_text("test\ntext");
 		code_edit->select(0, 0, 1, 0);
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Indent even if last column of first line. */
+		// Indent even if last column of first line.
 		code_edit->set_text("test\ntext");
 		code_edit->select(0, 4, 1, 0);
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Check selection is adjusted. */
+		// Check selection is adjusted.
 		code_edit->set_text("test");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->do_indent();
@@ -1984,7 +1984,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_auto_indent_enabled(true);
 		code_edit->set_indent_using_spaces(false);
 
-		/* Do nothing if not editable. */
+		// Do nothing if not editable.
 		code_edit->set_text("\t");
 
 		code_edit->set_editable(false);
@@ -1997,60 +1997,60 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		code_edit->set_editable(true);
 
-		/* Simple unindent. */
+		// Simple unindent.
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "");
 
-		/* Backspace does a simple unindent. */
+		// Backspace does a simple unindent.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\t");
 		code_edit->backspace();
 		CHECK(code_edit->get_line(0) == "");
 
-		/* Unindent lines does entire line and works without selection. */
+		// Unindent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\ttest");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Caret on col zero unindent line. */
+		// Caret on col zero unindent line.
 		code_edit->set_text("\t\ttest");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
 
-		/* Check input action. */
+		// Check input action.
 		code_edit->set_text("\t\ttest");
 		SEND_GUI_ACTION("ui_text_dedent");
 		CHECK(code_edit->get_line(0) == "\ttest");
 
-		/* Selection does entire line. */
+		// Selection does entire line.
 		code_edit->set_text("\t\ttest");
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
 
-		/* Handles multiple lines. */
+		// Handles multiple lines.
 		code_edit->set_text("\ttest\n\ttext");
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Do not unindent line if last col is zero. */
+		// Do not unindent line if last col is zero.
 		code_edit->set_text("\ttest\n\ttext");
 		code_edit->select(0, 0, 1, 0);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "\ttext");
 
-		/* Unindent even if last column of first line. */
+		// Unindent even if last column of first line.
 		code_edit->set_text("\ttest\n\ttext");
 		code_edit->select(0, 5, 1, 1);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Check selection is adjusted. */
+		// Check selection is adjusted.
 		code_edit->set_text("\ttest");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->unindent_lines();
@@ -2064,7 +2064,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_auto_indent_enabled(true);
 		code_edit->set_indent_using_spaces(true);
 
-		/* Do nothing if not editable. */
+		// Do nothing if not editable.
 		code_edit->set_text("    ");
 
 		code_edit->set_editable(false);
@@ -2077,71 +2077,71 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		code_edit->set_editable(true);
 
-		/* Simple unindent. */
+		// Simple unindent.
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "");
 
-		/* Backspace does a simple unindent. */
+		// Backspace does a simple unindent.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("    ");
 		code_edit->backspace();
 		CHECK(code_edit->get_line(0) == "");
 
-		/* Backspace with letter. */
+		// Backspace with letter.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("    a");
 		code_edit->backspace();
 		CHECK(code_edit->get_line(0) == "    ");
 
-		/* Unindent lines does entire line and works without selection. */
+		// Unindent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("    test");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Caret on col zero unindent line. */
+		// Caret on col zero unindent line.
 		code_edit->set_text("        test");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Only as far as needed */
+		// Only as far as needed.
 		code_edit->set_text("       test");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Check input action. */
+		// Check input action.
 		code_edit->set_text("        test");
 		SEND_GUI_ACTION("ui_text_dedent");
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Selection does entire line. */
+		// Selection does entire line.
 		code_edit->set_text("        test");
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
 
-		/* Handles multiple lines. */
+		// Handles multiple lines.
 		code_edit->set_text("    test\n    text");
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Do not unindent line if last col is zero. */
+		// Do not unindent line if last col is zero.
 		code_edit->set_text("    test\n    text");
 		code_edit->select(0, 0, 1, 0);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "    text");
 
-		/* Unindent even if last column of first line. */
+		// Unindent even if last column of first line.
 		code_edit->set_text("    test\n    text");
 		code_edit->select(0, 5, 1, 1);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
 
-		/* Check selection is adjusted. */
+		// Check selection is adjusted.
 		code_edit->set_text("    test");
 		code_edit->select(0, 4, 0, 5);
 		code_edit->unindent_lines();
@@ -2156,35 +2156,35 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			code_edit->set_auto_indent_enabled(true);
 			code_edit->set_indent_using_spaces(false);
 
-			/* Simple indent on new line. */
+			// Simple indent on new line.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "\t");
 
-			/* new blank line should still indent. */
+			// New blank line should still indent.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "\t");
 
-			/* new line above should not indent. */
+			// New line above should not indent.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test:");
 
-			/* Whitespace between symbol and caret is okay. */
+			// Whitespace between symbol and caret is okay.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:  ");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:  ");
 			CHECK(code_edit->get_line(1) == "\t");
 
-			/* Comment between symbol and caret is okay. */
+			// Comment between symbol and caret is okay.
 			code_edit->add_comment_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test: # comment");
@@ -2193,7 +2193,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "\t");
 			code_edit->remove_comment_delimiter("#");
 
-			/* Strings between symbol and caret are not okay. */
+			// Strings between symbol and caret are not okay.
 			code_edit->add_string_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test: # string");
@@ -2202,7 +2202,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_string_delimiter("#");
 
-			/* Non-whitespace prevents auto-indentation. */
+			// Non-whitespace prevents auto-indentation.
 			code_edit->add_comment_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test := 0 # comment");
@@ -2211,14 +2211,14 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
 
-			/* Even when there's no comments. */
+			// Even when there's no comments.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test := 0");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test := 0");
 			CHECK(code_edit->get_line(1) == "");
 
-			/* If between brace pairs an extra line is added. */
+			// If between brace pairs an extra line is added.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2227,7 +2227,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "\t");
 			CHECK(code_edit->get_line(2) == "}");
 
-			/* Except when we are going above. */
+			// Except when we are going above.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2235,7 +2235,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test{}");
 
-			/* or below. */
+			// Or below.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2249,35 +2249,35 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			code_edit->set_auto_indent_enabled(true);
 			code_edit->set_indent_using_spaces(true);
 
-			/* Simple indent on new line. */
+			// Simple indent on new line.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "    ");
 
-			/* new blank line should still indent. */
+			// New blank line should still indent.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "    ");
 
-			/* new line above should not indent. */
+			// New line above should not indent.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:");
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test:");
 
-			/* Whitespace between symbol and caret is okay. */
+			// Whitespace between symbol and caret is okay.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:  ");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:  ");
 			CHECK(code_edit->get_line(1) == "    ");
 
-			/* Comment between symbol and caret is okay. */
+			// Comment between symbol and caret is okay.
 			code_edit->add_comment_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test: # comment");
@@ -2286,7 +2286,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "    ");
 			code_edit->remove_comment_delimiter("#");
 
-			/* Strings between symbol and caret are not okay. */
+			// Strings between symbol and caret are not okay.
 			code_edit->add_string_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test: # string");
@@ -2295,7 +2295,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_string_delimiter("#");
 
-			/* Non-whitespace prevents auto-indentation. */
+			// Non-whitespace prevents auto-indentation.
 			code_edit->add_comment_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test := 0 # comment");
@@ -2304,14 +2304,14 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
 
-			/* Even when there's no comments. */
+			// Even when there's no comments.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test := 0");
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test := 0");
 			CHECK(code_edit->get_line(1) == "");
 
-			/* If between brace pairs an extra line is added. */
+			// If between brace pairs an extra line is added.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2320,7 +2320,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(1) == "    ");
 			CHECK(code_edit->get_line(2) == "}");
 
-			/* Except when we are going above. */
+			// Except when we are going above.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2328,7 +2328,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test{}");
 
-			/* or below. */
+			// Or below.
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test{}");
 			code_edit->set_caret_column(5);
@@ -2336,9 +2336,7 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test{}");
 			CHECK(code_edit->get_line(1) == "");
 
-			/* If there is something after a colon
-			and there is a colon in the comment it
-			should not indent. */
+			// If there is something after a colon and there is a colon in the comment it should not indent.
 			code_edit->add_comment_delimiter("#", "");
 			code_edit->set_text("");
 			code_edit->insert_text_at_caret("test:test#:");
@@ -2641,7 +2639,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 1);
 
 		// Comment & string blocks.
-		// Single line block
+		// Single line block.
 		code_edit->add_comment_delimiter("#", "", true);
 		code_edit->set_text("#line1\n#\tline2");
 		CHECK(code_edit->can_fold_line(0));
@@ -2784,7 +2782,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 1);
 
 		// Non-indented comments/strings.
-		// Single line
+		// Single line.
 		code_edit->set_text("test\n\tline1\n#line1\n#line2\n\ttest");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(1));
@@ -2805,7 +2803,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(1));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 4);
 
-		// Indent level 0->1, comment after lines
+		// Indent level 0->1, comment after lines.
 		code_edit->set_text("line1\n\tline2\n#test");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(1));
@@ -2816,7 +2814,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(1));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
 
-		// Indent level 0->1, comment between lines
+		// Indent level 0->1, comment between lines.
 		code_edit->set_text("line1\n#test\n\tline2\nline3");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(2));
@@ -2827,7 +2825,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(2));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 3);
 
-		// Indent level 1->2, comment after lines
+		// Indent level 1->2, comment after lines.
 		code_edit->set_text("\tline1\n\t\tline2\n#test");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(1));
@@ -2838,7 +2836,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(1));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 2);
 
-		// Indent level 1->2, comment between lines
+		// Indent level 1->2, comment between lines.
 		code_edit->set_text("\tline1\n#test\n\t\tline2\nline3");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(2));
@@ -2849,7 +2847,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK_FALSE(code_edit->is_line_folded(2));
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 3);
 
-		// Multiline
+		// Multiline.
 		code_edit->set_text("test\n\tline1\n&line1\nline2&\n\ttest");
 		CHECK(code_edit->can_fold_line(0));
 		CHECK_FALSE(code_edit->can_fold_line(1));
@@ -2954,7 +2952,7 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "#region New Code Region\ntest line1\ntest line2\ntest line3\n#endregion");
 
-		// Region tag with // comment delimiter.
+		// Region tag with // Comment delimiter.
 		code_edit->set_text("//region region_name\nline2\n//endregion");
 		code_edit->clear_comment_delimiters();
 		code_edit->add_comment_delimiter("//", "");
@@ -3074,7 +3072,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->set_highlight_matching_braces_enabled(true);
 		CHECK(code_edit->is_highlight_matching_braces_enabled());
 
-		/* Try setters, any length. */
+		// Try setters, any length.
 		Dictionary auto_brace_completion_pairs;
 		auto_brace_completion_pairs["["] = "]";
 		auto_brace_completion_pairs["'"] = "'";
@@ -3089,11 +3087,11 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		ERR_PRINT_OFF;
 
-		/* No duplicate start keys. */
+		// No duplicate start keys.
 		code_edit->add_auto_brace_completion_pair("[", "]");
 		CHECK(code_edit->get_auto_brace_completion_pairs().size() == 4);
 
-		/* No empty keys. */
+		// No empty keys.
 		code_edit->add_auto_brace_completion_pair("[", "");
 		CHECK(code_edit->get_auto_brace_completion_pairs().size() == 4);
 
@@ -3103,7 +3101,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->add_auto_brace_completion_pair("", "");
 		CHECK(code_edit->get_auto_brace_completion_pairs().size() == 4);
 
-		/* Must be a symbol. */
+		// Must be a symbol.
 		code_edit->add_auto_brace_completion_pair("a", "]");
 		CHECK(code_edit->get_auto_brace_completion_pairs().size() == 4);
 
@@ -3115,7 +3113,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 
 		ERR_PRINT_ON;
 
-		/* Check metadata. */
+		// Check metadata.
 		CHECK(code_edit->has_auto_brace_completion_open_key("["));
 		CHECK(code_edit->has_auto_brace_completion_open_key("'"));
 		CHECK(code_edit->has_auto_brace_completion_open_key(";"));
@@ -3133,28 +3131,28 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_auto_brace_completion_close_key("'''") == "'''");
 		CHECK(code_edit->get_auto_brace_completion_close_key("(").is_empty());
 
-		/* Check typing inserts closing pair. */
+		// Check typing inserts closing pair.
 		code_edit->clear();
 		SEND_GUI_KEY_EVENT(Key::BRACKETLEFT);
 		CHECK(code_edit->get_line(0) == "[]");
 
-		/* Should first match and insert smaller key. */
+		// Should first match and insert smaller key.
 		code_edit->clear();
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "''");
 		CHECK(code_edit->get_caret_column() == 1);
 
-		/* Move out from center, Should match and insert larger key. */
+		// Move out from center, Should match and insert larger key.
 		SEND_GUI_ACTION("ui_text_caret_right");
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "''''''");
 		CHECK(code_edit->get_caret_column() == 3);
 
-		/* Backspace should remove all. */
+		// Backspace should remove all.
 		SEND_GUI_ACTION("ui_text_backspace");
 		CHECK(code_edit->get_line(0).is_empty());
 
-		/* If in between and typing close key should "skip". */
+		// If in between and typing close key should "skip".
 		SEND_GUI_KEY_EVENT(Key::BRACKETLEFT);
 		CHECK(code_edit->get_line(0) == "[]");
 		CHECK(code_edit->get_caret_column() == 1);
@@ -3162,61 +3160,61 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_line(0) == "[]");
 		CHECK(code_edit->get_caret_column() == 2);
 
-		/* If current is char and inserting a string, do not autocomplete. */
+		// If current is char and inserting a string, do not autocomplete.
 		code_edit->clear();
 		SEND_GUI_KEY_EVENT(Key::A);
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "A'");
 
-		/* If in comment, do not complete. */
+		// If in comment, do not complete.
 		code_edit->add_comment_delimiter("#", "");
 		code_edit->clear();
 		SEND_GUI_KEY_EVENT(Key::NUMBERSIGN);
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		CHECK(code_edit->get_line(0) == "#'");
 
-		/* If in string, and inserting string do not complete. */
+		// If in string, and inserting string do not complete.
 		code_edit->clear();
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		SEND_GUI_KEY_EVENT(Key::QUOTEDBL);
 		CHECK(code_edit->get_line(0) == "'\"'");
 
-		/* Wrap single line selection with brackets */
+		// Wrap single line selection with brackets.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("abc");
 		code_edit->select_all();
 		SEND_GUI_KEY_EVENT(Key::BRACKETLEFT);
 		CHECK(code_edit->get_line(0) == "[abc]");
 
-		/* Caret should be after the last character of the single line selection */
+		// Caret should be after the last character of the single line selection.
 		CHECK(code_edit->get_caret_column() == 4);
 
-		/* Wrap multi line selection with brackets */
+		// Wrap multi line selection with brackets.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("abc\nabc");
 		code_edit->select_all();
 		SEND_GUI_KEY_EVENT(Key::BRACKETLEFT);
 		CHECK(code_edit->get_text() == "[abc\nabc]");
 
-		/* Caret should be after the last character of the multi line selection */
+		// Caret should be after the last character of the multi line selection.
 		CHECK(code_edit->get_caret_line() == 1);
 		CHECK(code_edit->get_caret_column() == 3);
 
-		/* If inserted character is not a auto brace completion open key, replace selected text with the inserted character */
+		// If inserted character is not a auto brace completion open key, replace selected text with the inserted character.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("abc");
 		code_edit->select_all();
 		SEND_GUI_KEY_EVENT(Key::KEY_1);
 		CHECK(code_edit->get_text() == "1");
 
-		/* If potential multichar and single brace completion is matched, it should wrap the single.  */
+		// If potential multichar and single brace completion is matched, it should wrap the single. .
 		code_edit->clear();
 		code_edit->insert_text_at_caret("\'\'abc");
 		code_edit->select(0, 2, 0, 5);
 		SEND_GUI_KEY_EVENT(Key::APOSTROPHE);
 		CHECK(code_edit->get_text() == "\'\'\'abc\'");
 
-		/* If only the potential multichar brace completion is matched, it does not wrap or complete. */
+		// If only the potential multichar brace completion is matched, it does not wrap or complete.
 		auto_brace_completion_pairs.erase("\'");
 		code_edit->set_auto_brace_completion_pairs(auto_brace_completion_pairs);
 		CHECK_FALSE(code_edit->has_auto_brace_completion_open_key("\'"));
@@ -3251,7 +3249,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_caret_column() == 6);
 		code_edit->undo();
 
-		// brace completion disabled
+		// Brace completion disabled.
 		code_edit->set_auto_brace_completion_enabled(false);
 
 		// Full completion.
@@ -3269,7 +3267,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_line(0) == "(test()");
 		CHECK(code_edit->get_caret_column() == 6);
 
-		// String
+		// String.
 		code_edit->set_auto_brace_completion_enabled(true);
 		code_edit->clear();
 		code_edit->insert_text_at_caret("\"\"");
@@ -3291,7 +3289,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		CHECK(code_edit->get_caret_column() == 7);
 		code_edit->undo();
 
-		// brace completion disabled
+		// Brace completion disabled.
 		code_edit->set_auto_brace_completion_enabled(false);
 
 		// Full completion.
@@ -3315,7 +3313,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->set_code_completion_enabled(true);
 		CHECK(code_edit->is_code_completion_enabled());
 
-		/* Set prefixes, single char only, disallow empty. */
+		// Set prefixes, single char only, disallow empty.
 		TypedArray<String> completion_prefixes;
 		completion_prefixes.push_back("");
 		completion_prefixes.push_back(".");
@@ -3341,17 +3339,17 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		Array signal_args;
 		signal_args.push_back(Array());
 
-		/* Force request. */
+		// Force request.
 		code_edit->request_code_completion();
 		SIGNAL_CHECK_FALSE("code_completion_requested");
 		code_edit->request_code_completion(true);
 		SIGNAL_CHECK("code_completion_requested", signal_args);
 
-		/* Manual request should force. */
+		// Manual request should force.
 		SEND_GUI_ACTION("ui_text_completion_query");
 		SIGNAL_CHECK("code_completion_requested", signal_args);
 
-		/* Insert prefix. */
+		// Insert prefix.
 		TypedArray<String> completion_prefixes;
 		completion_prefixes.push_back(".");
 		code_edit->set_code_completion_prefixes(completion_prefixes);
@@ -3360,12 +3358,12 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->request_code_completion();
 		SIGNAL_CHECK("code_completion_requested", signal_args);
 
-		/* Should work with space too. */
+		// Should work with space too.
 		code_edit->insert_text_at_caret(" ");
 		code_edit->request_code_completion();
 		SIGNAL_CHECK("code_completion_requested", signal_args);
 
-		/* Should work when complete ends with prefix. */
+		// Should work when complete ends with prefix.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("t");
 		code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "test.", "test.");
@@ -3389,7 +3387,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_option(0).size() == 0);
 			CHECK(code_edit->get_code_completion_options().size() == 0);
 
-			/* Adding does not update the list. */
+			// Adding does not update the list.
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_0.", "item_0");
 
 			code_edit->set_code_completion_selected_index(1);
@@ -3397,8 +3395,8 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_option(0).size() == 0);
 			CHECK(code_edit->get_code_completion_options().size() == 0);
 
-			/* After update, pending add should not be counted, */
-			/* also does not work on col 0                      */
+			// After update, pending add should not be counted,.
+			// Also does not work on col 0                     .
 			int before_text_caret_column = code_edit->get_caret_column();
 			code_edit->insert_text_at_caret("i");
 
@@ -3414,7 +3412,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_option(0).size() == 7);
 			CHECK(code_edit->get_code_completion_options().size() == 1);
 
-			/* Check cancel closes completion. */
+			// Check cancel closes completion.
 			SEND_GUI_ACTION("ui_cancel");
 			CHECK(code_edit->get_code_completion_selected_index() == -1);
 
@@ -3425,7 +3423,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_option(0).size() == 7);
 			CHECK(code_edit->get_code_completion_options().size() == 3);
 
-			/* Check data. */
+			// Check data.
 			Dictionary option = code_edit->get_code_completion_option(0);
 			CHECK((int)option["kind"] == (int)CodeEdit::CodeCompletionKind::KIND_CLASS);
 			CHECK(option["display_text"] == "item_0.");
@@ -3434,11 +3432,11 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(option["icon"] == Ref<Resource>());
 			CHECK(option["default_value"] == Color(1, 0, 0));
 
-			/* Set size for mouse input. */
+			// Set size for mouse input.
 			code_edit->set_size(Size2(100, 100));
 
-			/* Test home and end keys close the completion and move the caret */
-			/* => ui_text_caret_line_start */
+			// Test home and end keys close the completion and move the caret.
+			// => ui_text_caret_line_start.
 			code_edit->set_caret_column(before_text_caret_column + 1);
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0", Color(1, 0, 0), Ref<Resource>(), Color(1, 0, 0));
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_1.", "item_1");
@@ -3451,7 +3449,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_selected_index() == -1);
 			CHECK(code_edit->get_caret_column() == 0);
 
-			/* => ui_text_caret_line_end */
+			// => ui_text_caret_line_end.
 			code_edit->set_caret_column(before_text_caret_column + 1);
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0", Color(1, 0, 0), Ref<Resource>(), Color(1, 0, 0));
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_1.", "item_1");
@@ -3464,7 +3462,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_selected_index() == -1);
 			CHECK(code_edit->get_caret_column() == before_text_caret_column + 1);
 
-			/* Check input. */
+			// Check input.
 			code_edit->set_caret_column(before_text_caret_column + 1);
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0", Color(1, 0, 0), Ref<Resource>(), Color(1, 0, 0));
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_VARIABLE, "item_1.", "item_1");
@@ -3504,19 +3502,19 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_MOUSE_BUTTON_EVENT(caret_pos, MouseButton::WHEEL_UP, 0, Key::NONE);
 			CHECK(code_edit->get_code_completion_selected_index() == 0);
 
-			/* Single click selects. */
+			// Single click selects.
 			caret_pos.y += code_edit->get_line_height() * 2;
 			SEND_GUI_MOUSE_BUTTON_EVENT(caret_pos, MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
 			CHECK(code_edit->get_code_completion_selected_index() == 2);
 
-			/* Double click inserts. */
+			// Double click inserts.
 			SEND_GUI_DOUBLE_CLICK(caret_pos, Key::NONE);
 			CHECK(code_edit->get_code_completion_selected_index() == -1);
 			CHECK(code_edit->get_line(0) == "item_2");
 
 			code_edit->set_auto_brace_completion_enabled(false);
 
-			/* Does nothing in readonly. */
+			// Does nothing in readonly.
 			code_edit->undo();
 			code_edit->add_code_completion_option(CodeEdit::CodeCompletionKind::KIND_CLASS, "item_0.", "item_0");
 			code_edit->update_code_completion_options();
@@ -3525,7 +3523,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			code_edit->set_editable(true);
 			CHECK(code_edit->get_line(0) == "i");
 
-			/* Replace */
+			// Replace.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3534,7 +3532,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_ACTION("ui_text_completion_replace");
 			CHECK(code_edit->get_line(0) == "item_0 test");
 
-			/* Replace string. */
+			// Replace string.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("\"item_1 test\"");
 			code_edit->set_caret_column(2);
@@ -3543,7 +3541,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_ACTION("ui_text_completion_replace");
 			CHECK(code_edit->get_line(0) == "\"item_0\"");
 
-			/* Normal replace if no end is given. */
+			// Normal replace if no end is given.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("\"item_1 test");
 			code_edit->set_caret_column(2);
@@ -3552,7 +3550,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_ACTION("ui_text_completion_replace");
 			CHECK(code_edit->get_line(0) == "\"item_0\" test");
 
-			/* Insert at completion. */
+			// Insert at completion.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3561,7 +3559,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_ACTION("ui_text_completion_accept");
 			CHECK(code_edit->get_line(0) == "item_01 test");
 
-			/* Insert at completion with string should have same output. */
+			// Insert at completion with string should have same output.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("\"item_1 test\"");
 			code_edit->set_caret_column(2);
@@ -3570,8 +3568,8 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			SEND_GUI_ACTION("ui_text_completion_accept");
 			CHECK(code_edit->get_line(0) == "\"item_0\"1 test\"");
 
-			/* Merge symbol at end on insert text. */
-			/* End on completion entry. */
+			// Merge symbol at end on insert text.
+			// End on completion entry.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3581,7 +3579,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0( test");
 			CHECK(code_edit->get_caret_column() == 7);
 
-			/* End of text*/
+			// End of text.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1( test");
 			code_edit->set_caret_column(2);
@@ -3591,7 +3589,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0( test");
 			CHECK(code_edit->get_caret_column() == 6);
 
-			/* End of both. */
+			// End of both.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1( test");
 			code_edit->set_caret_column(2);
@@ -3601,8 +3599,8 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0( test");
 			CHECK(code_edit->get_caret_column() == 7);
 
-			/* Full set. */
-			/* End on completion entry. */
+			// Full set.
+			// End on completion entry.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3612,7 +3610,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 8);
 
-			/* End of text*/
+			// End of text.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1() test");
 			code_edit->set_caret_column(2);
@@ -3622,7 +3620,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 6);
 
-			/* End of both. */
+			// End of both.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1() test");
 			code_edit->set_caret_column(2);
@@ -3632,10 +3630,10 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 8);
 
-			/* Autobrace completion. */
+			// Autobrace completion.
 			code_edit->set_auto_brace_completion_enabled(true);
 
-			/* End on completion entry. */
+			// End on completion entry.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3645,7 +3643,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 7);
 
-			/* End of text*/
+			// End of text.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1( test");
 			code_edit->set_caret_column(2);
@@ -3655,7 +3653,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0( test");
 			CHECK(code_edit->get_caret_column() == 6);
 
-			/* End of both. */
+			// End of both.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1( test");
 			code_edit->set_caret_column(2);
@@ -3665,8 +3663,8 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0( test");
 			CHECK(code_edit->get_caret_column() == 7);
 
-			/* Full set. */
-			/* End on completion entry. */
+			// Full set.
+			// End on completion entry.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1 test");
 			code_edit->set_caret_column(2);
@@ -3676,7 +3674,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 8);
 
-			/* End of text*/
+			// End of text.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1() test");
 			code_edit->set_caret_column(2);
@@ -3686,7 +3684,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_line(0) == "item_0() test");
 			CHECK(code_edit->get_caret_column() == 6);
 
-			/* End of both. */
+			// End of both.
 			code_edit->clear();
 			code_edit->insert_text_at_caret("item_1() test");
 			code_edit->set_caret_column(2);
@@ -3699,7 +3697,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 	}
 
 	SUBCASE("[CodeEdit] autocomplete suggestion order") {
-		/* Prefer less fragmented suggestion. */
+		// Prefer less fragmented suggestion.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3709,7 +3707,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Prefer suggestion starting with the string to complete (matching start). */
+		// Prefer suggestion starting with the string to complete (matching start).
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3719,7 +3717,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Prefer less fragment over matching start. */
+		// Prefer less fragment over matching start.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3729,7 +3727,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "stest");
 
-		/* Prefer good capitalization. */
+		// Prefer good capitalization.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3739,7 +3737,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Prefer matching start over good capitalization. */
+		// Prefer matching start over good capitalization.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3749,7 +3747,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "Test");
 
-		/* Prefer closer location. */
+		// Prefer closer location.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3759,7 +3757,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test_bis");
 
-		/* Prefer good capitalization over location. */
+		// Prefer good capitalization over location.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3769,7 +3767,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "test");
 
-		/* Prefer the start of the string to complete being closest to the start of the suggestion (closest to start). */
+		// Prefer the start of the string to complete being closest to the start of the suggestion (closest to start).
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3779,7 +3777,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		code_edit->confirm_code_completion();
 		CHECK(code_edit->get_line(0) == "stest");
 
-		/* Prefer location over closest to start. */
+		// Prefer location over closest to start.
 		code_edit->clear();
 		code_edit->insert_text_at_caret("te");
 		code_edit->set_caret_column(2);
@@ -3863,7 +3861,7 @@ TEST_CASE("[SceneTree][CodeEdit] symbol lookup") {
 	CHECK(code_edit->is_symbol_lookup_on_click_enabled());
 
 	if (TS->has_feature(TextServer::FEATURE_FONT_DYNAMIC) && TS->has_feature(TextServer::FEATURE_SIMPLE_LAYOUT)) {
-		/* Set size for mouse input. */
+		// Set size for mouse input.
 		code_edit->set_size(Size2(100, 100));
 
 		code_edit->set_text("this is some text");
@@ -3906,7 +3904,7 @@ TEST_CASE("[SceneTree][CodeEdit] line length guidelines") {
 	guide_lines.push_back(80);
 	guide_lines.push_back(120);
 
-	/* Order should be preserved. */
+	// Order should be preserved.
 	code_edit->set_line_length_guidelines(guide_lines);
 	CHECK((int)code_edit->get_line_length_guidelines()[0] == 80);
 	CHECK((int)code_edit->get_line_length_guidelines()[1] == 120);
@@ -3919,14 +3917,14 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);
 	code_edit->grab_focus();
 
-	/* Backspace with selection on first line. */
+	// Backspace with selection on first line.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test backspace");
 	code_edit->select(0, 0, 0, 5);
 	code_edit->backspace();
 	CHECK(code_edit->get_line(0) == "backspace");
 
-	/* Backspace with selection on first line and caret at the beginning of file. */
+	// Backspace with selection on first line and caret at the beginning of file.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test backspace");
 	code_edit->select(0, 0, 0, 5);
@@ -3934,7 +3932,7 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->backspace();
 	CHECK(code_edit->get_line(0) == "backspace");
 
-	/* Move caret up to the previous line on backspace if caret is at the first column. */
+	// Move caret up to the previous line on backspace if caret is at the first column.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("line 1\nline 2");
 	code_edit->set_caret_line(1);
@@ -3944,14 +3942,14 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	CHECK(code_edit->get_caret_line() == 0);
 	CHECK(code_edit->get_caret_column() == 6);
 
-	/* Backspace delete all text if all text is selected. */
+	// Backspace delete all text if all text is selected.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("line 1\nline 2\nline 3");
 	code_edit->select_all();
 	code_edit->backspace();
 	CHECK(code_edit->get_text().is_empty());
 
-	/* Backspace at the beginning without selection has no effect. */
+	// Backspace at the beginning without selection has no effect.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("line 1\nline 2\nline 3");
 	code_edit->set_caret_line(0);
@@ -3967,7 +3965,7 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);
 	code_edit->grab_focus();
 
-	/* Add a new line. */
+	// Add a new line.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test new line");
 	code_edit->set_caret_line(0);
@@ -3976,7 +3974,7 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	CHECK(code_edit->get_line(0) == "test new line");
 	CHECK(code_edit->get_line(1) == "");
 
-	/* Split line with new line. */
+	// Split line with new line.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test new line");
 	code_edit->set_caret_line(0);
@@ -3985,7 +3983,7 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	CHECK(code_edit->get_line(0) == "test ");
 	CHECK(code_edit->get_line(1) == "new line");
 
-	/* Delete selection and split with new line. */
+	// Delete selection and split with new line.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test new line");
 	code_edit->select(0, 0, 0, 5);
@@ -3993,7 +3991,7 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	CHECK(code_edit->get_line(0) == "");
 	CHECK(code_edit->get_line(1) == "new line");
 
-	/* Blank new line below with selection should not split. */
+	// Blank new line below with selection should not split.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test new line");
 	code_edit->select(0, 0, 0, 5);
@@ -4001,7 +3999,7 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	CHECK(code_edit->get_line(0) == "test new line");
 	CHECK(code_edit->get_line(1) == "");
 
-	/* Blank new line above with selection should not split. */
+	// Blank new line above with selection should not split.
 	code_edit->set_text("");
 	code_edit->insert_text_at_caret("test new line");
 	code_edit->select(0, 0, 0, 5);
@@ -4029,14 +4027,14 @@ func _ready():
 	print("Make sure this exits: %b" % pos)
 )");
 
-	/* Duplicate a single line without selection. */
+	// Duplicate a single line without selection.
 	code_edit->set_caret_line(0);
 	code_edit->duplicate_lines();
 	CHECK(code_edit->get_line(0) == "extends Node");
 	CHECK(code_edit->get_line(1) == "extends Node");
 	CHECK(code_edit->get_line(2) == "");
 
-	/* Duplicate multiple lines with selection. */
+	// Duplicate multiple lines with selection.
 	code_edit->set_caret_line(6);
 	code_edit->set_caret_column(15);
 	code_edit->select(4, 8, 6, 15);
@@ -4047,7 +4045,7 @@ func _ready():
 	CHECK(code_edit->get_line(9) == "\tvar c := a + b");
 	CHECK(code_edit->get_line(10) == "\tfor i in range(c):");
 
-	/* Duplicate single lines with multiple carets. */
+	// Duplicate single lines with multiple carets.
 	code_edit->deselect();
 	code_edit->set_caret_line(10);
 	code_edit->set_caret_column(1);
@@ -4063,7 +4061,7 @@ func _ready():
 	CHECK(code_edit->get_line(15) == "\tvar pos = get_index() - 1");
 	CHECK(code_edit->get_line(16) == "\tprint(\"Make sure this exits: %b\" % pos)");
 
-	/* Duplicate multiple lines with multiple carets. */
+	// Duplicate multiple lines with multiple carets.
 	code_edit->select(0, 0, 1, 2, 0);
 	code_edit->select(3, 0, 4, 2, 1);
 	code_edit->select(16, 0, 17, 0, 2);
