@@ -5294,7 +5294,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		ERR_PRINT_ON;
 	}
 
-	SUBCASE("[TextEdit] caret sorting") {
+	SUBCASE("[TextEdit] sort carets") {
 		Vector<int> sorted_carets = { 0, 1, 2 };
 
 		// Ascending order.
@@ -5344,6 +5344,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 
 		// Don't merge carets that are not overlapping.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(0, 6);
@@ -5359,6 +5360,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 
 		// Don't merge selections that are not overlapping.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(0, 2);
@@ -5374,6 +5376,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 
 		// Don't merge selections that are only touching.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(1, 2);
@@ -5386,6 +5389,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 
 		// Merge carets into selection.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(3);
 		text_edit->add_caret(0, 2);
@@ -5400,12 +5404,14 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 8);
+		CHECK(text_edit->is_selection_direction_right(0));
 		CHECK_FALSE(text_edit->has_selection(1));
 		CHECK(text_edit->get_caret_line(1) == 1);
 		CHECK(text_edit->get_caret_column(1) == 10);
 
 		// Merge partially overlapping selections.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);
@@ -5419,10 +5425,12 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_line(0) == 0);
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
-		CHECK(text_edit->get_selection_to_column(0) == 5); // todo
+		CHECK(text_edit->get_selection_to_column(0) == 5);
+		CHECK(text_edit->is_selection_direction_right(0));
 
 		// Merge smaller overlapping selection into a bigger one.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);
@@ -5437,9 +5445,11 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 5);
+		CHECK(text_edit->is_selection_direction_right(0));
 
 		// Merge equal overlapping selections.
 		text_edit->remove_secondary_carets();
+		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);
@@ -5451,6 +5461,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 6);
+		CHECK(text_edit->is_selection_direction_right(0));
 	}
 
 	SUBCASE("[TextEdit] collapse carets") { // todo needed or private?
@@ -5461,36 +5472,320 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		text_edit->set_caret_line(1);
 		text_edit->set_caret_column(9);
 
+		// Add caret below. Column will clamp.
 		text_edit->add_caret_at_carets(true);
 		CHECK(text_edit->get_caret_count() == 2);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 9);
 		CHECK(text_edit->get_caret_line(1) == 2);
 		CHECK(text_edit->get_caret_column(1) == 4);
 
+		// Cannot add below when at last line.
 		text_edit->add_caret_at_carets(true);
 		CHECK(text_edit->get_caret_count() == 2);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 9);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 4);
 
+		// Add caret above. Column will clamp.
 		text_edit->add_caret_at_carets(false);
 		CHECK(text_edit->get_caret_count() == 3);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 9);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 4);
 		CHECK(text_edit->get_caret_line(2) == 0);
 		CHECK(text_edit->get_caret_column(2) == 7);
 
+		// Cannot add above when at first line.
+		text_edit->add_caret_at_carets(false);
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 9);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->get_caret_line(2) == 0);
+		CHECK(text_edit->get_caret_column(2) == 7);
+
+		// Cannot add below when at the last line for selection.
 		text_edit->remove_secondary_carets();
-		text_edit->set_caret_line(0);
-		text_edit->set_caret_column(4);
+		text_edit->select(2, 1, 2, 4);
+		text_edit->add_caret_at_carets(true);
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 2);
+		CHECK(text_edit->get_selection_origin_column(0) == 1);
+		CHECK(text_edit->get_caret_line(0) == 2);
+		CHECK(text_edit->get_caret_column(0) == 4);
+
+		// Cannot add above when at the first line for selection.
+		text_edit->select(0, 1, 0, 4);
+		text_edit->add_caret_at_carets(false);
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 1);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+
+		// Add selection below.
 		text_edit->select(0, 0, 0, 4);
 		text_edit->add_caret_at_carets(true);
 		CHECK(text_edit->get_caret_count() == 2);
-		CHECK(text_edit->get_selection_from_line(1) == 1);
-		CHECK(text_edit->get_selection_to_line(1) == 1);
-		CHECK(text_edit->get_selection_from_column(1) == 0);
-		CHECK(text_edit->get_selection_to_column(1) == 3);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 0);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->has_selection(1));
+		CHECK(text_edit->get_selection_origin_line(1) == 1);
+		CHECK(text_edit->get_selection_origin_column(1) == 0);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 3); // In the default font, this is the same position.
 
+		// Add selection below again.
 		text_edit->add_caret_at_carets(true);
 		CHECK(text_edit->get_caret_count() == 3);
-		CHECK(text_edit->get_selection_from_line(2) == 2);
-		CHECK(text_edit->get_selection_to_line(2) == 2);
-		CHECK(text_edit->get_selection_from_column(2) == 0);
-		CHECK(text_edit->get_selection_to_column(2) == 4);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 0);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->has_selection(1));
+		CHECK(text_edit->get_selection_origin_line(1) == 1);
+		CHECK(text_edit->get_selection_origin_column(1) == 0);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 3);
+		CHECK(text_edit->has_selection(2));
+		CHECK(text_edit->get_selection_origin_line(2) == 2);
+		CHECK(text_edit->get_selection_origin_column(2) == 0);
+		CHECK(text_edit->get_caret_line(2) == 2);
+		CHECK(text_edit->get_caret_column(2) == 4);
+
+		text_edit->set_text("\tthis is\nsome\n\ttest text");
+		MessageQueue::get_singleton()->flush();
+
+		// Last fit x is preserved when adding below.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(6);
+		text_edit->add_caret_at_carets(true);
+		text_edit->add_caret_at_carets(true);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 6);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->get_caret_line(2) == 2);
+		CHECK(text_edit->get_caret_column(2) == 6);
+
+		// Last fit x is preserved when adding above.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(2);
+		text_edit->set_caret_column(9);
+		text_edit->add_caret_at_carets(false);
+		text_edit->add_caret_at_carets(false);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->get_caret_line(0) == 2);
+		CHECK(text_edit->get_caret_column(0) == 9);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->get_caret_line(2) == 0);
+		CHECK(text_edit->get_caret_column(2) == 8);
+
+		// Last fit x is preserved when selection adding below.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->select(0, 8, 0, 5);
+		text_edit->add_caret_at_carets(true);
+		text_edit->add_caret_at_carets(true);
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 8);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 5);
+		CHECK_FALSE(text_edit->has_selection(1));
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->has_selection(2));
+		CHECK(text_edit->get_selection_origin_line(2) == 2);
+		CHECK(text_edit->get_selection_origin_column(2) == 7);
+		CHECK(text_edit->get_caret_line(2) == 2);
+		CHECK(text_edit->get_caret_column(2) == 5);
+
+		// Last fit x is preserved when selection adding above.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->select(2, 9, 2, 5);
+		text_edit->add_caret_at_carets(false);
+		text_edit->add_caret_at_carets(false);
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 2);
+		CHECK(text_edit->get_selection_origin_column(0) == 9);
+		CHECK(text_edit->get_caret_line(0) == 2);
+		CHECK(text_edit->get_caret_column(0) == 5);
+		CHECK_FALSE(text_edit->has_selection(1));
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->has_selection(2));
+		CHECK(text_edit->get_selection_origin_line(2) == 0);
+		CHECK(text_edit->get_selection_origin_column(2) == 8);
+		CHECK(text_edit->get_caret_line(2) == 0);
+		CHECK(text_edit->get_caret_column(2) == 5);
+
+		// Selections are merged when they overlap.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->select(0, 1, 0, 5);
+		text_edit->add_caret(1, 0);
+		text_edit->select(1, 1, 1, 3, 1);
+		text_edit->add_caret_at_carets(true);
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 1);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 5);
+		CHECK(text_edit->has_selection(1));
+		CHECK(text_edit->get_selection_origin_line(1) == 1);
+		CHECK(text_edit->get_selection_origin_column(1) == 1);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 4);
+		CHECK(text_edit->has_selection(2));
+		CHECK(text_edit->get_selection_origin_line(2) == 2);
+		CHECK(text_edit->get_selection_origin_column(2) == 0);
+		CHECK(text_edit->get_caret_line(2) == 2);
+		CHECK(text_edit->get_caret_column(2) == 3);
+
+		// Multiline selection.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(1);
+		text_edit->select(0, 3, 1, 1);
+		text_edit->add_caret_at_carets(true);
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->has_selection(0));
+		CHECK(text_edit->get_selection_origin_line(0) == 0);
+		CHECK(text_edit->get_selection_origin_column(0) == 3);
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 1);
+		CHECK(text_edit->has_selection(1));
+		CHECK(text_edit->get_selection_origin_line(1) == 1);
+		CHECK(text_edit->get_selection_origin_column(1) == 3);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 0);
+
+		text_edit->set_line_wrapping_mode(TextEdit::LineWrappingMode::LINE_WRAPPING_BOUNDARY);
+		text_edit->set_size(Size2(50, 100));
+		// \t,this, is\nso,me\n\t,test, ,text
+		CHECK(text_edit->is_line_wrapped(0));
+		MessageQueue::get_singleton()->flush();
+
+		// Add caret below on next line wrap.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret_at_carets(true);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 0);
+		CHECK(text_edit->get_caret_column(1) == 8);
+
+		// Add caret below from end of line wrap.
+		text_edit->add_caret_at_carets(true);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 0);
+		CHECK(text_edit->get_caret_column(1) == 8);
+		CHECK(text_edit->get_caret_line(2) == 1);
+		CHECK(text_edit->get_caret_column(2) == 1);
+
+		// Add caret below from last line and not last line wrap.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(2);
+		text_edit->set_caret_column(5);
+		text_edit->add_caret_at_carets(true);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_caret_line(0) == 2);
+		CHECK(text_edit->get_caret_column(0) == 5);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 10);
+
+		// Cannot add caret below from last line last line wrap.
+		text_edit->add_caret_at_carets(true);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_caret_line(0) == 2);
+		CHECK(text_edit->get_caret_column(0) == 5);
+		CHECK(text_edit->get_caret_line(1) == 2);
+		CHECK(text_edit->get_caret_column(1) == 10);
+
+		// Add caret above from not first line wrap.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(1);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret_at_carets(false);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 1);
+
+		// Add caret above from first line wrap.
+		text_edit->add_caret_at_carets(false);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 3);
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 1);
+		CHECK(text_edit->get_caret_line(2) == 0);
+		CHECK(text_edit->get_caret_column(2) == 8);
+
+		// Add caret above from first line and not first line wrap.
+		text_edit->add_caret_at_carets(false);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 4);
+		CHECK(text_edit->get_caret_line(0) == 1);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 1);
+		CHECK(text_edit->get_caret_column(1) == 1);
+		CHECK(text_edit->get_caret_line(2) == 0);
+		CHECK(text_edit->get_caret_column(2) == 8);
+		CHECK(text_edit->get_caret_line(3) == 0);
+		CHECK(text_edit->get_caret_column(3) == 4);
+
+		// Cannot add caret above from first line first line wrap.
+		text_edit->remove_secondary_carets();
+		text_edit->deselect();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(0);
+		text_edit->add_caret_at_carets(false);
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 0);
 	}
 
 	memdelete(text_edit);

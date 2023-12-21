@@ -4678,116 +4678,115 @@ int TextEdit::get_caret_count() const {
 }
 
 void TextEdit::add_caret_at_carets(bool p_below) {
+	const int last_line_max_wrap = get_line_wrap_count(text.size() - 1);
+
 	begin_multicaret_edit();
 	int view_target_caret = -1;
-	int view_line = p_below ? INT_MAX : INT_MIN;
+	int view_line = p_below ? -1 : INT_MAX;
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
 		const int caret_line = get_caret_line(i);
 		const int caret_column = get_caret_column(i);
-		int selection_origin_line = 0, selection_origin_column = 0;
+		const int selection_origin_line = get_selection_origin_line(i);
+		const int selection_origin_column = get_selection_origin_column(i);
+		const int caret_wrap_index = get_caret_wrap_index(i);
+		const int selection_origin_wrap_index = get_line_wrap_index_at_column(selection_origin_line, selection_origin_column);
 
-		if ((caret_line == 0 && !p_below) || (caret_line == text.size() - 1) && p_below) {
-			// Can't add above the first line or below the last line.
+		if (caret_line == 0 && !p_below && (caret_wrap_index == 0 || selection_origin_wrap_index == 0)) {
+			// Can't add above the first line.
 			continue;
 		}
-
-		bool is_selected = has_selection(i);
-
-		// todo why?
-		// The last fit x will be cleared if the caret has a selection,
-		// but if it does not have a selection the last fit x will be
-		// transferred to the new caret.
-		if (is_selected) {
-			selection_origin_line = get_selection_origin_line(i);
-			selection_origin_column = get_selection_origin_column(i);
-			// If the selection goes over multiple lines, deselect it.
-			if (get_selection_from_line(i) != get_selection_to_line(i)) {
-				deselect(i); // todo remove?
-				// } else {
-				// carets.write[i].last_fit_x = _get_column_x_offset_for_line(caret_column, caret_line, caret_column);
-			}
+		if (caret_line == text.size() - 1 && p_below && (caret_wrap_index == last_line_max_wrap || selection_origin_wrap_index == last_line_max_wrap)) {
+			// Can't add below the last line.
+			continue;
 		}
+		bool is_selected = has_selection(i) || carets[i].last_fit_x != carets[i].selection.origin_last_fit_x;
 
-		// todo need to add first, so hitting escape keeps caret 0 at original pos
+		// Add a new caret.
+		int new_caret_index = add_caret(caret_line, caret_column);
+
+		// Copy the selection origin and last fit.
+		set_selection_origin_line(selection_origin_line, new_caret_index);
+		set_selection_origin_column(selection_origin_column, new_caret_index);
+		carets.write[new_caret_index].last_fit_x = carets[i].last_fit_x;
+		carets.write[new_caret_index].selection.origin_last_fit_x = carets[i].selection.origin_last_fit_x;
 
 		// Move the caret up or down one visible line.
-		int caret_wrap_index = get_caret_wrap_index(i);
-		int selection_origin_wrap_index = get_line_wrap_index_at_column(selection_origin_line, selection_origin_column);
 		if (!p_below) {
 			// Move caret up.
 			if (caret_wrap_index > 0) {
-				set_caret_line(caret_line, false, false, caret_wrap_index - 1, i);
+				set_caret_line(caret_line, false, false, caret_wrap_index - 1, new_caret_index);
 			} else {
 				int new_line = caret_line - get_next_visible_line_offset_from(caret_line - 1, -1);
 				if (is_line_wrapped(new_line)) {
-					set_caret_line(new_line, false, false, get_line_wrap_count(new_line), i);
+					set_caret_line(new_line, false, false, get_line_wrap_count(new_line), new_caret_index);
 				} else {
-					set_caret_line(new_line, false, false, 0, i);
+					set_caret_line(new_line, false, false, 0, new_caret_index);
 				}
 			}
 			// Move selection origin up.
 			if (is_selected) {
 				if (selection_origin_wrap_index > 0) {
-					set_selection_origin_line(caret_line, i, false, selection_origin_wrap_index - 1);
+					set_selection_origin_line(caret_line, new_caret_index, false, selection_origin_wrap_index - 1);
 				} else {
 					int new_line = selection_origin_line - get_next_visible_line_offset_from(selection_origin_line - 1, -1);
 					if (is_line_wrapped(new_line)) {
-						set_selection_origin_line(new_line, i, false, get_line_wrap_count(new_line));
+						set_selection_origin_line(new_line, new_caret_index, false, get_line_wrap_count(new_line));
 					} else {
-						set_selection_origin_line(new_line, i, false, 0);
+						set_selection_origin_line(new_line, new_caret_index, false, 0);
 					}
 				}
 			}
-			if (caret_line < view_line) {
-				view_line = caret_line;
-				view_target_caret = i;
+			if (get_caret_line(new_caret_index) < view_line) {
+				view_line = get_caret_line(new_caret_index);
+				view_target_caret = new_caret_index;
 			}
 		} else {
 			// Move caret down.
 			if (caret_wrap_index < get_line_wrap_count(caret_line)) {
-				set_caret_line(caret_line, false, false, caret_wrap_index + 1, i);
+				set_caret_line(caret_line, false, false, caret_wrap_index + 1, new_caret_index);
 			} else {
 				int new_line = caret_line + get_next_visible_line_offset_from(CLAMP(caret_line + 1, 0, text.size() - 1), 1);
-				set_caret_line(new_line, false, false, 0, i);
+				set_caret_line(new_line, false, false, 0, new_caret_index);
 			}
 			// Move selection origin down.
 			if (is_selected) {
 				if (selection_origin_wrap_index < get_line_wrap_count(selection_origin_line)) {
-					set_selection_origin_line(selection_origin_line, i, false, selection_origin_wrap_index + 1);
+					set_selection_origin_line(selection_origin_line, new_caret_index, false, selection_origin_wrap_index + 1);
 				} else {
 					int new_line = selection_origin_line + get_next_visible_line_offset_from(CLAMP(selection_origin_line + 1, 0, text.size() - 1), 1);
-					set_selection_origin_line(new_line, i, false, 0);
+					set_selection_origin_line(new_line, new_caret_index, false, 0);
 				}
 			}
-			if (caret_line > view_line) {
-				view_line = caret_line;
-				view_target_caret = i;
+			if (get_caret_line(new_caret_index) > view_line) {
+				view_line = get_caret_line(new_caret_index);
+				view_target_caret = new_caret_index;
 			}
 		}
-
-		// Add a new caret at the original position.
-		int new_caret_index = add_caret(caret_line, caret_column);
-		if (new_caret_index == -1) {
-			continue;
-		}
 		if (is_selected) {
-			select(selection_origin_line, selection_origin_column, caret_line, caret_column, new_caret_index);
+			// Make sure selection is active.
+			select(get_selection_origin_line(new_caret_index), get_selection_origin_column(new_caret_index), get_caret_line(new_caret_index), get_caret_column(new_caret_index), new_caret_index);
+			carets.write[new_caret_index].last_fit_x = carets[i].last_fit_x;
+			carets.write[new_caret_index].selection.origin_last_fit_x = carets[i].selection.origin_last_fit_x;
 		}
-		carets.write[new_caret_index].last_fit_x = carets[i].last_fit_x;
-		carets.write[new_caret_index].selection.origin_last_fit_x = carets[i].selection.origin_last_fit_x;
-	}
-	queue_merge_carets();
 
+		if (get_caret_line(new_caret_index) == get_caret_line(0) && get_caret_column(new_caret_index) == get_caret_column(0) && (carets[0].last_fit_x == carets[0].selection.origin_last_fit_x || get_selection_origin_line(new_caret_index) == get_selection_origin_line(0) && get_selection_origin_column(new_caret_index) == get_selection_origin_column(0))) {
+			// Override the main caret and remove, because merging prioritizes the last caret.
+			carets.write[0].last_fit_x = carets[new_caret_index].last_fit_x;
+			carets.write[0].selection.origin_last_fit_x = carets[new_caret_index].selection.origin_last_fit_x;
+			remove_caret(new_caret_index);
+		}
+	}
+
+	// Show the topmost caret if added above or bottommost caret if added below.
 	if (view_target_caret >= 0 && view_target_caret < get_caret_count()) {
-		// Show the topmost caret if added above or bottommost caret if added below.
 		adjust_viewport_to_caret(view_target_caret);
 	}
 
+	queue_merge_carets();
 	end_multicaret_edit();
-	queue_redraw();
 }
 
 // todo use this
@@ -5109,7 +5108,6 @@ void TextEdit::begin_multicaret_edit() {
 }
 
 void TextEdit::end_multicaret_edit() {
-	// todo something with undo? to merge with previous?
 	if (multicaret_edit_count > 0) {
 		multicaret_edit_count--;
 	}
@@ -5221,6 +5219,11 @@ void TextEdit::set_caret_column(int p_column, bool p_adjust_viewport, int p_care
 	carets.write[p_caret].column = p_column;
 
 	carets.write[p_caret].last_fit_x = _get_column_x_offset_for_line(get_caret_column(p_caret), get_caret_line(p_caret), get_caret_column(p_caret));
+
+	if (!has_selection(p_caret)) {
+		// Set the selection origin last fit x to be the same, so we can tell if there was a selection.
+		carets.write[p_caret].selection.origin_last_fit_x = carets[p_caret].last_fit_x;
+	}
 
 	// Unselect if the caret moved to the selection origin.
 	if (has_selection(p_caret) && get_caret_line(p_caret) == get_selection_origin_line(p_caret) && get_caret_column(p_caret) == get_selection_origin_column(p_caret)) {
@@ -5431,9 +5434,10 @@ void TextEdit::select(int p_origin_line, int p_origin_column, int p_caret_line, 
 	set_selection_origin_line(p_origin_line, p_caret);
 	set_selection_origin_column(p_origin_column, p_caret);
 
+	bool had_selection = has_selection(p_caret);
 	bool activate = p_origin_line != p_caret_line || p_origin_column != p_caret_column;
 	carets.write[p_caret].selection.active = activate;
-	if (has_selection(p_caret) != activate) {
+	if (had_selection != activate) {
 		_selection_changed(p_caret);
 	}
 }
