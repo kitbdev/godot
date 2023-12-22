@@ -232,7 +232,7 @@ TEST_CASE("[SceneTree][CodeEdit] line gutters") {
 
 			code_edit->set_caret_line(0);
 			SEND_GUI_ACTION("ui_text_newline_above");
-			CHECK(code_edit->get_line_count() == 4); // Todo fix (3).
+			CHECK(code_edit->get_line_count() == 4);
 			CHECK_FALSE(code_edit->is_line_breakpointed(0));
 			CHECK(code_edit->is_line_breakpointed(1));
 			SIGNAL_CHECK("breakpoint_toggled", args);
@@ -2308,23 +2308,21 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		// Only line.
 		code_edit->insert_text_at_caret("        test");
-		code_edit->set_caret_line(0);
-		code_edit->set_caret_column(8);
-		code_edit->select(0, 8, 0, 9);
+		code_edit->select(0, 9, 0, 8);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "\t\ttest");
-		CHECK(code_edit->get_caret_column() == 2);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_caret_column() == 2); // todo cleanup these with new style
 		CHECK(code_edit->get_selection_from_column() == 2);
 		CHECK(code_edit->get_selection_to_column() == 3);
 
 		// First line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("        test\n");
-		code_edit->set_caret_line(0);
-		code_edit->set_caret_column(8);
-		code_edit->select(0, 8, 0, 9);
+		code_edit->select(0, 9, 0, 8);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "\t\ttest");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 2);
 		CHECK(code_edit->get_selection_from_column() == 2);
 		CHECK(code_edit->get_selection_to_column() == 3);
@@ -2332,11 +2330,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// Middle line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\n        test\n");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(8);
-		code_edit->select(1, 8, 1, 9);
+		code_edit->select(1, 9, 1, 8);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "\t\ttest");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 2);
 		CHECK(code_edit->get_selection_from_column() == 2);
 		CHECK(code_edit->get_selection_to_column() == 3);
@@ -2344,11 +2341,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// End line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\n        test");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(8);
-		code_edit->select(1, 8, 1, 9);
+		code_edit->select(1, 9, 1, 8);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "\t\ttest");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 2);
 		CHECK(code_edit->get_selection_from_column() == 2);
 		CHECK(code_edit->get_selection_to_column() == 3);
@@ -2356,12 +2352,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// Within provided range.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("    test\n        test\n");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(8);
-		code_edit->select(1, 8, 1, 9);
+		code_edit->select(1, 9, 1, 8);
 		code_edit->convert_indent(1, 1);
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "\t\ttest");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 2);
 		CHECK(code_edit->get_selection_from_column() == 2);
 		CHECK(code_edit->get_selection_to_column() == 3);
@@ -2373,11 +2368,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 		// Only line.
 		code_edit->insert_text_at_caret("\t\ttest");
-		code_edit->set_caret_line(0);
-		code_edit->set_caret_column(2);
-		code_edit->select(0, 2, 0, 3);
+		code_edit->select(0, 3, 0, 2);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "        test");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 8);
 		CHECK(code_edit->get_selection_from_column() == 8);
 		CHECK(code_edit->get_selection_to_column() == 9);
@@ -2385,11 +2379,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// First line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\t\ttest\n");
-		code_edit->set_caret_line(0);
-		code_edit->set_caret_column(2);
-		code_edit->select(0, 2, 0, 3);
+		code_edit->select(0, 3, 0, 2);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "        test");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 8);
 		CHECK(code_edit->get_selection_from_column() == 8);
 		CHECK(code_edit->get_selection_to_column() == 9);
@@ -2397,11 +2390,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// Middle line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\n\t\ttest\n");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(2);
-		code_edit->select(1, 2, 1, 3);
+		code_edit->select(1, 3, 1, 2);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "        test");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 8);
 		CHECK(code_edit->get_selection_from_column() == 8);
 		CHECK(code_edit->get_selection_to_column() == 9);
@@ -2409,11 +2401,10 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// End line.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\n\t\ttest");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(2);
-		code_edit->select(1, 2, 1, 3);
+		code_edit->select(1, 3, 1, 2);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "        test");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 8);
 		CHECK(code_edit->get_selection_from_column() == 8);
 		CHECK(code_edit->get_selection_to_column() == 9);
@@ -2421,12 +2412,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		// Within provided range.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("\ttest\n\t\ttest\n");
-		code_edit->set_caret_line(1);
-		code_edit->set_caret_column(2);
-		code_edit->select(1, 2, 1, 3);
+		code_edit->select(1, 3, 1, 2);
 		code_edit->convert_indent(1, 1);
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "        test");
+		CHECK(code_edit->has_selection());
 		CHECK(code_edit->get_caret_column() == 8);
 		CHECK(code_edit->get_selection_from_column() == 8);
 		CHECK(code_edit->get_selection_to_column() == 9);
@@ -2904,7 +2894,7 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->select(0, 0, 1, 2, 0);
 		code_edit->add_caret(1, 4);
 		code_edit->select(1, 4, 2, 5, 1);
-		code_edit->create_code_region();
+		code_edit->create_code_region(); // todo fix
 		CHECK(code_edit->get_text() == "#region New Code Region\ntest line1\ntest line2\ntest line3\n#endregion");
 
 		// Region tag with // Comment delimiter.

@@ -2278,7 +2278,7 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 		}
 		if (p_split_current_line) {
 			insert_text_at_caret("\n", i);
-		} else {
+		} else { // todo revert? maybe?
 			int line = get_caret_line(i);
 			insert_text("\n", line, p_above ? 0 : text[line].length());
 			deselect(i);
@@ -4924,11 +4924,13 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 				any_collapsed = true;
 			} else if (is_caret_in) {
 				// Only caret was inside.
-				select(get_selection_origin_line(i), get_selection_origin_column(i), collapse_line, collapse_column, i);
+				set_caret_line(collapse_line, false, true, -1, i);
+				set_caret_column(collapse_column, false, i);
 				any_collapsed = true;
 			} else if (is_origin_in) {
 				// Only selection origin was inside.
-				select(collapse_line, collapse_column, get_caret_line(i), get_caret_column(i), i);
+				set_selection_origin_line(collapse_line, i);
+				set_selection_origin_column(collapse_column, i);
 				any_collapsed = true;
 			}
 		}
@@ -7648,8 +7650,8 @@ void TextEdit::_update_selection_mode_pointer(bool p_initial) {
 		set_selection_origin_line(line, caret_index);
 		set_selection_origin_column(column, caret_index);
 		// Set the word begin and end to the column in case the mode changes later.
-		selected_word_begin_column = column;
-		selected_word_end_column = column;
+		carets.write[caret_index].selection.word_begin_column = column;
+		carets.write[caret_index].selection.word_end_column = column;
 	} else {
 		select(get_selection_origin_line(caret_index), get_selection_origin_column(caret_index), line, column, caret_index);
 	}
@@ -7682,12 +7684,12 @@ void TextEdit::_update_selection_mode_word(bool p_initial) {
 	if (p_initial && !has_selection(caret_index)) {
 		// Only set the selection origin if there is no selection, otherwise we want to expand the selection.
 		select(line, beg, line, end, caret_index);
-		selected_word_begin_column = beg;
-		selected_word_end_column = end;
+		carets.write[caret_index].selection.word_begin_column = beg;
+		carets.write[caret_index].selection.word_end_column = end;
 	} else {
 		int origin_line = get_selection_origin_line(caret_index);
-		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= selected_word_begin_column);
-		int origin_col = is_new_selection_dir_right ? selected_word_begin_column : selected_word_end_column;
+		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= carets[caret_index].selection.word_begin_column);
+		int origin_col = is_new_selection_dir_right ? carets[caret_index].selection.word_begin_column : carets[caret_index].selection.word_end_column;
 		int caret_col = is_new_selection_dir_right ? end : beg;
 
 		select(origin_line, origin_col, line, caret_col, caret_index);
@@ -7721,8 +7723,8 @@ void TextEdit::_update_selection_mode_line(bool p_initial) {
 
 	if (p_initial) {
 		// Set the word begin and end to the start and end of the origin line in case it changes later.
-		selected_word_begin_column = 0;
-		selected_word_end_column = get_line(origin_line).length();
+		carets.write[caret_index].selection.word_begin_column = 0;
+		carets.write[caret_index].selection.word_end_column = get_line(origin_line).length();
 	}
 
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
@@ -7746,6 +7748,8 @@ void TextEdit::_pre_shift_selection(int p_caret) {
 	set_selection_origin_line(get_caret_line(p_caret), p_caret);
 	set_selection_origin_column(get_caret_column(p_caret), p_caret);
 	carets.write[p_caret].selection.active = true;
+	carets.write[p_caret].selection.word_begin_column = get_caret_column(p_caret);
+	carets.write[p_caret].selection.word_end_column = get_caret_column(p_caret);
 }
 
 /* Line Wrapping */

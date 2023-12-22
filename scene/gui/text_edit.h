@@ -391,6 +391,8 @@ private:
 		int origin_line = 0;
 		int origin_column = 0;
 		int origin_last_fit_x = 0;
+		int word_begin_column = 0;
+		int word_end_column = 0;
 	};
 
 	struct Caret {
@@ -442,8 +444,6 @@ private:
 
 	/* Selection. */
 	SelectionMode selecting_mode = SelectionMode::SELECTION_MODE_NONE;
-	int selected_word_begin_column = 0;
-	int selected_word_end_column = 0;
 
 	bool selecting_enabled = true;
 	bool deselect_on_focus_loss_enabled = true;
