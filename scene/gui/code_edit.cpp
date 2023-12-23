@@ -1681,10 +1681,12 @@ void CodeEdit::create_code_region() {
 
 	// Add start and end region tags.
 	int first_region_start = -1;
+	int line_offset = 0;
 	for (Point2i line_range : line_ranges) {
-		insert_text("\n" + code_region_end_string, line_range.y, get_line(line_range.y).length());
-		insert_line_at(line_range.x, code_region_start_string + " " + RTR("New Code Region"));
-		fold_line(line_range.x);
+		insert_text("\n" + code_region_end_string, line_range.y + line_offset, get_line(line_range.y + line_offset).length());
+		insert_line_at(line_range.x + line_offset, code_region_start_string + " " + RTR("New Code Region"));
+		fold_line(line_range.x + line_offset);
+		line_offset += 2;
 	}
 
 	// Select name of the first region to allow quick edit.
@@ -1694,7 +1696,6 @@ void CodeEdit::create_code_region() {
 
 	end_multicaret_edit();
 	end_complex_operation();
-	queue_redraw();
 }
 
 String CodeEdit::get_code_region_start_tag() const {
@@ -2125,7 +2126,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 
 			// Replace.
 			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_remove_line, caret_col);
-			set_caret_column(get_caret_column(i) - code_completion_base.length(), false, i);
 			insert_text_at_caret(insert_text, i);
 		} else {
 			// Get first non-matching char.
@@ -2141,7 +2141,6 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 
 			// Remove base completion text.
 			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_line, get_caret_column(i));
-			set_caret_column(get_caret_column(i) - code_completion_base.length(), false, i);
 
 			// Merge with text.
 			insert_text_at_caret(insert_text.substr(0, code_completion_base.length()), i);
@@ -2180,8 +2179,10 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 			pre_brace_pair = _get_auto_brace_pair_open_at_pos(caret_line, get_caret_column(i) + 1);
 			if (pre_brace_pair != -1 && pre_brace_pair == _get_auto_brace_pair_close_at_pos(caret_line, get_caret_column(i) - 1)) {
 				remove_text(caret_line, get_caret_column(i) - 2, caret_line, get_caret_column(i));
-				if (_get_auto_brace_pair_close_at_pos(caret_line, get_caret_column(i) - 1) != pre_brace_pair) {
-					set_caret_column(get_caret_column(i) - 1, i == 0, i);
+				if (_get_auto_brace_pair_close_at_pos(caret_line, get_caret_column(i) + 1) != pre_brace_pair) {
+					set_caret_column(get_caret_column(i) + 1, i == 0, i);
+				} else {
+					set_caret_column(get_caret_column(i) + 2, i == 0, i);
 				}
 			}
 		}
@@ -2275,17 +2276,19 @@ void CodeEdit::duplicate_lines() {
 	begin_multicaret_edit();
 
 	Vector<Point2i> line_ranges = get_line_ranges_from_carets(false, false);
+	int line_offset = 0;
 	for (Point2i line_range : line_ranges) {
 		// The text that will be inserted. All lines in one string.
 		String text_to_insert;
 
-		for (int i = line_range.x; i <= line_range.y; i++) {
+		for (int i = line_range.x + line_offset; i <= line_range.y + line_offset; i++) {
 			text_to_insert += get_line(i) + "\n";
 			unfold_line(i);
 		}
 
 		// Insert new text before the line.
-		insert_text(text_to_insert, line_range.x, 0);
+		insert_text(text_to_insert, line_range.x + line_offset, 0);
+		line_offset += 1;
 	}
 
 	end_multicaret_edit();

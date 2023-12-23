@@ -1256,7 +1256,7 @@ void CodeTextEditor::delete_lines() {
 			text_editor->remove_text(line_ranges[i].x + line_offset, 0, line_ranges[i].y + line_offset, 0);
 		}
 		// todo test
-		line_offset = line_ranges[i].x - line_ranges[i].y - 1;
+		line_offset += line_ranges[i].x - line_ranges[i].y - 1;
 	}
 
 	// Deselect all.

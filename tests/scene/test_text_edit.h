@@ -3746,6 +3746,31 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Delete one word with multiple carets.
+			text_edit->remove_secondary_carets();
+			text_edit->set_text("onelongword test");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(9);
+			text_edit->add_caret(0, 6);
+			text_edit->add_caret(0, 3);
+			lines_edited_args = build_array(build_array(0, 0));
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_ACTION("ui_text_delete_word");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_text() == "one test");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 3);
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] ui_text_delete_word same line") {

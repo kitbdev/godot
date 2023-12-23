@@ -915,7 +915,7 @@ public:
 	bool selection_contains(int p_caret, int p_line, int p_column, bool p_include_edges = true, bool p_only_selections = true) const;
 	// returns the caret index.
 	int get_selection_at(int p_line, int p_column, bool p_include_edges = true) const;
-	Vector<Point2i> get_line_ranges_from_carets(bool p_only_selections = false, bool p_merge_adjacent = true, int p_caret = -1) const;
+	Vector<Point2i> get_line_ranges_from_carets(bool p_only_selections = false, bool p_merge_adjacent = true) const;
 
 	void set_selection_origin_line(int p_line, int p_caret = 0, bool p_can_be_hidden = true, int p_wrap_index = -1);
 	void set_selection_origin_column(int p_column, int p_caret = 0);

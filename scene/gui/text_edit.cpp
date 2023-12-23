@@ -5199,7 +5199,7 @@ void TextEdit::set_caret_line(int p_line, bool p_adjust_viewport, bool p_can_be_
 		adjust_viewport_to_caret(p_caret);
 	}
 
-	setting_caret_line = false; //todo
+	setting_caret_line = false;
 
 	if (caret_moved) {
 		_caret_changed(p_caret);
@@ -5490,7 +5490,7 @@ bool TextEdit::selection_contains(int p_caret, int p_line, int p_column, bool p_
 
 // returns the caret index.
 int TextEdit::get_selection_at(int p_line, int p_column, bool p_include_edges) const {
-	for (int i = 0; i < carets.size(); i++) { // todo needs drag caret?
+	for (int i = 0; i < get_caret_count(); i++) {
 		if (selection_contains(i, p_line, p_column, p_include_edges, true)) {
 			return i;
 		}
@@ -5498,27 +5498,20 @@ int TextEdit::get_selection_at(int p_line, int p_column, bool p_include_edges) c
 	return -1;
 }
 
-Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bool p_merge_adjacent, int p_caret) const {
-	// todo line ranges will not autmatically be updated if lines are added are removed.
-	if (p_caret != -1) {
-		ERR_FAIL_INDEX_V(p_caret, get_caret_count(), Vector<Point2i>());
-		return { Point2(get_selection_from_line(p_caret), get_selection_to_line(p_caret)) };
-	}
-
-	// todo use for text manipulation like toggle comments and indent. remove affected_lines
+Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bool p_merge_adjacent) const {
 	// Get a series of line ranges that cover all lines that have a caret or selection.
 	// For each Point2i range, x is the first line and y is the last line.
 	Vector<Point2i> ret;
 	int last_to_line = INT_MIN;
 
 	Vector<int> sorted_carets = get_sorted_carets();
-	for (int i = sorted_carets.size() - 1; i >= 0; i--) {
+	for (int i = 0; i < sorted_carets.size(); i++) {
 		int caret_index = sorted_carets[i];
-		if (p_only_selections && !has_selection(i)) {
+		if (p_only_selections && !has_selection(caret_index)) {
 			continue;
 		}
 		Point2i range = Point2i(get_selection_from_line(caret_index), get_selection_to_line(caret_index));
-		if (get_selection_to_column(caret_index) == 0 && has_selection(i)) {
+		if (get_selection_to_column(caret_index) == 0 && has_selection(caret_index)) {
 			// Dont include selection end line if it ends at column 0.
 			range.y--;
 		}
@@ -7165,11 +7158,10 @@ void TextEdit::_cut_internal(int p_caret) {
 	// Cut full lines.
 	Vector<Point2i> line_ranges;
 	if (p_caret == -1) {
-		line_ranges = get_line_ranges_from_carets(false, true, p_caret);
+		line_ranges = get_line_ranges_from_carets(false, true);
 	} else {
-		line_ranges.push_back(Point2(get_caret_line(p_caret), get_caret_line(p_caret)));
+		line_ranges.push_back(Point2i(get_caret_line(p_caret), get_caret_line(p_caret)));
 	}
-	// todo line offset elsewhere
 	int line_offset = 0;
 	for (int i = line_ranges.size() - 1; i >= 0; i--) {
 		// Preserve cursors on the last line.
@@ -7177,7 +7169,7 @@ void TextEdit::_cut_internal(int p_caret) {
 		if (line_ranges[i].x != line_ranges[i].y) {
 			remove_text(line_ranges[i].x + line_offset, 0, line_ranges[i].y + line_offset, 0);
 		}
-		line_offset = line_ranges[i].x - line_ranges[i].y - 1;
+		line_offset += line_ranges[i].x - line_ranges[i].y - 1;
 	}
 	// todo make sure carets are placed right
 }
