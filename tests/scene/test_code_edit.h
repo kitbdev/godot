@@ -2533,17 +2533,44 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 			// Preserve current indentation.
 			code_edit->set_text("\ttest");
-			code_edit->set_caret_column(5);
+			code_edit->set_caret_column(3);
 			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "\tte");
+			CHECK(code_edit->get_line(1) == "\tst");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
+
+			// Preserve current indentation blank.
+			code_edit->set_text("\ttest");
+			code_edit->set_caret_column(3);
+			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "\ttest");
 			CHECK(code_edit->get_line(1) == "\t");
 			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
+
+			// Preserve current indentation above.
+			code_edit->set_text("\ttest");
+			code_edit->set_caret_column(3);
+			SEND_GUI_ACTION("ui_text_newline_above");
+			CHECK(code_edit->get_line(0) == "\t");
+			CHECK(code_edit->get_line(1) == "\ttest");
+			CHECK(code_edit->get_caret_line() == 0);
 			CHECK(code_edit->get_caret_column() == 1);
 
 			// Increase existing indentation.
 			code_edit->set_text("\ttest:");
 			code_edit->set_caret_column(6);
 			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "\ttest:");
+			CHECK(code_edit->get_line(1) == "\t\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 2);
+
+			// Increase existing indentation blank.
+			code_edit->set_text("\ttest:");
+			code_edit->set_caret_column(3);
+			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "\ttest:");
 			CHECK(code_edit->get_line(1) == "\t\t");
 			CHECK(code_edit->get_caret_line() == 1);
@@ -2666,14 +2693,41 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 
 			// Preserve current indentation.
 			code_edit->set_text("    test");
-			code_edit->set_caret_column(8);
+			code_edit->set_caret_column(6);
 			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "    te");
+			CHECK(code_edit->get_line(1) == "    st");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
+
+			// Preserve current indentation blank.
+			code_edit->set_text("    test");
+			code_edit->set_caret_column(6);
+			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "    test");
 			CHECK(code_edit->get_line(1) == "    ");
 			CHECK(code_edit->get_caret_line() == 1);
 			CHECK(code_edit->get_caret_column() == 4);
 
+			// Preserve current indentation above.
+			code_edit->set_text("    test");
+			code_edit->set_caret_column(6);
+			SEND_GUI_ACTION("ui_text_newline_above");
+			CHECK(code_edit->get_line(0) == "    ");
+			CHECK(code_edit->get_line(1) == "    test");
+			CHECK(code_edit->get_caret_line() == 0);
+			CHECK(code_edit->get_caret_column() == 4);
+
 			// Increase existing indentation.
+			code_edit->set_text("    test:");
+			code_edit->set_caret_column(9);
+			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "    test:");
+			CHECK(code_edit->get_line(1) == "        ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 8);
+
+			// Increase existing indentation blank.
 			code_edit->set_text("    test:");
 			code_edit->set_caret_column(9);
 			SEND_GUI_ACTION("ui_text_newline");
@@ -4421,9 +4475,9 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_line(1) == "");
 		CHECK(code_edit->get_line(2) == "");
 		CHECK(code_edit->get_caret_count() == 2);
-		CHECK(code_edit->get_caret_line(0) == 1);
+		CHECK(code_edit->get_caret_line(0) == 2);
 		CHECK(code_edit->get_caret_column(0) == 0);
-		CHECK(code_edit->get_caret_line(1) == 2);
+		CHECK(code_edit->get_caret_line(1) == 1);
 		CHECK(code_edit->get_caret_column(1) == 0);
 
 		// Multiple new lines above with multiple carets.
@@ -4559,13 +4613,14 @@ func _ready():
 	print("Make sure this exits: %b" % pos)
 )");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_selection_origin_line() == 6);
+		CHECK(code_edit->get_selection_origin_line() == 9);
 		CHECK(code_edit->get_selection_origin_column() == 15);
-		CHECK(code_edit->get_caret_line() == 4);
+		CHECK(code_edit->get_caret_line() == 7);
 		CHECK(code_edit->get_caret_column() == 8);
 
-		// Duplicate single lines with multiple carets. Multiple carets on a single line only duplicate once. // todo maybe?
+		// Duplicate single lines with multiple carets. Multiple carets on a single line only duplicate once.
 		code_edit->set_text(reset_text);
+		code_edit->deselect();
 		code_edit->remove_secondary_carets();
 		code_edit->set_caret_line(3);
 		code_edit->set_caret_column(1);
@@ -4580,7 +4635,6 @@ func _ready():
 	var a := len(OS.get_cmdline_args())
 	var b := get_child_count()
 	var b := get_child_count()
-	var c := a + b
 	var c := a + b
 	var c := a + b
 	for i in range(c):
@@ -4604,15 +4658,19 @@ func _ready():
 
 		// Duplicate multiple lines with multiple carets.
 		code_edit->set_text(reset_text);
+		code_edit->remove_secondary_carets();
+		code_edit->add_caret(4, 2);
+		code_edit->add_caret(6, 0);
+		code_edit->add_caret(7, 8);
 		code_edit->select(0, 0, 2, 5, 0);
 		code_edit->select(3, 0, 4, 2, 1);
-		code_edit->select(7, 0, 6, 0, 2);
-		code_edit->select(7, 3, 7, 8, 2);
+		code_edit->select(7, 1, 6, 0, 2);
+		code_edit->select(7, 3, 7, 8, 3);
 		code_edit->duplicate_lines();
 		CHECK(code_edit->get_text() == R"(extends Node
 
 func _ready():
-	(extends Node
+extends Node
 
 func _ready():
 	var a := len(OS.get_cmdline_args())
@@ -4642,7 +4700,7 @@ func _ready():
 
 		CHECK(code_edit->has_selection(2));
 		CHECK(code_edit->get_selection_origin_line(2) == 14);
-		CHECK(code_edit->get_selection_origin_column(2) == 0);
+		CHECK(code_edit->get_selection_origin_column(2) == 1);
 		CHECK(code_edit->get_caret_line(2) == 13);
 		CHECK(code_edit->get_caret_column(2) == 0);
 

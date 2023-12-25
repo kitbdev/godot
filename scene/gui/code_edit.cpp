@@ -1005,7 +1005,10 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 
 		const String line = get_line(cl);
 
-		String ins = "\n";
+		String ins = "";
+		if (!p_above) {
+			ins = "\n";
+		}
 
 		// Append current indentation.
 		int space_count = 0;
@@ -1027,6 +1030,9 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 				continue;
 			}
 			break;
+		}
+		if (p_above) {
+			ins += "\n";
 		}
 
 		if (is_line_folded(cl)) {
@@ -1073,28 +1079,15 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 			}
 		}
 
-		bool first_line = false;
-		if (!p_split_current_line) {
+		if (p_split_current_line) {
+			insert_text_at_caret(ins, i);
+		} else {
+			insert_text(ins, cl, p_above ? 0 : get_line(cl).length());
 			deselect(i);
-
-			if (p_above) {
-				if (cl > 0) {
-					set_caret_line(cl - 1, false, true, 0, i);
-					set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
-				} else {
-					set_caret_column(0, i == 0, i);
-					first_line = true;
-				}
-			} else {
-				set_caret_column(line.length(), i == 0, i);
-			}
+			set_caret_line(p_above ? cl : cl + 1, false, true, -1, i);
+			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
 		}
-
-		insert_text_at_caret(ins, i);
-
-		if (first_line) {
-			set_caret_line(0, i == 0, true, 0, i);
-		} else if (brace_indent) {
+		if (brace_indent) {
 			// Move to inner indented line.
 			set_caret_line(get_caret_line(i) - 1, false, true, 0, i);
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
@@ -2389,7 +2382,7 @@ void CodeEdit::duplicate_lines() {
 
 		// Insert new text before the line.
 		insert_text(text_to_insert, line_range.x + line_offset, 0);
-		line_offset += 1;
+		line_offset += line_range.y - line_range.x + 1;
 	}
 
 	end_multicaret_edit();

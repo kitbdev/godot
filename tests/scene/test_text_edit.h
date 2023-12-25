@@ -2770,7 +2770,30 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// todo insert multiple new lines above one line. (and below)
+			// Insert multiple new lines above from one line.
+			text_edit->set_text("test");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(1);
+			text_edit->add_caret(0, 3);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 1), build_array(1, 2));
+
+			SEND_GUI_ACTION("ui_text_newline_above");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_text() == "\n\ntest");
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 1);
+			CHECK(text_edit->get_caret_column(1) == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] ui_text_newline_blank") {
@@ -2846,6 +2869,31 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 			text_edit->set_editable(true);
+
+			// Insert multiple new lines below from one line.
+			text_edit->set_text("test");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(1);
+			text_edit->add_caret(0, 3);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 1), build_array(0, 1));
+
+			SEND_GUI_ACTION("ui_text_newline_blank");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_text() == "test\n\n");
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 2);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 1);
+			CHECK(text_edit->get_caret_column(1) == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] ui_text_newline") {

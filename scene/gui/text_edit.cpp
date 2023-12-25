@@ -2278,7 +2278,7 @@ void TextEdit::_new_line(bool p_split_current_line, bool p_above) {
 		}
 		if (p_split_current_line) {
 			insert_text_at_caret("\n", i);
-		} else { // todo revert? maybe?
+		} else {
 			int line = get_caret_line(i);
 			insert_text("\n", line, p_above ? 0 : text[line].length());
 			deselect(i);
@@ -7519,6 +7519,7 @@ void TextEdit::_caret_changed(int p_caret) {
 	}
 
 	if (is_inside_tree()) {
+		// todo maybe use call deferred instead, see https://github.com/godotengine/godot/pull/86301
 		MessageQueue::get_singleton()->push_callable(callable_mp(this, &TextEdit::_emit_caret_changed));
 	}
 	caret_pos_dirty = true;
@@ -7597,6 +7598,7 @@ void TextEdit::_selection_changed(int p_caret) {
 }
 
 void TextEdit::_emit_selection_changed() {
+	// todo remove for now.
 	emit_signal(SNAME("selection_changed"));
 	selection_pos_dirty = false;
 }
