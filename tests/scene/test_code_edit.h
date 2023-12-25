@@ -4304,10 +4304,10 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->set_caret_line(1);
 	code_edit->set_caret_column(2);
 	code_edit->add_caret(1, 0);
-	code_edit->add_caret(1, 4);
+	code_edit->add_caret(1, 5);
 	code_edit->backspace();
-	CHECK(code_edit->get_line(0) == "line 1lne2");
-	CHECK(code_edit->get_caret_count() == 2);
+	CHECK(code_edit->get_text() == "line 1lne2");
+	CHECK(code_edit->get_caret_count() == 3);
 	CHECK(code_edit->get_caret_line(0) == 0);
 	CHECK(code_edit->get_caret_column(0) == 7);
 	CHECK(code_edit->get_caret_line(1) == 0);
@@ -4322,7 +4322,7 @@ TEST_CASE("[SceneTree][CodeEdit] Backspace delete") {
 	code_edit->set_caret_column(2);
 	code_edit->add_caret(1, 1);
 	code_edit->backspace();
-	CHECK(code_edit->get_line(0) == "line 1\nne 2");
+	CHECK(code_edit->get_text() == "line 1\nne 2");
 	CHECK(code_edit->get_caret_count() == 1);
 	CHECK(code_edit->get_caret_line() == 1);
 	CHECK(code_edit->get_caret_column() == 0);

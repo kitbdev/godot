@@ -717,48 +717,47 @@ void CodeEdit::_backspace_internal(int p_caret) {
 			continue;
 		}
 
-		int cc = get_caret_column(i);
-		int cl = get_caret_line(i);
+		int to_line = get_caret_line(i);
+		int to_column = get_caret_column(i);
 
-		if (cc == 0 && cl == 0) {
+		if (to_column == 0 && to_line == 0) {
 			continue;
 		}
 
-		if (cl > 0 && _is_line_hidden(cl - 1)) {
-			unfold_line(cl - 1);
+		if (to_line > 0 && _is_line_hidden(to_line - 1)) {
+			unfold_line(to_line - 1);
 		}
 
-		int prev_line = cc ? cl : cl - 1;
-		int prev_column = cc ? (cc - 1) : (get_line(cl - 1).length());
+		int from_line = to_column > 0 ? to_line : to_line - 1;
+		int from_column = to_column > 0 ? (to_column - 1) : (get_line(to_line - 1).length());
 
-		merge_gutters(prev_line, cl);
+		merge_gutters(from_line, to_line);
 
-		if (auto_brace_completion_enabled && cc > 0) {
-			int idx = _get_auto_brace_pair_open_at_pos(cl, cc);
+		if (auto_brace_completion_enabled && to_column > 0) {
+			int idx = _get_auto_brace_pair_open_at_pos(to_line, to_column);
 			if (idx != -1) {
-				prev_column = cc - auto_brace_completion_pairs[idx].open_key.length();
+				from_column = to_column - auto_brace_completion_pairs[idx].open_key.length();
 
-				if (_get_auto_brace_pair_close_at_pos(cl, cc) == idx) {
-					cc += auto_brace_completion_pairs[idx].close_key.length();
+				if (_get_auto_brace_pair_close_at_pos(to_line, to_column) == idx) {
+					to_column += auto_brace_completion_pairs[idx].close_key.length();
 				}
 			}
 		}
 
 		// For space indentation we need to do a basic unindent if there are no chars to the left, acting the same way as tabs.
-		if (indent_using_spaces && cc != 0) {
-			if (get_first_non_whitespace_column(cl) >= cc) {
-				prev_column = cc - _calculate_spaces_till_next_left_indent(cc);
-				prev_line = cl;
+		if (indent_using_spaces && to_column != 0) {
+			if (get_first_non_whitespace_column(to_line) >= to_column) {
+				from_column = to_column - _calculate_spaces_till_next_left_indent(to_column);
+				from_line = to_line;
 			}
 		}
 
-		remove_text(prev_line, prev_column, cl, cc);
+		remove_text(from_line, from_column, to_line, to_column);
 
-		set_caret_line(prev_line, false, true, -1, i);
-		set_caret_column(prev_column, i == 0, i);
+		set_caret_line(from_line, false, true, -1, i);
+		set_caret_column(from_column, i == 0, i);
 	}
 
-	// merge_overlapping_carets();
 	end_multicaret_edit();
 	end_complex_operation();
 }
@@ -1595,7 +1594,7 @@ void CodeEdit::fold_line(int p_line) {
 
 	// Collapse any carets in the hidden area.
 	begin_multicaret_edit();
-	collapse_carets(p_line + 1, 0, end_line, get_line(p_line).length());
+	collapse_carets(p_line + 1, 0, end_line, get_line(p_line).length(), true);
 	end_multicaret_edit();
 }
 

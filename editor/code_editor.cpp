@@ -1206,11 +1206,11 @@ void CodeTextEditor::move_lines_up() {
 	text_editor->begin_multicaret_edit();
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
-	for (int i = 0; i < line_ranges.size(); i++) {
-		if (line_ranges[i].x == 0) {
+	for (Point2i line_range : line_ranges) {
+		if (line_range.x == 0) {
 			continue;
 		}
-		for (int line = line_ranges[i].x; line <= line_ranges[i].y; line++) {
+		for (int line = line_range.x; line <= line_range.y; line++) {
 			text_editor->unfold_line(line);
 			text_editor->unfold_line(line - 1);
 
@@ -1227,11 +1227,11 @@ void CodeTextEditor::move_lines_down() {
 	text_editor->begin_multicaret_edit();
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
-	for (int i = 0; i < line_ranges.size(); i++) {
-		if (line_ranges[i].y == text_editor->get_line_count() - 1) {
+	for (Point2i line_range : line_ranges) {
+		if (line_range.y == text_editor->get_line_count() - 1) {
 			continue;
 		}
-		for (int line = line_ranges[i].y; line >= line_ranges[i].x; line--) {
+		for (int line = line_range.y; line >= line_range.x; line--) {
 			text_editor->unfold_line(line);
 			text_editor->unfold_line(line + 1);
 
@@ -1249,15 +1249,15 @@ void CodeTextEditor::delete_lines() { // todo move to code edit entirely, then a
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
 	int line_offset = 0;
-	for (int i = line_ranges.size() - 1; i >= 0; i--) {
+	for (Point2i line_range : line_ranges) {
 		// Remove last line of range separately to preserve carets.
-		text_editor->remove_line_at(line_ranges[i].y + line_offset);
-		text_editor->unfold_line(line_ranges[i].y + line_offset);
-		if (line_ranges[i].x != line_ranges[i].y) {
-			text_editor->remove_text(line_ranges[i].x + line_offset, 0, line_ranges[i].y + line_offset, 0);
+		text_editor->remove_line_at(line_range.y + line_offset);
+		text_editor->unfold_line(line_range.y + line_offset);
+		if (line_range.x != line_range.y) {
+			text_editor->remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
 		}
 		// todo test
-		line_offset += line_ranges[i].x - line_ranges[i].y - 1;
+		line_offset += line_range.x - line_range.y - 1;
 	}
 
 	// Deselect all.
@@ -1313,9 +1313,9 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 
 	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
 	int folded_to = 0;
-	for (int i = 0; i < line_ranges.size(); i++) {
-		int from_line = line_ranges[i].x;
-		int to_line = line_ranges[i].y;
+	for (Point2i line_range : line_ranges) {
+		int from_line = line_range.x;
+		int to_line = line_range.y;
 		// If last line is folded, extends to the end of the folded section
 		if (text_editor->is_line_folded(to_line)) {
 			folded_to = text_editor->get_next_visible_line_offset_from(to_line + 1, 1) - 1;

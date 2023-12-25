@@ -1888,6 +1888,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			text_edit->delete_selection();
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 
@@ -1902,8 +1903,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Undo restores previous selection.
 			text_edit->undo();
-			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
+			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 			CHECK(text_edit->get_selection_origin_line() == 0);
@@ -1911,14 +1912,14 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Redo restores caret.
 			text_edit->redo();
-			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
 
 			text_edit->undo();
-			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
+			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 
@@ -1927,15 +1928,15 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Delete selection removes text, deselects, and moves caret.
 			text_edit->delete_selection();
-			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
 
 			// Undo delete works.
 			text_edit->undo();
-			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "this is some text\nfor selection");
+			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
 			CHECK(text_edit->get_selection_origin_line() == 0);
@@ -1943,8 +1944,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Redo delete works.
 			text_edit->redo();
-			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
+			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 4);
 
@@ -1965,6 +1966,32 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->undo();
 			CHECK_FALSE(text_edit->has_selection());
 			CHECK(text_edit->get_text() == "thissome text\nfor selection");
+
+			// Delete multiple adjacent selections on the same line.
+			text_edit->select(0, 0, 0, 5);
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 5, 0, 8, 1);
+			CHECK(text_edit->get_caret_count() == 2);
+			text_edit->delete_selection();
+			CHECK(text_edit->get_text() == " text\nfor selection");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
+
+			// Delete mulitline selection. Ignore non selections.
+			text_edit->remove_secondary_carets();
+			text_edit->select(1, 3, 0, 2);
+			text_edit->add_caret(1, 7);
+			text_edit->delete_selection();
+			CHECK(text_edit->get_text() == " t selection");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK_FALSE(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			CHECK_FALSE(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 6);
 		}
 
 		SUBCASE("[TextEdit] text drag") {
@@ -3437,9 +3464,31 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// Select the entire text, from right to left.
-			text_edit->select(0, 18, 0, 0);
-			text_edit->select(1, 19, 1, 0, 1);
+			// Backspace with multiple carets that will overlap.
+			text_edit->remove_secondary_carets();
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(8);
+			text_edit->add_caret(0, 7);
+			text_edit->add_caret(0, 9);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0), build_array(0, 0));
+
+			SEND_GUI_ACTION("ui_text_backspace");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_text() == " is sotest tex\nthis some testext.");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 6);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Select each line of text, from right to left. Remove selection to column 0.
+			text_edit->select(0, text_edit->get_line(0).length(), 0, 0);
+			text_edit->add_caret(1, 0);
+			text_edit->select(1, text_edit->get_line(1).length(), 1, 0, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
@@ -3459,9 +3508,9 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Backspace at start of first line does nothing.
 			text_edit->remove_secondary_carets();
+			text_edit->deselect();
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(0);
-			text_edit->deselect();
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
@@ -3751,10 +3800,10 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->remove_secondary_carets();
 			text_edit->set_text("onelongword test");
 			text_edit->set_caret_line(0);
-			text_edit->set_caret_column(9);
-			text_edit->add_caret(0, 6);
+			text_edit->set_caret_column(6);
+			text_edit->add_caret(0, 9);
 			text_edit->add_caret(0, 3);
-			lines_edited_args = build_array(build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
@@ -3768,7 +3817,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK_FALSE(text_edit->has_selection(0));
 			CHECK(text_edit->get_caret_line(0) == 0);
 			CHECK(text_edit->get_caret_column(0) == 3);
-			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}

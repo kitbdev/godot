@@ -865,7 +865,7 @@ public:
 	// Vector<int> get_caret_index_edit_order();
 	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
 	void offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
-	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, int p_dont_ignore_caret = -1);
+	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_inclusive = false);
 	void clamp_carets(int p_line);
 
 	void merge_overlapping_carets();
