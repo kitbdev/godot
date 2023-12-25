@@ -765,7 +765,7 @@ public:
 	void remove_line_at(int p_line, bool p_move_cursors_down = true);
 
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
-	void insert_text(const String &p_text, int p_line, int p_column);
+	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets = true);
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 	void replace_text(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_grow_selection = true, bool p_insert_after_caret = false);
 	String get_text_at(int p_from_line, int p_from_column, int p_to_line, int p_to_column);

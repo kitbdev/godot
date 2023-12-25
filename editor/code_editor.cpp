@@ -1150,9 +1150,9 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 		return;
 	}
 	text_editor->begin_complex_operation();
+	text_editor->begin_multicaret_edit();
 	// todo why is the CodeEdit called text_editor?
 
-	text_editor->begin_multicaret_edit();
 	for (int c = 0; c < text_editor->get_caret_count(); c++) {
 		if (text_editor->multicaret_edit_ignore_caret(c)) {
 			continue;
@@ -1197,6 +1197,7 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 			text_editor->set_line(i, new_line);
 		}
 	}
+	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
 }
 
@@ -1242,7 +1243,7 @@ void CodeTextEditor::move_lines_down() {
 	text_editor->end_complex_operation();
 }
 
-void CodeTextEditor::delete_lines() {
+void CodeTextEditor::delete_lines() { // todo move to code edit entirely, then add tests.
 	text_editor->begin_complex_operation();
 	text_editor->begin_multicaret_edit();
 
@@ -1264,7 +1265,6 @@ void CodeTextEditor::delete_lines() {
 
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
-	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::duplicate_selection() {
@@ -1305,7 +1305,6 @@ void CodeTextEditor::duplicate_selection() {
 
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
-	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
@@ -1359,7 +1358,6 @@ void CodeTextEditor::toggle_inline_comment(const String &delimiter) {
 
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
-	text_editor->queue_redraw();
 }
 
 void CodeTextEditor::goto_line(int p_line) {

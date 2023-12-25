@@ -1361,8 +1361,9 @@ void ScriptTextEditor::_edit_option(int p_op) {
 
 			tx->begin_complex_operation();
 			tx->begin_multicaret_edit();
-			int begin = INT_MAX, end = 0;
+			int begin = tx->get_line_count() - 1, end = 0;
 			if (tx->has_selection()) {
+				// Auto indent all lines that have a caret or selecion on it.
 				Vector<Point2i> line_ranges = tx->get_line_ranges_from_carets();
 				for (Point2i line_range : line_ranges) {
 					scr->get_language()->auto_indent_code(text, line_range.x, line_range.y);
@@ -1374,10 +1375,13 @@ void ScriptTextEditor::_edit_option(int p_op) {
 					}
 				}
 			} else {
+				// Auto indent entire text.
 				begin = 0;
 				end = tx->get_line_count() - 1;
 				scr->get_language()->auto_indent_code(text, begin, end);
 			}
+
+			// Apply auto indented code.
 			Vector<String> lines = text.split("\n");
 			for (int i = begin; i <= end; ++i) {
 				tx->set_line(i, lines[i]);

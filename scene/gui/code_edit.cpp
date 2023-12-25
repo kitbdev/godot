@@ -869,9 +869,9 @@ void CodeEdit::indent_lines() {
 
 			if (indent_using_spaces) {
 				int spaces_to_add = _calculate_spaces_till_next_right_indent(get_first_non_whitespace_column(i));
-				insert_text(String(" ").repeat(spaces_to_add), i, 0);
+				insert_text(String(" ").repeat(spaces_to_add), i, 0, false);
 			} else {
-				insert_text("\t", i, 0);
+				insert_text("\t", i, 0, false);
 			}
 		}
 	}
@@ -892,10 +892,6 @@ void CodeEdit::unindent_lines() {
 	for (Point2i line_range : line_ranges) {
 		for (int i = line_range.x; i <= line_range.y; i++) {
 			const String line_text = get_line(i);
-			if (line_text.size() == 0) {
-				// Ignore empty lines.
-				continue;
-			}
 
 			if (line_text.begins_with("\t")) {
 				remove_text(i, 0, i, 1);

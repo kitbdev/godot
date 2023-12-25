@@ -1813,17 +1813,47 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "test\t");
 
+		// Insert in place with multiple carets.
+		code_edit->set_text("test text");
+		code_edit->set_caret_column(5);
+		code_edit->add_caret(0, 7);
+		code_edit->add_caret(0, 2);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "te\tst \tte\txt");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->get_caret_column(0) == 7);
+		CHECK(code_edit->get_caret_column(1) == 10);
+		CHECK(code_edit->get_caret_column(2) == 3);
+		code_edit->remove_secondary_carets();
+
 		// Indent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->indent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_caret_column() == 5);
 
 		// Selection does entire line.
 		code_edit->set_text("test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 5);
+
+		// Selection does entire line, right to left selection.
+		code_edit->set_text("test");
+		code_edit->select(0, 4, 0, 0);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 5);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Handles multiple lines.
 		code_edit->set_text("test\ntext");
@@ -1831,6 +1861,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "\ttext");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 5);
 
 		// Do not indent line if last col is zero.
 		code_edit->set_text("test\ntext");
@@ -1838,6 +1873,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Indent even if last column of first line.
 		code_edit->set_text("test\ntext");
@@ -1845,15 +1885,53 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 5);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Indent even if last column of first line, reversed.
+		code_edit->set_text("test\ntext");
+		code_edit->select(1, 0, 0, 4);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 5);
 
 		// Check selection is adjusted.
 		code_edit->set_text("test");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->do_indent();
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
 		CHECK(code_edit->get_line(0) == "\ttest");
-		code_edit->undo();
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 3);
+
+		// Indent once with multiple selections.
+		code_edit->set_text("test");
+		code_edit->select(0, 1, 0, 2);
+		code_edit->add_caret(0, 4);
+		code_edit->select(0, 4, 0, 3, 1);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 0);
+		CHECK(code_edit->get_selection_origin_column(0) == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 3);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 0);
+		CHECK(code_edit->get_selection_origin_column(1) == 5);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 4);
 	}
 
 	SUBCASE("[CodeEdit] indent spaces") {
@@ -1886,23 +1964,58 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "test    ");
 
+		// Insert in place with multiple carets.
+		code_edit->set_text("test text");
+		code_edit->set_caret_column(5);
+		code_edit->add_caret(0, 7);
+		code_edit->add_caret(0, 2);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "te  st    te  xt");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->get_caret_column(0) == 10);
+		CHECK(code_edit->get_caret_column(1) == 14);
+		CHECK(code_edit->get_caret_column(2) == 4);
+		code_edit->remove_secondary_carets();
+
 		// Indent lines does entire line and works without selection.
 		code_edit->set_text("");
 		code_edit->insert_text_at_caret("test");
 		code_edit->indent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_caret_column() == 8);
 
 		// Selection does entire line.
 		code_edit->set_text("test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 8);
+
+		// Selection does entire line, right to left selection.
+		code_edit->set_text("test");
+		code_edit->select(0, 4, 0, 0);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Single indent only add required spaces.
 		code_edit->set_text(" test");
 		code_edit->select_all();
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 8);
 
 		// Handles multiple lines.
 		code_edit->set_text("test\ntext");
@@ -1910,6 +2023,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "    text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 8);
 
 		// Do not indent line if last col is zero.
 		code_edit->set_text("test\ntext");
@@ -1917,6 +2035,11 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Indent even if last column of first line.
 		code_edit->set_text("test\ntext");
@@ -1924,14 +2047,53 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->do_indent();
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Indent even if last column of first line, right to left selection.
+		code_edit->set_text("test\ntext");
+		code_edit->select(1, 0, 0, 4);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 8);
 
 		// Check selection is adjusted.
 		code_edit->set_text("test");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->do_indent();
-		CHECK(code_edit->get_selection_from_column() == 5);
-		CHECK(code_edit->get_selection_to_column() == 6);
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 5);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 6);
+
+		// Indent once with multiple selections.
+		code_edit->set_text("test");
+		code_edit->select(0, 1, 0, 2);
+		code_edit->add_caret(0, 4);
+		code_edit->select(0, 4, 0, 3, 1);
+		code_edit->do_indent();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 0);
+		CHECK(code_edit->get_selection_origin_column(0) == 5);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 6);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 0);
+		CHECK(code_edit->get_selection_origin_column(1) == 8);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 7);
 	}
 
 	SUBCASE("[CodeEdit] unindent tabs") {
@@ -1967,11 +2129,28 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->insert_text_at_caret("\ttest");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->get_caret_column() == 4);
+
+		// Unindent lines once with multiple carets.
+		code_edit->set_text("\t\ttest");
+		code_edit->set_caret_column(1);
+		code_edit->add_caret(0, 3);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 2);
+		code_edit->remove_secondary_carets();
 
 		// Caret on col zero unindent line.
 		code_edit->set_text("\t\ttest");
+		code_edit->set_caret_column(0);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Check input action.
 		code_edit->set_text("\t\ttest");
@@ -1983,13 +2162,34 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 5);
+
+		// Selection does entire line, right to left selection.
+		code_edit->set_text("\t\ttest");
+		code_edit->select(0, 6, 0, 0);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 5);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Handles multiple lines.
-		code_edit->set_text("\ttest\n\ttext");
+		code_edit->set_text("\t\ttest\n\t\ttext");
 		code_edit->select_all();
 		code_edit->unindent_lines();
-		CHECK(code_edit->get_line(0) == "test");
-		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_line(1) == "\ttext");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 5);
 
 		// Do not unindent line if last col is zero.
 		code_edit->set_text("\ttest\n\ttext");
@@ -1997,6 +2197,23 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "\ttext");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Do not unindent line if last col is zero, right to left selection.
+		code_edit->set_text("\ttest\n\ttext");
+		code_edit->select(1, 0, 0, 0);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->get_line(1) == "\ttext");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Unindent even if last column of first line.
 		code_edit->set_text("\ttest\n\ttext");
@@ -2004,14 +2221,50 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 4);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Check selection is adjusted.
 		code_edit->set_text("\ttest");
 		code_edit->select(0, 1, 0, 2);
 		code_edit->unindent_lines();
-		CHECK(code_edit->get_selection_from_column() == 0);
-		CHECK(code_edit->get_selection_to_column() == 1);
 		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Deselect if only the tab was selected.
+		code_edit->set_text("\ttest");
+		code_edit->select(0, 0, 0, 1);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "test");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Unindent once with multiple selections.
+		code_edit->set_text("\t\ttest");
+		code_edit->select(0, 1, 0, 2);
+		code_edit->add_caret(0, 4);
+		code_edit->select(0, 4, 0, 3, 1);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "\ttest");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 0);
+		CHECK(code_edit->get_selection_origin_column(0) == 0);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 1);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 0);
+		CHECK(code_edit->get_selection_origin_column(1) == 3);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 2);
 	}
 
 	SUBCASE("[CodeEdit] unindent spaces") {
@@ -2053,11 +2306,28 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->insert_text_at_caret("    test");
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->get_caret_column() == 4);
+
+		// Unindent lines once with multiple carets.
+		code_edit->set_text("        test");
+		code_edit->set_caret_column(1);
+		code_edit->add_caret(0, 9);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 5);
+		code_edit->remove_secondary_carets();
 
 		// Caret on col zero unindent line.
 		code_edit->set_text("        test");
+		code_edit->set_caret_column(0);
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Only as far as needed.
 		code_edit->set_text("       test");
@@ -2074,13 +2344,34 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->select_all();
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 8);
+
+		// Selection does entire line, right to left selection.
+		code_edit->set_text("        test");
+		code_edit->select(0, 12, 0, 0);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Handles multiple lines.
-		code_edit->set_text("    test\n    text");
+		code_edit->set_text("        test\n        text");
 		code_edit->select_all();
 		code_edit->unindent_lines();
-		CHECK(code_edit->get_line(0) == "test");
-		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_line(1) == "    text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 8);
 
 		// Do not unindent line if last col is zero.
 		code_edit->set_text("    test\n    text");
@@ -2088,6 +2379,23 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "    text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Do not unindent line if last col is zero, right to left selection.
+		code_edit->set_text("    test\n    text");
+		code_edit->select(1, 0, 0, 0);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->get_line(1) == "    text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Unindent even if last column of first line.
 		code_edit->set_text("    test\n    text");
@@ -2095,14 +2403,48 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->unindent_lines();
 		CHECK(code_edit->get_line(0) == "test");
 		CHECK(code_edit->get_line(1) == "text");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 1);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Check selection is adjusted.
 		code_edit->set_text("    test");
 		code_edit->select(0, 4, 0, 5);
 		code_edit->unindent_lines();
-		CHECK(code_edit->get_selection_from_column() == 0);
-		CHECK(code_edit->get_selection_to_column() == 1);
 		CHECK(code_edit->get_line(0) == "test");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Deselect if only the tab was selected.
+		code_edit->set_text("    test");
+		code_edit->select(0, 0, 0, 4);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "test");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Unindent once with multiple selections.
+		code_edit->set_text("        test");
+		code_edit->select(0, 1, 0, 2);
+		code_edit->add_caret(0, 4);
+		code_edit->select(0, 12, 0, 10, 1);
+		code_edit->unindent_lines();
+		CHECK(code_edit->get_line(0) == "    test");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK_FALSE(code_edit->has_selection(0));
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 0);
+		CHECK(code_edit->get_selection_origin_column(1) == 8);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 6);
 	}
 
 	SUBCASE("[CodeEdit] auto indent") {
@@ -2117,6 +2459,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
 
 			// New blank line should still indent.
 			code_edit->set_text("");
@@ -2124,6 +2468,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
 
 			// New line above should not indent.
 			code_edit->set_text("");
@@ -2131,6 +2477,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test:");
+			CHECK(code_edit->get_caret_line() == 0);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Whitespace between symbol and caret is okay.
 			code_edit->set_text("");
@@ -2138,6 +2486,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:  ");
 			CHECK(code_edit->get_line(1) == "\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
 
 			// Comment between symbol and caret is okay.
 			code_edit->add_comment_delimiter("#", "");
@@ -2147,6 +2497,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test: # comment");
 			CHECK(code_edit->get_line(1) == "\t");
 			code_edit->remove_comment_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
 
 			// Strings between symbol and caret are not okay.
 			code_edit->add_string_delimiter("#", "");
@@ -2156,6 +2508,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test: # string");
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_string_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Non-whitespace prevents auto-indentation.
 			code_edit->add_comment_delimiter("#", "");
@@ -2165,6 +2519,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test := 0 # comment");
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Even when there's no comments.
 			code_edit->set_text("");
@@ -2172,6 +2528,26 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test := 0");
 			CHECK(code_edit->get_line(1) == "");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
+
+			// Preserve current indentation.
+			code_edit->set_text("\ttest");
+			code_edit->set_caret_column(5);
+			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "\ttest");
+			CHECK(code_edit->get_line(1) == "\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
+
+			// Increase existing indentation.
+			code_edit->set_text("\ttest:");
+			code_edit->set_caret_column(6);
+			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "\ttest:");
+			CHECK(code_edit->get_line(1) == "\t\t");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 2);
 
 			// If between brace pairs an extra line is added.
 			code_edit->set_text("");
@@ -2181,6 +2557,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test{");
 			CHECK(code_edit->get_line(1) == "\t");
 			CHECK(code_edit->get_line(2) == "}");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 1);
 
 			// Except when we are going above.
 			code_edit->set_text("");
@@ -2189,6 +2567,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test{}");
+			CHECK(code_edit->get_caret_line() == 0);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Or below.
 			code_edit->set_text("");
@@ -2197,6 +2577,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test{}");
 			CHECK(code_edit->get_line(1) == "");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 		}
 
 		SUBCASE("[CodeEdit] auto indent spaces") {
@@ -2210,6 +2592,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "    ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
 
 			// New blank line should still indent.
 			code_edit->set_text("");
@@ -2217,6 +2601,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test:");
 			CHECK(code_edit->get_line(1) == "    ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
 
 			// New line above should not indent.
 			code_edit->set_text("");
@@ -2224,6 +2610,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test:");
+			CHECK(code_edit->get_caret_line() == 0);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Whitespace between symbol and caret is okay.
 			code_edit->set_text("");
@@ -2231,6 +2619,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test:  ");
 			CHECK(code_edit->get_line(1) == "    ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
 
 			// Comment between symbol and caret is okay.
 			code_edit->add_comment_delimiter("#", "");
@@ -2240,6 +2630,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test: # comment");
 			CHECK(code_edit->get_line(1) == "    ");
 			code_edit->remove_comment_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
 
 			// Strings between symbol and caret are not okay.
 			code_edit->add_string_delimiter("#", "");
@@ -2249,6 +2641,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test: # string");
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_string_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Non-whitespace prevents auto-indentation.
 			code_edit->add_comment_delimiter("#", "");
@@ -2258,6 +2652,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test := 0 # comment");
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Even when there's no comments.
 			code_edit->set_text("");
@@ -2265,6 +2661,26 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline");
 			CHECK(code_edit->get_line(0) == "test := 0");
 			CHECK(code_edit->get_line(1) == "");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
+
+			// Preserve current indentation.
+			code_edit->set_text("    test");
+			code_edit->set_caret_column(8);
+			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "    test");
+			CHECK(code_edit->get_line(1) == "    ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
+
+			// Increase existing indentation.
+			code_edit->set_text("    test:");
+			code_edit->set_caret_column(9);
+			SEND_GUI_ACTION("ui_text_newline");
+			CHECK(code_edit->get_line(0) == "    test:");
+			CHECK(code_edit->get_line(1) == "        ");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 8);
 
 			// If between brace pairs an extra line is added.
 			code_edit->set_text("");
@@ -2274,6 +2690,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test{");
 			CHECK(code_edit->get_line(1) == "    ");
 			CHECK(code_edit->get_line(2) == "}");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 4);
 
 			// Except when we are going above.
 			code_edit->set_text("");
@@ -2282,6 +2700,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_above");
 			CHECK(code_edit->get_line(0) == "");
 			CHECK(code_edit->get_line(1) == "test{}");
+			CHECK(code_edit->get_caret_line() == 0);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// Or below.
 			code_edit->set_text("");
@@ -2290,6 +2710,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			SEND_GUI_ACTION("ui_text_newline_blank");
 			CHECK(code_edit->get_line(0) == "test{}");
 			CHECK(code_edit->get_line(1) == "");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 
 			// If there is something after a colon and there is a colon in the comment it should not indent.
 			code_edit->add_comment_delimiter("#", "");
@@ -2299,6 +2721,8 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 			CHECK(code_edit->get_line(0) == "test:test#:");
 			CHECK(code_edit->get_line(1) == "");
 			code_edit->remove_comment_delimiter("#");
+			CHECK(code_edit->get_caret_line() == 1);
+			CHECK(code_edit->get_caret_column() == 0);
 		}
 	}
 
@@ -2307,59 +2731,50 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_indent_using_spaces(false);
 
 		// Only line.
-		code_edit->insert_text_at_caret("        test");
+		code_edit->set_text("        test");
 		code_edit->select(0, 9, 0, 8);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "\t\ttest");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 2); // todo cleanup these with new style
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 3);
+		CHECK(code_edit->get_caret_column() == 2);
 
 		// First line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("        test\n");
-		code_edit->select(0, 9, 0, 8);
+		code_edit->set_text("        test\n");
+		code_edit->select(0, 8, 0, 9);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "\t\ttest");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 2);
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_column() == 3);
 
 		// Middle line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\n        test\n");
-		code_edit->select(1, 9, 1, 8);
+		code_edit->set_text("\n        test\n");
+		code_edit->select(1, 8, 1, 9);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "\t\ttest");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 2);
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_column() == 3);
 
 		// End line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\n        test");
-		code_edit->select(1, 9, 1, 8);
+		code_edit->set_text("\n        test");
+		code_edit->select(1, 8, 1, 9);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "\t\ttest");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 2);
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_column() == 3);
 
 		// Within provided range.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("    test\n        test\n");
-		code_edit->select(1, 9, 1, 8);
+		code_edit->set_text("    test\n        test\n");
+		code_edit->select(1, 8, 1, 9);
 		code_edit->convert_indent(1, 1);
 		CHECK(code_edit->get_line(0) == "    test");
 		CHECK(code_edit->get_line(1) == "\t\ttest");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 2);
-		CHECK(code_edit->get_selection_from_column() == 2);
-		CHECK(code_edit->get_selection_to_column() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_column() == 3);
 	}
 
 	SUBCASE("[CodeEdit] convert indent to spaces") {
@@ -2367,59 +2782,50 @@ TEST_CASE("[SceneTree][CodeEdit] indent") {
 		code_edit->set_indent_using_spaces(true);
 
 		// Only line.
-		code_edit->insert_text_at_caret("\t\ttest");
+		code_edit->set_text("\t\ttest");
 		code_edit->select(0, 3, 0, 2);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "        test");
 		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_column() == 9);
 		CHECK(code_edit->get_caret_column() == 8);
-		CHECK(code_edit->get_selection_from_column() == 8);
-		CHECK(code_edit->get_selection_to_column() == 9);
 
 		// First line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\t\ttest\n");
-		code_edit->select(0, 3, 0, 2);
+		code_edit->set_text("\t\ttest\n");
+		code_edit->select(0, 2, 0, 3);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(0) == "        test");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 8);
-		CHECK(code_edit->get_selection_from_column() == 8);
-		CHECK(code_edit->get_selection_to_column() == 9);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_column() == 9);
 
 		// Middle line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\n\t\ttest\n");
-		code_edit->select(1, 3, 1, 2);
+		code_edit->set_text("\n\t\ttest\n");
+		code_edit->select(1, 2, 1, 3);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "        test");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 8);
-		CHECK(code_edit->get_selection_from_column() == 8);
-		CHECK(code_edit->get_selection_to_column() == 9);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_column() == 9);
 
 		// End line.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\n\t\ttest");
-		code_edit->select(1, 3, 1, 2);
+		code_edit->set_text("\n\t\ttest");
+		code_edit->select(1, 2, 1, 3);
 		code_edit->convert_indent();
 		CHECK(code_edit->get_line(1) == "        test");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 8);
-		CHECK(code_edit->get_selection_from_column() == 8);
-		CHECK(code_edit->get_selection_to_column() == 9);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_column() == 9);
 
 		// Within provided range.
-		code_edit->set_text("");
-		code_edit->insert_text_at_caret("\ttest\n\t\ttest\n");
-		code_edit->select(1, 3, 1, 2);
+		code_edit->set_text("\ttest\n\t\ttest\n");
+		code_edit->select(1, 2, 1, 3);
 		code_edit->convert_indent(1, 1);
 		CHECK(code_edit->get_line(0) == "\ttest");
 		CHECK(code_edit->get_line(1) == "        test");
 		CHECK(code_edit->has_selection());
-		CHECK(code_edit->get_caret_column() == 8);
-		CHECK(code_edit->get_selection_from_column() == 8);
-		CHECK(code_edit->get_selection_to_column() == 9);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->get_caret_column() == 9);
 
 		// Outside of range.
 		ERR_PRINT_OFF;
@@ -3995,9 +4401,53 @@ TEST_CASE("[SceneTree][CodeEdit] New Line") {
 	CHECK(code_edit->get_caret_column() == 0);
 
 	// Multiple new lines with multiple carets.
-	// todo
+	code_edit->set_text("test new line");
+	code_edit->set_caret_line(0);
+	code_edit->set_caret_column(5);
+	code_edit->add_caret(0, 8);
+	SEND_GUI_ACTION("ui_text_newline");
+	CHECK(code_edit->get_line(0) == "test ");
+	CHECK(code_edit->get_line(1) == "new");
+	CHECK(code_edit->get_line(2) == " line");
+	CHECK(code_edit->get_caret_count() == 2);
+	CHECK(code_edit->get_caret_line(0) == 1);
+	CHECK(code_edit->get_caret_column(0) == 0);
+	CHECK(code_edit->get_caret_line(1) == 2);
+	CHECK(code_edit->get_caret_column(1) == 0);
 
-	// todo all of that... but with indentation
+	// Multiple blank new lines with multiple carets.
+	code_edit->set_text("test new line");
+	code_edit->remove_secondary_carets();
+	code_edit->set_caret_line(0);
+	code_edit->set_caret_column(5);
+	code_edit->add_caret(0, 8);
+	SEND_GUI_ACTION("ui_text_newline_blank");
+	CHECK(code_edit->get_line(0) == "test new line");
+	CHECK(code_edit->get_line(1) == "");
+	CHECK(code_edit->get_line(2) == "");
+	CHECK(code_edit->get_caret_count() == 2);
+	CHECK(code_edit->get_caret_line(0) == 1);
+	CHECK(code_edit->get_caret_column(0) == 0);
+	CHECK(code_edit->get_caret_line(1) == 2);
+	CHECK(code_edit->get_caret_column(1) == 0);
+
+	// Multiple new lines above with multiple carets.
+	code_edit->set_text("test new line");
+	code_edit->remove_secondary_carets();
+	code_edit->set_caret_line(0);
+	code_edit->set_caret_column(5);
+	code_edit->add_caret(0, 8);
+	SEND_GUI_ACTION("ui_text_newline_above");
+	CHECK(code_edit->get_line(0) == "");
+	CHECK(code_edit->get_line(1) == "");
+	CHECK(code_edit->get_line(2) == "test new line");
+	CHECK(code_edit->get_caret_count() == 2);
+	CHECK(code_edit->get_caret_line(0) == 0);
+	CHECK(code_edit->get_caret_column(0) == 0);
+	CHECK(code_edit->get_caret_line(1) == 1);
+	CHECK(code_edit->get_caret_column(1) == 0);
+
+	// See '[CodeEdit] auto indent' tests for tests about new line with indentation.
 
 	memdelete(code_edit);
 }

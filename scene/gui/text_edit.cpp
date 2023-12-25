@@ -3506,7 +3506,7 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 	end_complex_operation();
 }
 
-void TextEdit::insert_text(const String &p_text, int p_line, int p_column) {
+void TextEdit::insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets) {
 	ERR_FAIL_INDEX(p_line, text.size());
 	ERR_FAIL_INDEX(p_column, text[p_line].length() + 1);
 
@@ -3514,7 +3514,11 @@ void TextEdit::insert_text(const String &p_text, int p_line, int p_column) {
 
 	int new_line, new_column;
 	_insert_text(p_line, p_column, p_text, &new_line, &new_column);
-	offset_carets_after(p_line, p_column, new_line, new_column);
+	if (p_before_carets) {
+		offset_carets_after(p_line, p_column, new_line, new_column);
+	} else {
+		offset_carets_after(p_line, p_column + 1, new_line, new_column + 1);
+	}
 
 	end_complex_operation();
 }
@@ -3571,7 +3575,7 @@ void TextEdit::replace_text(const String &p_new_text, int p_from_line, int p_fro
 	}
 
 	// todo better way to not include start?
-	offset_carets_after(p_to_line, p_to_column + 1, new_end_line, new_end_column);
+	offset_carets_after(p_to_line, p_to_column + 1, new_end_line, new_end_column + 1);
 
 	// todo needed?
 	// _update_scrollbars();
@@ -4846,6 +4850,7 @@ void TextEdit::offset_carets_after(int p_old_line, int p_old_column, int p_new_l
 		// Move caret.
 		int caret_line = get_caret_line(i);
 		int caret_column = get_caret_column(i);
+		bool selected = has_selection(i);
 		if (caret_line > p_old_line || (caret_line == p_old_line && caret_column >= p_old_column)) {
 			caret_line += edit_height;
 			if (caret_line == p_new_line) {
@@ -4859,7 +4864,7 @@ void TextEdit::offset_carets_after(int p_old_line, int p_old_column, int p_new_l
 		}
 
 		// Move selection origin.
-		if (!has_selection(i)) {
+		if (!selected) {
 			continue;
 		}
 		int selection_origin_line = get_selection_origin_line(i);
@@ -4869,10 +4874,7 @@ void TextEdit::offset_carets_after(int p_old_line, int p_old_column, int p_new_l
 			if (selection_origin_line == p_new_line) {
 				selection_origin_column += edit_size;
 			}
-			if (edit_height != 0) {
-				set_selection_origin_line(selection_origin_line, i);
-			}
-			set_selection_origin_column(selection_origin_column, i);
+			select(selection_origin_line, selection_origin_column, caret_line, caret_column, i);
 		}
 	}
 }
@@ -6703,7 +6705,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_sorted_carets"), &TextEdit::get_sorted_carets);
 	// todo deprecate properly. keep old name?
 	// ClassDB::bind_method(D_METHOD("adjust_carets_after_edit", "caret", "from_line", "from_col", "to_line", "to_col"), &TextEdit::adjust_carets_after_edit);
-	ClassDB::bind_method(D_METHOD("offset_carets_after", "old_line", "old_column", "new_line", "new_column"), &TextEdit::offset_carets_after);
+	// ClassDB::bind_method(D_METHOD("offset_carets_after", "old_line", "old_column", "new_line", "new_column"), &TextEdit::offset_carets_after);
 
 	ClassDB::bind_method(D_METHOD("is_caret_visible", "caret_index"), &TextEdit::is_caret_visible, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_caret_draw_pos", "caret_index"), &TextEdit::get_caret_draw_pos, DEFVAL(0));
@@ -7124,13 +7126,10 @@ void TextEdit::_backspace_internal(int p_caret) {
 		int prev_line = cc ? cl : cl - 1;
 		int prev_column = cc ? (cc - 1) : (text[cl - 1].length());
 
-		// todo why only here and nowhere else...
+		// todo doesnt work. also should be in other places? also not undoable.
 		merge_gutters(prev_line, cl);
+		// todo undo force unhidden carets
 
-		if (_is_line_hidden(cl)) {
-			_set_line_as_hidden(prev_line, true); // todo what is this about
-		}
-		// todo use remove_text instead?
 		_remove_text(prev_line, prev_column, cl, cc);
 		collapse_carets(prev_line, prev_column, cl, cc, i);
 		offset_carets_after(cl, cc, prev_line, prev_column);
