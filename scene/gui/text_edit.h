@@ -440,6 +440,9 @@ private:
 
 	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
 
+	void _offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
+	void _clamp_carets(int p_line);
+
 	void _cancel_drag_and_drop_text();
 
 	/* Selection. */
@@ -460,10 +463,7 @@ private:
 	uint64_t last_dblclk = 0;
 	Vector2 last_dblclk_pos;
 
-	bool selection_pos_dirty = false;
-
 	void _selection_changed(int p_caret = -1);
-	void _emit_selection_changed();
 	void _click_selection_held();
 
 	void _update_selection_mode_pointer(bool p_initial = false);
@@ -767,7 +767,6 @@ public:
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
 	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets = true);
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
-	void replace_text(const String &p_new_text, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_grow_selection = true, bool p_insert_after_caret = false);
 	String get_text_at(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	int get_last_unhidden_line() const;
@@ -861,12 +860,7 @@ public:
 
 	Vector<int> get_sorted_carets(bool p_include_ignored_carets = false) const; // ? dont cache so its const
 
-	// todo make private?
-	// Vector<int> get_caret_index_edit_order();
-	// void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
-	void offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
 	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_inclusive = false);
-	void clamp_carets(int p_line);
 
 	void merge_overlapping_carets();
 	void check_overlapping_carets(); // todo
