@@ -488,6 +488,10 @@ public:
 	void set_symbol_lookup_word_as_valid(bool p_valid);
 
 	/* Text manipulation */
+	void move_lines_up();
+	void move_lines_down();
+	void delete_lines();
+	void duplicate_selection();
 	void duplicate_lines();
 
 	CodeEdit();

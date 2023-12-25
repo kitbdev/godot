@@ -648,10 +648,10 @@ void TextShaderEditor::_menu_option(int p_option) {
 			shader_editor->get_text_editor()->select_all();
 		} break;
 		case EDIT_MOVE_LINE_UP: {
-			shader_editor->move_lines_up();
+			shader_editor->get_text_editor()->move_lines_up();
 		} break;
 		case EDIT_MOVE_LINE_DOWN: {
-			shader_editor->move_lines_down();
+			shader_editor->get_text_editor()->move_lines_down();
 		} break;
 		case EDIT_INDENT: {
 			if (shader.is_null() && shader_inc.is_null()) {
@@ -666,10 +666,10 @@ void TextShaderEditor::_menu_option(int p_option) {
 			shader_editor->get_text_editor()->unindent_lines();
 		} break;
 		case EDIT_DELETE_LINE: {
-			shader_editor->delete_lines();
+			shader_editor->get_text_editor()->delete_lines();
 		} break;
 		case EDIT_DUPLICATE_SELECTION: {
-			shader_editor->duplicate_selection();
+			shader_editor->get_text_editor()->duplicate_selection();
 		} break;
 		case EDIT_DUPLICATE_LINES: {
 			shader_editor->get_text_editor()->duplicate_lines();

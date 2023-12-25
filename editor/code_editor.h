@@ -231,11 +231,6 @@ public:
 	};
 	void convert_case(CaseStyle p_case);
 
-	void move_lines_up();
-	void move_lines_down();
-	void delete_lines();
-	void duplicate_selection();
-
 	/// Toggle inline comment on currently selected lines, or on current line if nothing is selected,
 	/// by adding or removing comment delimiter
 	void toggle_inline_comment(const String &delimiter);

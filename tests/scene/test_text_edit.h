@@ -2769,6 +2769,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// todo insert multiple new lines above one line. (and below)
 		}
 
 		SUBCASE("[TextEdit] ui_text_newline_blank") {

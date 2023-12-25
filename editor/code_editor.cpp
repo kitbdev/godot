@@ -787,22 +787,22 @@ void CodeTextEditor::input(const Ref<InputEvent> &event) {
 	}
 
 	if (ED_IS_SHORTCUT("script_text_editor/move_up", key_event)) {
-		move_lines_up();
+		text_editor->move_lines_up();
 		accept_event();
 		return;
 	}
 	if (ED_IS_SHORTCUT("script_text_editor/move_down", key_event)) {
-		move_lines_down();
+		text_editor->move_lines_down();
 		accept_event();
 		return;
 	}
 	if (ED_IS_SHORTCUT("script_text_editor/delete_line", key_event)) {
-		delete_lines();
+		text_editor->delete_lines();
 		accept_event();
 		return;
 	}
 	if (ED_IS_SHORTCUT("script_text_editor/duplicate_selection", key_event)) {
-		duplicate_selection();
+		text_editor->duplicate_selection();
 		accept_event();
 		return;
 	}
@@ -1197,112 +1197,6 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 			text_editor->set_line(i, new_line);
 		}
 	}
-	text_editor->end_multicaret_edit();
-	text_editor->end_complex_operation();
-}
-
-void CodeTextEditor::move_lines_up() {
-	text_editor->begin_complex_operation();
-	text_editor->begin_multicaret_edit();
-
-	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
-	for (Point2i line_range : line_ranges) {
-		if (line_range.x == 0) {
-			continue;
-		}
-		for (int line = line_range.x; line <= line_range.y; line++) {
-			text_editor->unfold_line(line);
-			text_editor->unfold_line(line - 1);
-
-			text_editor->swap_lines(line - 1, line);
-		}
-	}
-
-	text_editor->end_multicaret_edit();
-	text_editor->end_complex_operation();
-}
-
-void CodeTextEditor::move_lines_down() {
-	text_editor->begin_complex_operation();
-	text_editor->begin_multicaret_edit();
-
-	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
-	for (Point2i line_range : line_ranges) {
-		if (line_range.y == text_editor->get_line_count() - 1) {
-			continue;
-		}
-		for (int line = line_range.y; line >= line_range.x; line--) {
-			text_editor->unfold_line(line);
-			text_editor->unfold_line(line + 1);
-
-			text_editor->swap_lines(line + 1, line);
-		}
-	}
-
-	text_editor->end_multicaret_edit();
-	text_editor->end_complex_operation();
-}
-
-void CodeTextEditor::delete_lines() { // todo move to code edit entirely, then add tests.
-	text_editor->begin_complex_operation();
-	text_editor->begin_multicaret_edit();
-
-	Vector<Point2i> line_ranges = text_editor->get_line_ranges_from_carets();
-	int line_offset = 0;
-	for (Point2i line_range : line_ranges) {
-		// Remove last line of range separately to preserve carets.
-		text_editor->remove_line_at(line_range.y + line_offset);
-		text_editor->unfold_line(line_range.y + line_offset);
-		if (line_range.x != line_range.y) {
-			text_editor->remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
-		}
-		// todo test
-		line_offset += line_range.x - line_range.y - 1;
-	}
-
-	// Deselect all.
-	text_editor->deselect();
-
-	text_editor->end_multicaret_edit();
-	text_editor->end_complex_operation();
-}
-
-void CodeTextEditor::duplicate_selection() {
-	text_editor->begin_complex_operation();
-	text_editor->begin_multicaret_edit();
-
-	// Duplicate lines first.
-	for (int i = 0; i < text_editor->get_caret_count(); i++) {
-		if (text_editor->multicaret_edit_ignore_caret(i)) {
-			continue;
-		}
-		// todo Only unhide lines?
-		for (int l = text_editor->get_selection_from_line(i); l <= text_editor->get_selection_to_line(i); l++) {
-			text_editor->unfold_line(l);
-		}
-		if (!text_editor->has_selection(i)) {
-			continue;
-		}
-
-		String text_to_insert = text_editor->get_line(text_editor->get_caret_line(i)) + "\n";
-		// Insert new text before the line.
-		text_editor->insert_text(text_to_insert, text_editor->get_caret_line(i), 0);
-	}
-
-	// Duplicate selections.
-	for (int i = 0; i < text_editor->get_caret_count(); i++) {
-		if (text_editor->multicaret_edit_ignore_caret(i)) {
-			continue;
-		}
-		if (!text_editor->has_selection(i)) {
-			continue;
-		}
-
-		String text_to_insert = text_editor->get_selected_text(i);
-		// Insert new text before the selection.
-		text_editor->insert_text(text_to_insert, text_editor->get_selection_from_line(i), text_editor->get_selection_from_column(i));
-	}
-
 	text_editor->end_multicaret_edit();
 	text_editor->end_complex_operation();
 }

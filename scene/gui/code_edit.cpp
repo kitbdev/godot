@@ -2266,6 +2266,112 @@ void CodeEdit::set_symbol_lookup_word_as_valid(bool p_valid) {
 }
 
 /* Text manipulation */
+void CodeEdit::move_lines_up() {
+	begin_complex_operation();
+	begin_multicaret_edit();
+
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+	for (Point2i line_range : line_ranges) {
+		if (line_range.x == 0) {
+			continue;
+		}
+		for (int line = line_range.x; line <= line_range.y; line++) {
+			unfold_line(line);
+			unfold_line(line - 1);
+
+			swap_lines(line - 1, line);
+		}
+	}
+
+	end_multicaret_edit();
+	end_complex_operation();
+}
+
+void CodeEdit::move_lines_down() {
+	begin_complex_operation();
+	begin_multicaret_edit();
+
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+	for (Point2i line_range : line_ranges) {
+		if (line_range.y == get_line_count() - 1) {
+			continue;
+		}
+		for (int line = line_range.y; line >= line_range.x; line--) {
+			unfold_line(line);
+			unfold_line(line + 1);
+
+			swap_lines(line + 1, line);
+		}
+	}
+
+	end_multicaret_edit();
+	end_complex_operation();
+}
+
+void CodeEdit::delete_lines() {
+	begin_complex_operation();
+	begin_multicaret_edit();
+
+	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+	int line_offset = 0;
+	for (Point2i line_range : line_ranges) {
+		// Remove last line of range separately to preserve carets.
+		remove_line_at(line_range.y + line_offset);
+		unfold_line(line_range.y + line_offset);
+		if (line_range.x != line_range.y) {
+			remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
+		}
+		// todo test
+		line_offset += line_range.x - line_range.y - 1;
+	}
+
+	// Deselect all.
+	deselect();
+
+	end_multicaret_edit();
+	end_complex_operation();
+}
+
+void CodeEdit::duplicate_selection() {
+	begin_complex_operation();
+	begin_multicaret_edit();
+
+	// Duplicate lines first.
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
+		// todo Only unhide lines?
+		for (int l = get_selection_from_line(i); l <= get_selection_to_line(i); l++) {
+			unfold_line(l);
+		}
+		if (!has_selection(i)) {
+			continue;
+		}
+
+		String text_to_insert = get_line(get_caret_line(i)) + "\n";
+		// Insert new text before the line.
+		insert_text(text_to_insert, get_caret_line(i), 0);
+	}
+
+	// Duplicate selections.
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (multicaret_edit_ignore_caret(i)) {
+			continue;
+		}
+		if (!has_selection(i)) {
+			continue;
+		}
+
+		String text_to_insert = get_selected_text(i);
+		// Insert new text before the selection.
+		insert_text(text_to_insert, get_selection_from_line(i), get_selection_from_column(i));
+	}
+
+	end_multicaret_edit();
+	end_complex_operation();
+}
+
 void CodeEdit::duplicate_lines() {
 	begin_complex_operation();
 	begin_multicaret_edit();
