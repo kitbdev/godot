@@ -1116,7 +1116,8 @@ void TextEdit::_notification(int p_what) {
 					}
 
 					int start = TS->shaped_text_get_range(rid).x;
-					if (!clipped && !search_text.is_empty()) { // Search highlight
+					// Search highlight.
+					if (!clipped && !search_text.is_empty()) {
 						int search_text_col = _get_column_pos_of_word(search_text, str, search_flags, 0);
 						int search_text_len = search_text.length();
 						while (search_text_col != -1) {
@@ -1140,7 +1141,8 @@ void TextEdit::_notification(int p_what) {
 						}
 					}
 
-					if (!clipped && highlight_all_occurrences && !only_whitespaces_highlighted && !highlighted_text.is_empty()) { // Highlight
+					// Highlight.
+					if (!clipped && highlight_all_occurrences && !only_whitespaces_highlighted && !highlighted_text.is_empty()) {
 						int highlighted_text_col = _get_column_pos_of_word(highlighted_text, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
 						int highlighted_text_len = highlighted_text.length();
 						while (highlighted_text_col != -1) {
@@ -1163,7 +1165,8 @@ void TextEdit::_notification(int p_what) {
 						}
 					}
 
-					if (!clipped && lookup_symbol_word.length() != 0) { // Highlight word
+					// Highlight word.
+					if (!clipped && lookup_symbol_word.length() != 0) {
 						if (is_ascii_char(lookup_symbol_word[0]) || lookup_symbol_word[0] == '_' || lookup_symbol_word[0] == '.') {
 							int lookup_symbol_word_col = _get_column_pos_of_word(lookup_symbol_word, str, SEARCH_MATCH_CASE | SEARCH_WHOLE_WORDS, 0);
 							int lookup_symbol_word_len = lookup_symbol_word.length();
@@ -1236,7 +1239,8 @@ void TextEdit::_notification(int p_what) {
 						Color gl_color = current_color;
 
 						for (int c = 0; c < get_caret_count(); c++) {
-							if (has_selection(c) && line >= get_selection_from_line(c) && line <= get_selection_to_line(c)) { // Selection
+							// Selection.
+							if (has_selection(c) && line >= get_selection_from_line(c) && line <= get_selection_to_line(c)) {
 								int sel_from = (line > get_selection_from_line(c)) ? TS->shaped_text_get_range(rid).x : get_selection_from_column(c);
 								int sel_to = (line < get_selection_to_line(c)) ? TS->shaped_text_get_range(rid).y : get_selection_to_column(c);
 
@@ -1311,7 +1315,7 @@ void TextEdit::_notification(int p_what) {
 					cache_entry.first_visible_chars.push_back(first_visible_char);
 					cache_entry.last_visible_chars.push_back(last_visible_char);
 
-					// is_line_folded
+					// Folded end of line icon.
 					if (line_wrap_index == line_wrap_amount && line < text.size() - 1 && _is_line_hidden(line + 1)) {
 						int xofs = char_ofs + char_margin + ofs_x + (_get_folded_eol_icon()->get_width() / 2);
 						if (xofs >= xmargin_beg && xofs < xmargin_end) {
@@ -1997,13 +2001,12 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 		_reset_caret_blink_timer();
 
-		// Allow unicode handling if:
-		// * No modifiers are pressed (except Shift and CapsLock)
+		// Allow unicode handling if no modifiers are pressed (except Shift and CapsLock).
 		bool allow_unicode_handling = !(k->is_ctrl_pressed() || k->is_alt_pressed() || k->is_meta_pressed());
 
 		// Check and handle all built-in shortcuts.
 
-		// NEWLINES.
+		// Newlines.
 		if (k->is_action("ui_text_newline_above", true)) {
 			_new_line(false, true);
 			accept_event();
@@ -2020,7 +2023,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// BACKSPACE AND DELETE.
+		// Backspace and delete.
 		if (k->is_action("ui_text_backspace_all_to_left", true)) {
 			_do_backspace(false, true);
 			accept_event();
@@ -2052,7 +2055,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// SCROLLING.
+		// Scrolling.
 		if (k->is_action("ui_text_scroll_up", true)) {
 			_scroll_lines_up();
 			accept_event();
@@ -2065,8 +2068,6 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		if (is_shortcut_keys_enabled()) {
-			// SELECT ALL, SELECT WORD UNDER CARET, ADD SELECTION FOR NEXT OCCURRENCE,
-			// CLEAR CARETS AND SELECTIONS, CUT, COPY, PASTE.
 			if (k->is_action("ui_text_select_all", true)) {
 				select_all();
 				accept_event();
@@ -2105,7 +2106,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				return;
 			}
 
-			// UNDO/REDO.
+			// Undo/redo.
 			if (k->is_action("ui_undo", true)) {
 				undo();
 				accept_event();
@@ -2129,7 +2130,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 		}
 
-		// MISC.
+		// Misc.
 		if (k->is_action("ui_menu", true)) {
 			if (context_menu_enabled) {
 				_update_context_menu();
@@ -2153,14 +2154,14 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// CARET MOVEMENT
+		// Caret movement.
 
 		k = k->duplicate();
 		bool shift_pressed = k->is_shift_pressed();
 		// Remove shift or else actions will not match. Use above variable for selection.
 		k->set_shift_pressed(false);
 
-		// CARET MOVEMENT - LEFT, RIGHT.
+		// Caret movement - Left, Right.
 		if (k->is_action("ui_text_caret_word_left", true)) {
 			_move_caret_left(shift_pressed, true);
 			accept_event();
@@ -2182,7 +2183,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// CARET MOVEMENT - UP, DOWN.
+		// Caret movement - Up, Down.
 		if (k->is_action("ui_text_caret_up", true)) {
 			_move_caret_up(shift_pressed);
 			accept_event();
@@ -2194,19 +2195,19 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// CARET MOVEMENT - DOCUMENT START/END.
-		if (k->is_action("ui_text_caret_document_start", true)) { // && shift_pressed) {
+		// Caret movement - Document start/end.
+		if (k->is_action("ui_text_caret_document_start", true)) {
 			_move_caret_document_start(shift_pressed);
 			accept_event();
 			return;
 		}
-		if (k->is_action("ui_text_caret_document_end", true)) { // && shift_pressed) {
+		if (k->is_action("ui_text_caret_document_end", true)) {
 			_move_caret_document_end(shift_pressed);
 			accept_event();
 			return;
 		}
 
-		// CARET MOVEMENT - LINE START/END.
+		// Caret movement - Line start/end.
 		if (k->is_action("ui_text_caret_line_start", true)) {
 			_move_caret_to_line_start(shift_pressed);
 			accept_event();
@@ -2218,7 +2219,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			return;
 		}
 
-		// CARET MOVEMENT - PAGE UP/DOWN.
+		// Caret movement - Page up/down.
 		if (k->is_action("ui_text_caret_page_up", true)) {
 			_move_caret_page_up(shift_pressed);
 			accept_event();
@@ -2248,7 +2249,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	}
 }
 
-/* Input actions. */
+// --- Input actions. ---
 void TextEdit::_swap_current_input_direction() {
 	if (input_direction == TEXT_DIRECTION_LTR) {
 		input_direction = TEXT_DIRECTION_RTL;
@@ -2765,7 +2766,7 @@ void TextEdit::_update_theme_item_cache() {
 }
 
 void TextEdit::_update_caches() {
-	/* Text properties. */
+	// Text properties.
 	TextServer::Direction dir;
 	if (text_direction == Control::TEXT_DIRECTION_INHERITED) {
 		dir = is_layout_rtl() ? TextServer::DIRECTION_RTL : TextServer::DIRECTION_LTR;
@@ -2779,7 +2780,7 @@ void TextEdit::_update_caches() {
 	text.invalidate_font();
 	_update_placeholder();
 
-	/* Syntax highlighting. */
+	// Syntax highlighting.
 	if (syntax_highlighter.is_valid()) {
 		syntax_highlighter->set_text_edit(this);
 	}
@@ -2848,7 +2849,7 @@ void TextEdit::_update_ime_text() {
 	queue_redraw();
 }
 
-/* General overrides. */
+// --- General overrides. ---
 Size2 TextEdit::get_minimum_size() const {
 	Size2 size = theme_cache.style_normal->get_minimum_size();
 	if (fit_content_height) {
@@ -2995,7 +2996,7 @@ void TextEdit::set_tooltip_request_func(const Callable &p_tooltip_callback) {
 	tooltip_callback = p_tooltip_callback;
 }
 
-/* Text */
+// --- Text. ---
 // Text properties.
 bool TextEdit::has_ime_text() const {
 	return !ime_text.is_empty();
@@ -3111,7 +3112,7 @@ int TextEdit::get_tab_size() const {
 	return text.get_tab_size();
 }
 
-// User controls
+// User controls.
 void TextEdit::set_overtype_mode_enabled(const bool p_enabled) {
 	if (overtype_mode == p_enabled) {
 		return;
@@ -3157,7 +3158,7 @@ bool TextEdit::is_middle_mouse_paste_enabled() const {
 	return middle_mouse_paste_enabled;
 }
 
-// Text manipulation
+// Text manipulation.
 void TextEdit::clear() {
 	setting_text = true;
 	_clear();
@@ -3665,7 +3666,7 @@ Point2i TextEdit::get_next_visible_line_index_offset_from(int p_line_from, int p
 	return Point2i(num_total, wrap_index);
 }
 
-// Overridable actions
+// Overridable actions.
 void TextEdit::handle_unicode_input(const uint32_t p_unicode, int p_caret) {
 	if (GDVIRTUAL_CALL(_handle_unicode_input, p_unicode, p_caret)) {
 		return;
@@ -3843,7 +3844,7 @@ void TextEdit::menu_option(int p_option) {
 	}
 }
 
-/* Versioning */
+// --- Versioning. ---
 void TextEdit::start_action(EditAction p_action) {
 	if (current_action != p_action) {
 		if (current_action != EditAction::ACTION_NONE) {
@@ -4052,7 +4053,7 @@ uint32_t TextEdit::get_saved_version() const {
 	return saved_version;
 }
 
-/* Search */
+// --- Search. ---
 void TextEdit::set_search_text(const String &p_search_text) {
 	search_text = p_search_text;
 }
@@ -4171,7 +4172,7 @@ Point2i TextEdit::search(const String &p_key, uint32_t p_search_flags, int p_fro
 	return (pos == -1) ? Point2i(-1, -1) : Point2i(pos, line);
 }
 
-/* Mouse */
+// --- Mouse. ---
 Point2 TextEdit::get_local_mouse_pos() const {
 	Point2 mp = get_local_mouse_position();
 	if (is_layout_rtl()) {
@@ -4399,7 +4400,7 @@ bool TextEdit::is_mouse_over_selection(bool p_edges, int p_caret) const {
 	return false;
 }
 
-/* Caret */
+// --- Caret. ---
 void TextEdit::set_caret_type(CaretType p_type) {
 	if (caret_type == p_type) {
 		return;
@@ -4889,7 +4890,6 @@ void TextEdit::check_overlapping_carets() { // todo use?
 // Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
 void TextEdit::begin_multicaret_edit() {
 	multicaret_edit_count++;
-	// todo prevent some actions when in an edit?
 }
 
 void TextEdit::end_multicaret_edit() {
@@ -5056,7 +5056,7 @@ String TextEdit::get_word_under_caret(int p_caret) const {
 	return selected_text.as_string();
 }
 
-/* Selection. */
+// --- Selection. ---
 void TextEdit::set_selecting_enabled(const bool p_enabled) {
 	if (selecting_enabled == p_enabled) {
 		return;
@@ -5136,8 +5136,7 @@ void TextEdit::select_word_under_caret(int p_caret) {
 
 		if (has_selection(c)) {
 			// Allow toggling selection by pressing the shortcut a second time.
-			// This is also usable as a general-purpose "deselect" shortcut after
-			// selecting anything.
+			// This is also usable as a general-purpose "deselect" shortcut after selecting anything.
 			deselect(c);
 			continue;
 		}
@@ -5270,8 +5269,8 @@ bool TextEdit::selection_contains(int p_caret, int p_line, int p_column, bool p_
 	return is_line_col_in_range(p_line, p_column, get_selection_from_line(p_caret), get_selection_from_column(p_caret), get_selection_to_line(p_caret), get_selection_to_column(p_caret), p_include_edges);
 }
 
-// returns the caret index.
 int TextEdit::get_selection_at(int p_line, int p_column, bool p_include_edges) const {
+	// Return the caret index of the found selection, or -1.
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (selection_contains(i, p_line, p_column, p_include_edges, true)) {
 			return i;
@@ -5503,7 +5502,7 @@ void TextEdit::delete_selection(int p_caret) {
 	end_complex_operation();
 }
 
-/* Line wrapping. */
+// --- Line wrapping. ---
 void TextEdit::set_line_wrapping_mode(LineWrappingMode p_wrapping_mode) {
 	if (line_wrapping_mode != p_wrapping_mode) {
 		line_wrapping_mode = p_wrapping_mode;
@@ -5591,7 +5590,7 @@ Vector<String> TextEdit::get_line_wrapped_text(int p_line) const {
 	return lines;
 }
 
-/* Viewport */
+// --- Viewport. ---
 // Scrolling.
 void TextEdit::set_smooth_scroll_enabled(const bool p_enabled) {
 	v_scroll->set_smooth_scroll_enabled(p_enabled);
@@ -5895,7 +5894,7 @@ void TextEdit::center_viewport_to_caret(int p_caret) {
 	queue_redraw();
 }
 
-/* Minimap */
+// --- Minimap. ---
 void TextEdit::set_draw_minimap(bool p_enabled) {
 	if (draw_minimap == p_enabled) {
 		return;
@@ -5928,7 +5927,7 @@ int TextEdit::get_minimap_visible_lines() const {
 	return _get_control_height() / (minimap_char_size.y + minimap_line_spacing);
 }
 
-/* Gutters. */
+// --- Gutters. ---
 void TextEdit::add_gutter(int p_at) {
 	if (p_at < 0 || p_at > gutters.size()) {
 		gutters.push_back(GutterInfo());
@@ -6168,7 +6167,7 @@ bool TextEdit::is_line_gutter_clickable(int p_line, int p_gutter) const {
 	return text.is_line_gutter_clickable(p_line, p_gutter);
 }
 
-// Line style
+// Line style.
 void TextEdit::set_line_background_color(int p_line, const Color &p_color) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
@@ -6185,7 +6184,7 @@ Color TextEdit::get_line_background_color(int p_line) const {
 	return text.get_line_background_color(p_line);
 }
 
-/* Syntax Highlighting. */
+// --- Syntax highlighting. ---
 void TextEdit::set_syntax_highlighter(Ref<SyntaxHighlighter> p_syntax_highlighter) {
 	if (syntax_highlighter == p_syntax_highlighter && syntax_highlighter.is_valid() == p_syntax_highlighter.is_valid()) {
 		return;
@@ -6202,7 +6201,7 @@ Ref<SyntaxHighlighter> TextEdit::get_syntax_highlighter() const {
 	return syntax_highlighter;
 }
 
-/* Visual. */
+// --- Visual. ---
 void TextEdit::set_highlight_current_line(bool p_enabled) {
 	if (highlight_current_line == p_enabled) {
 		return;
@@ -6277,8 +6276,8 @@ Color TextEdit::get_font_color() const {
 }
 
 void TextEdit::_bind_methods() {
-	/* Text */
-	// Text properties
+	// --- Text. ---
+	// Text properties.
 	ClassDB::bind_method(D_METHOD("has_ime_text"), &TextEdit::has_ime_text);
 
 	ClassDB::bind_method(D_METHOD("set_editable", "enabled"), &TextEdit::set_editable);
@@ -6298,7 +6297,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_tab_size", "size"), &TextEdit::set_tab_size);
 	ClassDB::bind_method(D_METHOD("get_tab_size"), &TextEdit::get_tab_size);
 
-	// User controls
+	// User controls.
 	ClassDB::bind_method(D_METHOD("set_overtype_mode_enabled", "enabled"), &TextEdit::set_overtype_mode_enabled);
 	ClassDB::bind_method(D_METHOD("is_overtype_mode_enabled"), &TextEdit::is_overtype_mode_enabled);
 
@@ -6314,7 +6313,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_middle_mouse_paste_enabled", "enabled"), &TextEdit::set_middle_mouse_paste_enabled);
 	ClassDB::bind_method(D_METHOD("is_middle_mouse_paste_enabled"), &TextEdit::is_middle_mouse_paste_enabled);
 
-	// Text manipulation
+	// Text manipulation.
 	ClassDB::bind_method(D_METHOD("clear"), &TextEdit::clear);
 
 	ClassDB::bind_method(D_METHOD("set_text", "text"), &TextEdit::set_text);
@@ -6347,7 +6346,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_next_visible_line_offset_from", "line", "visible_amount"), &TextEdit::get_next_visible_line_offset_from);
 	ClassDB::bind_method(D_METHOD("get_next_visible_line_index_offset_from", "line", "wrap_index", "visible_amount"), &TextEdit::get_next_visible_line_index_offset_from);
 
-	// Overridable actions
+	// Overridable actions.
 	ClassDB::bind_method(D_METHOD("backspace", "caret_index"), &TextEdit::backspace, DEFVAL(-1));
 
 	ClassDB::bind_method(D_METHOD("cut", "caret_index"), &TextEdit::cut, DEFVAL(-1));
@@ -6362,7 +6361,7 @@ void TextEdit::_bind_methods() {
 	GDVIRTUAL_BIND(_paste, "caret_index")
 	GDVIRTUAL_BIND(_paste_primary_clipboard, "caret_index")
 
-	// Context Menu
+	// Context Menu.
 	BIND_ENUM_CONSTANT(MENU_CUT);
 	BIND_ENUM_CONSTANT(MENU_COPY);
 	BIND_ENUM_CONSTANT(MENU_PASTE);
@@ -6395,7 +6394,7 @@ void TextEdit::_bind_methods() {
 	BIND_ENUM_CONSTANT(MENU_INSERT_SHY);
 	BIND_ENUM_CONSTANT(MENU_MAX);
 
-	/* Versioning */
+	// --- Versioning. ---
 	BIND_ENUM_CONSTANT(ACTION_NONE);
 	BIND_ENUM_CONSTANT(ACTION_TYPING);
 	BIND_ENUM_CONSTANT(ACTION_BACKSPACE);
@@ -6418,7 +6417,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_version"), &TextEdit::get_version);
 	ClassDB::bind_method(D_METHOD("get_saved_version"), &TextEdit::get_saved_version);
 
-	/* Search */
+	// --- Search. ---
 	BIND_ENUM_CONSTANT(SEARCH_MATCH_CASE);
 	BIND_ENUM_CONSTANT(SEARCH_WHOLE_WORDS);
 	BIND_ENUM_CONSTANT(SEARCH_BACKWARDS);
@@ -6428,10 +6427,10 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("search", "text", "flags", "from_line", "from_colum"), &TextEdit::search);
 
-	/* Tooltip */
+	// --- Tooltip. ---
 	ClassDB::bind_method(D_METHOD("set_tooltip_request_func", "callback"), &TextEdit::set_tooltip_request_func);
 
-	/* Mouse */
+	// --- Mouse. ---
 	ClassDB::bind_method(D_METHOD("get_local_mouse_pos"), &TextEdit::get_local_mouse_pos);
 
 	ClassDB::bind_method(D_METHOD("get_word_at_pos", "position"), &TextEdit::get_word_at_pos);
@@ -6445,7 +6444,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_dragging_cursor"), &TextEdit::is_dragging_cursor);
 	ClassDB::bind_method(D_METHOD("is_mouse_over_selection", "edges", "caret_index"), &TextEdit::is_mouse_over_selection, DEFVAL(-1));
 
-	/* Caret. */
+	// --- Caret. ---
 	BIND_ENUM_CONSTANT(CARET_TYPE_LINE);
 	BIND_ENUM_CONSTANT(CARET_TYPE_BLOCK);
 
@@ -6496,7 +6495,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_word_under_caret", "caret_index"), &TextEdit::get_word_under_caret, DEFVAL(-1));
 
-	/* Selection. */
+	// --- Selection. ---
 	BIND_ENUM_CONSTANT(SELECTION_MODE_NONE);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_SHIFT);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_POINTER);
@@ -6540,7 +6539,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("deselect", "caret_index"), &TextEdit::deselect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("delete_selection", "caret_index"), &TextEdit::delete_selection, DEFVAL(-1));
 
-	/* Line wrapping. */
+	// --- Line wrapping. ---
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_NONE);
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_BOUNDARY);
 
@@ -6556,7 +6555,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_line_wrapped_text", "line"), &TextEdit::get_line_wrapped_text);
 
-	/* Viewport. */
+	// --- Viewport. ---
 	// Scrolling.
 	ClassDB::bind_method(D_METHOD("set_smooth_scroll_enabled", "enable"), &TextEdit::set_smooth_scroll_enabled);
 	ClassDB::bind_method(D_METHOD("is_smooth_scroll_enabled"), &TextEdit::is_smooth_scroll_enabled);
@@ -6595,11 +6594,11 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_visible_line_count_in_range", "from_line", "to_line"), &TextEdit::get_visible_line_count_in_range);
 	ClassDB::bind_method(D_METHOD("get_total_visible_line_count"), &TextEdit::get_total_visible_line_count);
 
-	// Auto adjust
+	// Auto adjust.
 	ClassDB::bind_method(D_METHOD("adjust_viewport_to_caret", "caret_index"), &TextEdit::adjust_viewport_to_caret, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("center_viewport_to_caret", "caret_index"), &TextEdit::center_viewport_to_caret, DEFVAL(0));
 
-	// Minimap
+	// Minimap.
 	ClassDB::bind_method(D_METHOD("set_draw_minimap", "enabled"), &TextEdit::set_draw_minimap);
 	ClassDB::bind_method(D_METHOD("is_drawing_minimap"), &TextEdit::is_drawing_minimap);
 
@@ -6608,7 +6607,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_minimap_visible_lines"), &TextEdit::get_minimap_visible_lines);
 
-	/* Gutters. */
+	// --- Gutters. ---
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_STRING);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_ICON);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_CUSTOM);
@@ -6644,15 +6643,15 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_line_gutter_clickable", "line", "gutter", "clickable"), &TextEdit::set_line_gutter_clickable);
 	ClassDB::bind_method(D_METHOD("is_line_gutter_clickable", "line", "gutter"), &TextEdit::is_line_gutter_clickable);
 
-	// Line style
+	// Line style.
 	ClassDB::bind_method(D_METHOD("set_line_background_color", "line", "color"), &TextEdit::set_line_background_color);
 	ClassDB::bind_method(D_METHOD("get_line_background_color", "line"), &TextEdit::get_line_background_color);
 
-	/* Syntax Highlighting. */
+	// --- Syntax highlighting. ---
 	ClassDB::bind_method(D_METHOD("set_syntax_highlighter", "syntax_highlighter"), &TextEdit::set_syntax_highlighter);
 	ClassDB::bind_method(D_METHOD("get_syntax_highlighter"), &TextEdit::get_syntax_highlighter);
 
-	/* Visual. */
+	// --- Visual. ---
 	ClassDB::bind_method(D_METHOD("set_highlight_current_line", "enabled"), &TextEdit::set_highlight_current_line);
 	ClassDB::bind_method(D_METHOD("is_highlight_current_line_enabled"), &TextEdit::is_highlight_current_line_enabled);
 
@@ -6672,7 +6671,8 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_menu_visible"), &TextEdit::is_menu_visible);
 	ClassDB::bind_method(D_METHOD("menu_option", "option"), &TextEdit::menu_option);
 
-	/* Inspector */
+	// todo these dont need --- stuff
+	// --- Inspector. ---
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "placeholder_text", PROPERTY_HINT_MULTILINE_TEXT), "set_placeholder", "get_placeholder");
 
@@ -6724,36 +6724,36 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "structured_text_bidi_override", PROPERTY_HINT_ENUM, "Default,URI,File,Email,List,None,Custom"), "set_structured_text_bidi_override", "get_structured_text_bidi_override");
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "structured_text_bidi_override_options"), "set_structured_text_bidi_override_options", "get_structured_text_bidi_override_options");
 
-	/* Signals */
-	/* Core. */
+	// Signals.
+	// --- Core. ---
 	ADD_SIGNAL(MethodInfo("text_set"));
 	ADD_SIGNAL(MethodInfo("text_changed"));
 	ADD_SIGNAL(MethodInfo("lines_edited_from", PropertyInfo(Variant::INT, "from_line"), PropertyInfo(Variant::INT, "to_line")));
 
-	/* Caret. */
+	// --- Caret. ---
 	ADD_SIGNAL(MethodInfo("caret_changed"));
 	ADD_SIGNAL(MethodInfo("selection_changed"));
 
-	/* Gutters. */
+	// --- Gutters. ---
 	ADD_SIGNAL(MethodInfo("gutter_clicked", PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "gutter")));
 	ADD_SIGNAL(MethodInfo("gutter_added"));
 	ADD_SIGNAL(MethodInfo("gutter_removed"));
 
-	/* Theme items */
-	/* Search */
+	// Theme items.
+	// --- Search. ---
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_border_color);
 
-	/* Caret */
+	// --- Caret. ---
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, TextEdit, caret_width);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, caret_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, caret_background_color);
 
-	/* Selection */
+	// --- Selection. ---
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, font_selected_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, selection_color);
 
-	/* Other visuals */
+	// --- Other visuals. ---
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_normal, "normal");
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_focus, "focus");
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_readonly, "read_only");
@@ -6776,7 +6776,7 @@ void TextEdit::_bind_methods() {
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, current_line_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, word_highlighted_color);
 
-	/* Settings. */
+	// Settings.
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "gui/timers/text_edit_idle_detect_sec", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater"), 3);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), 1024);
 }
@@ -6835,9 +6835,9 @@ void TextEdit::_set_symbol_lookup_word(const String &p_symbol) {
 	queue_redraw();
 }
 
-/* Text manipulation */
+// --- Text manipulation. ---
 
-// Overridable actions
+// Overridable actions.
 void TextEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) {
 	ERR_FAIL_COND(p_caret >= get_caret_count() || p_caret < -1);
 	if (!editable) {
@@ -7171,7 +7171,7 @@ void TextEdit::_update_context_menu() {
 #undef MENU_ITEM_CHECKED
 }
 
-/* Versioning */
+// --- Versioning. ---
 void TextEdit::_push_current_op() {
 	if (pending_action_end) {
 		start_action(EditAction::ACTION_NONE);
@@ -7229,7 +7229,7 @@ void TextEdit::_clear_redo() {
 	}
 }
 
-/* Search */
+// --- Search. ---
 int TextEdit::_get_column_pos_of_word(const String &p_key, const String &p_search, uint32_t p_search_flags, int p_from_column) const {
 	int col = -1;
 
@@ -7270,7 +7270,7 @@ int TextEdit::_get_column_pos_of_word(const String &p_key, const String &p_searc
 	return col;
 }
 
-/* Mouse */
+// --- Mouse. ---
 int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) const {
 	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
 	p_wrap_index = MIN(p_wrap_index, text.get_line_data(p_line)->get_line_count() - 1);
@@ -7286,7 +7286,7 @@ int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) con
 	return ofs;
 }
 
-/* Caret */
+// --- Caret. ---
 void TextEdit::_caret_changed(int p_caret) {
 	queue_redraw();
 
@@ -7434,7 +7434,7 @@ void TextEdit::_cancel_drag_and_drop_text() {
 	}
 }
 
-/* Selection */
+// --- Selection. ---
 void TextEdit::_selection_changed(int p_caret) {
 	if (!selecting_enabled) {
 		return;
@@ -7581,7 +7581,7 @@ void TextEdit::_pre_shift_selection(int p_caret) {
 	carets.write[p_caret].selection.word_end_column = get_caret_column(p_caret);
 }
 
-/* Line Wrapping */
+// --- Line wrapping. ---
 void TextEdit::_update_wrap_at_column(bool p_force) {
 	int new_wrap_at = get_size().width - theme_cache.style_normal->get_minimum_size().width - gutters_width - gutter_padding;
 	if (draw_minimap) {
@@ -7590,7 +7590,7 @@ void TextEdit::_update_wrap_at_column(bool p_force) {
 	if (v_scroll->is_visible_in_tree()) {
 		new_wrap_at -= v_scroll->get_combined_minimum_size().width;
 	}
-	/* Give it a little more space. */
+	// Give it a little more space.
 	new_wrap_at -= wrap_right_offset;
 
 	if ((wrap_at_column != new_wrap_at) || p_force) {
@@ -7630,7 +7630,7 @@ void TextEdit::_update_wrap_at_column(bool p_force) {
 	set_line_as_first_visible(first_visible_line, first_visible_line_wrap_ofs);
 }
 
-/* Viewport. */
+// --- Viewport. ---
 void TextEdit::_update_scrollbars() {
 	Size2 size = get_size();
 	Size2 hmin = h_scroll->get_combined_minimum_size();
@@ -7859,7 +7859,7 @@ void TextEdit::_scroll_lines_down() {
 	merge_overlapping_carets();
 }
 
-// Minimap
+// Minimap.
 
 void TextEdit::_update_minimap_hover() {
 	const Point2 mp = get_local_mouse_pos();
@@ -7934,7 +7934,7 @@ void TextEdit::_update_minimap_drag() {
 	v_scroll->set_as_ratio(minimap_scroll_ratio + diff);
 }
 
-/* Gutters. */
+// --- Gutters. ---
 void TextEdit::_update_gutter_width() {
 	gutters_width = 0;
 	for (int i = 0; i < gutters.size(); i++) {
@@ -7948,7 +7948,7 @@ void TextEdit::_update_gutter_width() {
 	queue_redraw();
 }
 
-/* Syntax highlighting. */
+// --- Syntax highlighting. ---
 Dictionary TextEdit::_get_line_syntax_highlighting(int p_line) {
 	return syntax_highlighter.is_null() && !setting_text ? Dictionary() : syntax_highlighter->get_line_syntax_highlighting(p_line);
 }
@@ -7996,7 +7996,7 @@ void TextEdit::_insert_text(int p_line, int p_char, const String &p_text, int *r
 		return;
 	}
 
-	/* UNDO!! */
+	// Add operation for undo.
 	TextOperation op;
 	op.type = TextOperation::TYPE_INSERT;
 	op.from_line = p_line;
@@ -8055,7 +8055,7 @@ void TextEdit::_remove_text(int p_from_line, int p_from_column, int p_to_line, i
 		return;
 	}
 
-	/* UNDO! */
+	// Add operation for undo.
 	TextOperation op;
 	op.type = TextOperation::TYPE_REMOVE;
 	op.from_line = p_from_line;
@@ -8208,14 +8208,14 @@ TextEdit::TextEdit(const String &p_placeholder) {
 
 	v_scroll->connect("scrolling", callable_mp(this, &TextEdit::_v_scroll_input));
 
-	/* Caret. */
+	// Caret.
 	caret_blink_timer = memnew(Timer);
 	add_child(caret_blink_timer, false, INTERNAL_MODE_FRONT);
 	caret_blink_timer->set_wait_time(0.65);
 	caret_blink_timer->connect("timeout", callable_mp(this, &TextEdit::_toggle_draw_caret));
 	set_caret_blink_enabled(false);
 
-	/* Selection. */
+	// Selection.
 	click_select_held = memnew(Timer);
 	add_child(click_select_held, false, INTERNAL_MODE_FRONT);
 	click_select_held->set_wait_time(0.05);

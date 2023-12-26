@@ -6457,7 +6457,7 @@ TEST_CASE("[SceneTree][TextEdit] viewport") {
 	SEND_GUI_MOUSE_BUTTON_EVENT(Point2i(10, 10), MouseButton::WHEEL_UP, 0, Key::NONE);
 	CHECK(text_edit->get_v_scroll() == v_scroll);
 
-	// smooth scroll speed.
+	// Smooth scroll speed.
 	text_edit->set_smooth_scroll_enabled(true);
 
 	v_scroll = text_edit->get_v_scroll();
