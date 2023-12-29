@@ -4503,47 +4503,486 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		code_edit->set_text("test\nlines\nto\n\nmove\naround");
 
 		// Move line up with caret on it.
-		// code_edit->move_lines_up();
+		code_edit->set_caret_line(2);
+		code_edit->set_caret_column(1);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nto\nlines\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
 
 		// Undo.
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 1);
 
 		// Redo.
+		code_edit->redo();
+		CHECK(code_edit->get_text() == "test\nto\nlines\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
 
 		// Does nothing at the first line.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(1);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 1);
 
 		// Works on empty line.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->set_caret_line(3);
+		code_edit->set_caret_column(0);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\n\nto\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Move multiple lines up with selection.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(4, 0, 5, 1);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\nto\nmove\naround\n");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 4);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Does not affect line with selection end at column 0.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(4, 0, 5, 0);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\nto\nmove\n\naround");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 4);
+		CHECK(code_edit->get_caret_column() == 0);
 
 		// Move multiple lines up with selection, right to left selection.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(5, 2, 4, 1);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\nto\nmove\naround\n");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 4);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_line() == 3);
+		CHECK(code_edit->get_caret_column() == 1);
 
-		// Move multiple lines with multiple carets.
+		// Move multiple lines with multiple carets. A line with multiple carets is only moved once.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(5, 2, 5, 4);
+		code_edit->add_caret(4, 0);
+		code_edit->add_caret(4, 4);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "test\nlines\nto\nmove\naround\n");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 4);
+		CHECK(code_edit->get_selection_origin_column(0) == 2);
+		CHECK(code_edit->get_caret_line(0) == 4);
+		CHECK(code_edit->get_caret_column(0) == 4);
+		CHECK_FALSE(code_edit->has_selection(1));
+		CHECK(code_edit->get_caret_line(1) == 3);
+		CHECK(code_edit->get_caret_column(1) == 0);
+		CHECK_FALSE(code_edit->has_selection(2));
+		CHECK(code_edit->get_caret_line(2) == 3);
+		CHECK(code_edit->get_caret_column(2) == 4);
 
 		// Move multiple separate lines with multiple selections.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(2, 2, 1, 4);
+		code_edit->add_caret(5, 0);
+		code_edit->select(5, 0, 5, 1, 1);
+		code_edit->move_lines_up();
+		CHECK(code_edit->get_text() == "lines\nto\ntest\n\naround\nmove");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 1);
+		CHECK(code_edit->get_selection_origin_column(0) == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 4);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 4);
+		CHECK(code_edit->get_selection_origin_column(1) == 0);
+		CHECK(code_edit->get_caret_line(1) == 4);
+		CHECK(code_edit->get_caret_column(1) == 1);
 	}
 
 	SUBCASE("[SceneTree][CodeEdit] Move Lines Down") {
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+
+		// Move line down with caret on it.
+		code_edit->set_caret_line(1);
+		code_edit->set_caret_column(1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\nto\nlines\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Undo.
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Redo.
+		code_edit->redo();
+		CHECK(code_edit->get_text() == "test\nto\nlines\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Does nothing at the last line.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->set_caret_line(5);
+		code_edit->set_caret_column(1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\nmove\naround");
+		CHECK(code_edit->get_caret_line() == 5);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Works on empty line.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->set_caret_line(3);
+		code_edit->set_caret_column(0);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\nlines\nto\nmove\n\naround");
+		CHECK(code_edit->get_caret_line() == 4);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Move multiple lines down with selection.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(1, 0, 2, 1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\n\nlines\nto\nmove\naround");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 2);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 3);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Does not affect line with selection end at column 0.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(1, 0, 2, 0);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\nto\nlines\n\nmove\naround");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 2);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK(code_edit->get_caret_line() == 3);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Move multiple lines down with selection, right to left selection.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(2, 2, 1, 1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "test\n\nlines\nto\nmove\naround");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 3);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Move multiple lines with multiple carets. A line with multiple carets is only moved once.
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(1, 2, 1, 4);
+		code_edit->add_caret(0, 0);
+		code_edit->add_caret(0, 1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "to\ntest\nlines\n\nmove\naround");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 2);
+		CHECK(code_edit->get_selection_origin_column(0) == 2);
+		CHECK(code_edit->get_caret_line(0) == 2);
+		CHECK(code_edit->get_caret_column(0) == 4);
+		CHECK_FALSE(code_edit->has_selection(1));
+		CHECK(code_edit->get_caret_line(1) == 1);
+		CHECK(code_edit->get_caret_column(1) == 0);
+		CHECK_FALSE(code_edit->has_selection(2));
+		CHECK(code_edit->get_caret_line(2) == 1);
+		CHECK(code_edit->get_caret_column(2) == 1);
+
+		// Move multiple separate lines with multiple selections.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\nmove\naround");
+		code_edit->select(0, 2, 1, 4);
+		code_edit->add_caret(4, 0);
+		code_edit->select(4, 0, 4, 2, 1);
+		code_edit->move_lines_down();
+		CHECK(code_edit->get_text() == "to\ntest\nlines\n\naround\nmove");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 1);
+		CHECK(code_edit->get_selection_origin_column(0) == 2);
+		CHECK(code_edit->get_caret_line(0) == 2);
+		CHECK(code_edit->get_caret_column(0) == 4);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 5);
+		CHECK(code_edit->get_selection_origin_column(1) == 0);
+		CHECK(code_edit->get_caret_line(1) == 5);
+		CHECK(code_edit->get_caret_column(1) == 2);
 	}
 
 	SUBCASE("[SceneTree][CodeEdit] Delete Lines") {
+		code_edit->set_text("test\nlines\nto\n\ndelete");
+
 		// Delete line with caret on it.
+		code_edit->set_caret_line(1);
+		code_edit->set_caret_column(1);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "test\nto\n\ndelete");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
+
 		// Undo.
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\ndelete");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
+
 		// Redo.
+		code_edit->redo();
+		CHECK(code_edit->get_text() == "test\nto\n\ndelete");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Delete empty line.
+		code_edit->set_caret_line(2);
+		code_edit->set_caret_column(0);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "test\nto\ndelete");
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Deletes only one line when there are multiple carets on it. Carets move down and the column gets clamped.
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(0);
+		code_edit->add_caret(0, 1);
+		code_edit->add_caret(0, 4);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "to\ndelete");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 1);
+		CHECK(code_edit->get_caret_line(2) == 0);
+		CHECK(code_edit->get_caret_column(2) == 2);
+
 		// Delete multiple lines with selection.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\ndelete");
+		code_edit->select(0, 1, 2, 1);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "\ndelete");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Does not affect line with selection end at column 0.
+		code_edit->set_text("test\nlines\nto\n\ndelete");
+		code_edit->select(0, 1, 1, 0);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "lines\nto\n\ndelete");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
 		// Delete multiple lines with multiple carets.
+		code_edit->set_text("test\nlines\nto\n\ndelete");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(2);
+		code_edit->add_caret(1, 0);
+		code_edit->add_caret(4, 5);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "to\n");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 1);
+		CHECK(code_edit->get_caret_column(1) == 0);
+
 		// Delete multiple separate lines with multiple selections.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\ndelete");
+		code_edit->add_caret(4, 5);
+		code_edit->select(0, 1, 1, 1);
+		code_edit->select(5, 5, 4, 0, 1);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "to\n");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 1);
+		CHECK(code_edit->get_caret_line(1) == 1);
+		CHECK(code_edit->get_caret_column(1) == 0);
+
 		// Deletes contents when there is only one line.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(4);
+		code_edit->delete_lines();
+		CHECK(code_edit->get_text() == "");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
 	}
 
 	SUBCASE("[SceneTree][CodeEdit] Duplicate Selection") {
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+
 		// Duplicate selected text.
+		code_edit->select(0, 1, 1, 2);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\nliest\nlines\nto\n\nduplicate");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 2);
+
 		// Undo.
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "test\nlines\nto\n\nduplicate");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 1);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 2);
+
 		// Redo.
+		code_edit->redo();
+		CHECK(code_edit->get_text() == "test\nliest\nlines\nto\n\nduplicate");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 2);
+
 		// Duplicate selected text, right to left selection.
-		// Does nothing if there are no selections.
-		// Duplicate multiple separate selections. Ignores non-selections.
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+		code_edit->select(1, 1, 0, 2);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\nlst\nlines\nto\n\nduplicate");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selection_origin_line() == 2);
+		CHECK(code_edit->get_selection_origin_column() == 1);
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 1);
+
+		// Duplicate line if there is no selection.
+		code_edit->deselect();
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+		code_edit->set_caret_line(1);
+		code_edit->set_caret_column(2);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\nlines\nlines\nto\n\nduplicate");
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 2);
+		CHECK(code_edit->get_caret_column() == 2);
+
+		// Duplicate multiple lines.
+		code_edit->deselect();
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+		code_edit->set_caret_line(1);
+		code_edit->set_caret_column(2);
+		code_edit->add_caret(5, 0);
+		code_edit->add_caret(0, 4);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\ntest\nlines\nlines\nto\n\nduplicate\nduplicate");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line(0) == 3);
+		CHECK(code_edit->get_caret_column(0) == 2);
+		CHECK(code_edit->get_caret_line(1) == 7);
+		CHECK(code_edit->get_caret_column(1) == 0);
+		CHECK(code_edit->get_caret_line(2) == 1);
+		CHECK(code_edit->get_caret_column(2) == 4);
+
+		// Duplicate multiple separate selections.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+		code_edit->add_caret(4, 4);
+		code_edit->add_caret(0, 1);
+		code_edit->add_caret(0, 4);
+		code_edit->select(2, 0, 2, 1, 0);
+		code_edit->select(3, 0, 4, 4, 1);
+		code_edit->select(0, 1, 0, 0, 2);
+		code_edit->select(0, 2, 0, 4, 3);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "ttestst\nlines\ntto\n\ndupl\nduplicate");
+		CHECK(code_edit->get_caret_count() == 4);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 2);
+		CHECK(code_edit->get_selection_origin_column(0) == 1);
+		CHECK(code_edit->get_caret_line(0) == 2);
+		CHECK(code_edit->get_caret_column(0) == 2);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 4);
+		CHECK(code_edit->get_selection_origin_column(1) == 4);
+		CHECK(code_edit->get_caret_line(1) == 5);
+		CHECK(code_edit->get_caret_column(1) == 4);
+		CHECK(code_edit->has_selection(2));
+		CHECK(code_edit->get_selection_origin_line(2) == 0);
+		CHECK(code_edit->get_selection_origin_column(2) == 2);
+		CHECK(code_edit->get_caret_line(2) == 0);
+		CHECK(code_edit->get_caret_column(2) == 1);
+		CHECK(code_edit->has_selection(3));
+		CHECK(code_edit->get_selection_origin_line(3) == 0);
+		CHECK(code_edit->get_selection_origin_column(3) == 5);
+		CHECK(code_edit->get_caret_line(3) == 0);
+		CHECK(code_edit->get_caret_column(3) == 7);
+
 		// Duplicate adjacent selections.
-		// todo
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test\nlines\nto\n\nduplicate");
+		code_edit->add_caret(1, 2);
+		code_edit->select(1, 0, 1, 1, 0);
+		code_edit->select(1, 1, 1, 4, 1);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\nllineines\nto\n\nduplicate");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 1);
+		CHECK(code_edit->get_selection_origin_column(0) == 1);
+		CHECK(code_edit->get_caret_line(0) == 1);
+		CHECK(code_edit->get_caret_column(0) == 2);
+		CHECK(code_edit->has_selection(1));
+		CHECK(code_edit->get_selection_origin_line(1) == 1);
+		CHECK(code_edit->get_selection_origin_column(1) == 5);
+		CHECK(code_edit->get_caret_line(1) == 1);
+		CHECK(code_edit->get_caret_column(1) == 8);
+
+		// Duplicate lines then duplicate selections when there are both selections and non-selections.
+		code_edit->remove_secondary_carets();
+		code_edit->set_text("test duplicate");
+		code_edit->select(0, 14, 0, 13, 0);
+		code_edit->add_caret(0, 8);
+		code_edit->add_caret(0, 4);
+		code_edit->select(0, 2, 0, 4, 2);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test duplicate\ntestst duplicatee");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK(code_edit->has_selection(0));
+		CHECK(code_edit->get_selection_origin_line(0) == 1);
+		CHECK(code_edit->get_selection_origin_column(0) == 17);
+		CHECK(code_edit->get_caret_line(0) == 1);
+		CHECK(code_edit->get_caret_column(0) == 16);
+		CHECK_FALSE(code_edit->has_selection(1));
+		CHECK(code_edit->get_caret_line(1) == 1);
+		CHECK(code_edit->get_caret_column(1) == 10);
+		CHECK(code_edit->has_selection(2));
+		CHECK(code_edit->get_selection_origin_line(2) == 1);
+		CHECK(code_edit->get_selection_origin_column(2) == 4);
+		CHECK(code_edit->get_caret_line(2) == 1);
+		CHECK(code_edit->get_caret_column(2) == 6);
 	}
 
 	SUBCASE("[SceneTree][CodeEdit] Duplicate Lines") {
@@ -4619,9 +5058,9 @@ func _ready():
 		CHECK(code_edit->get_caret_column() == 8);
 
 		// Duplicate single lines with multiple carets. Multiple carets on a single line only duplicate once.
-		code_edit->set_text(reset_text);
-		code_edit->deselect();
 		code_edit->remove_secondary_carets();
+		code_edit->deselect();
+		code_edit->set_text(reset_text);
 		code_edit->set_caret_line(3);
 		code_edit->set_caret_column(1);
 		code_edit->add_caret(5, 1);
@@ -4656,9 +5095,9 @@ func _ready():
 		CHECK(code_edit->get_caret_line(3) == 6);
 		CHECK(code_edit->get_caret_column(3) == 2);
 
-		// Duplicate multiple lines with multiple carets.
-		code_edit->set_text(reset_text);
+		// Duplicate multiple lines with multiple selections.
 		code_edit->remove_secondary_carets();
+		code_edit->set_text(reset_text);
 		code_edit->add_caret(4, 2);
 		code_edit->add_caret(6, 0);
 		code_edit->add_caret(7, 8);
@@ -4709,9 +5148,6 @@ func _ready():
 		CHECK(code_edit->get_selection_origin_column(3) == 3);
 		CHECK(code_edit->get_caret_line(3) == 14);
 		CHECK(code_edit->get_caret_column(3) == 8);
-
-		// Duplicate lines with mixed selections and regular carets.
-		// todo
 	}
 
 	memdelete(code_edit);

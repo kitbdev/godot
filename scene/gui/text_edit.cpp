@@ -3376,7 +3376,7 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 				set_caret_line(caret_new_line, false, true, -1, i);
 				set_caret_column(caret_column, false, i);
 			}
-			if (selected && get_selection_origin_line(i) == p_from_line || get_selection_origin_line(i) == p_to_line) {
+			if (selected && (get_selection_origin_line(i) == p_from_line || get_selection_origin_line(i) == p_to_line)) {
 				int origin_new_line = get_selection_origin_line(i) == p_from_line ? p_to_line : p_from_line;
 				int origin_column = get_selection_origin_column(i);
 				select(origin_new_line, origin_column, get_caret_line(i), get_caret_column(i), i);

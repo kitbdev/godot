@@ -2262,16 +2262,27 @@ void CodeEdit::move_lines_up() {
 	begin_complex_operation();
 	begin_multicaret_edit();
 
+	// Move lines up by swapping each line with the one above it.
 	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
 	for (Point2i line_range : line_ranges) {
 		if (line_range.x == 0) {
 			continue;
 		}
+		unfold_line(line_range.x - 1);
 		for (int line = line_range.x; line <= line_range.y; line++) {
 			unfold_line(line);
-			unfold_line(line - 1);
-
 			swap_lines(line - 1, line);
+		}
+	}
+
+	// Fix selection if it ended at column 0, since it wasn't moved.
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (has_selection(i) && get_selection_to_column(i) == 0 && get_selection_to_line(i) != 0) {
+			if (is_selection_direction_right(i)) {
+				set_caret_line(get_caret_line(i) - 1, false, true, -1, i);
+			} else {
+				set_selection_origin_line(get_selection_origin_line(i) - 1, i);
+			}
 		}
 	}
 
@@ -2284,14 +2295,26 @@ void CodeEdit::move_lines_down() {
 	begin_multicaret_edit();
 
 	Vector<Point2i> line_ranges = get_line_ranges_from_carets();
+
+	// Fix selection if it ended at column 0, since it won't be moved.
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (has_selection(i) && get_selection_to_column(i) == 0 && get_selection_to_line(i) != get_line_count() - 1) {
+			if (is_selection_direction_right(i)) {
+				set_caret_line(get_caret_line(i) + 1, false, true, -1, i);
+			} else {
+				set_selection_origin_line(get_selection_origin_line(i) + 1, i);
+			}
+		}
+	}
+
+	// Move lines down by swapping each line with the one below it.
 	for (Point2i line_range : line_ranges) {
 		if (line_range.y == get_line_count() - 1) {
 			continue;
 		}
+		unfold_line(line_range.y + 1);
 		for (int line = line_range.y; line >= line_range.x; line--) {
 			unfold_line(line);
-			unfold_line(line + 1);
-
 			swap_lines(line + 1, line);
 		}
 	}
@@ -2313,7 +2336,6 @@ void CodeEdit::delete_lines() {
 		if (line_range.x != line_range.y) {
 			remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
 		}
-		// todo test
 		line_offset += line_range.x - line_range.y - 1;
 	}
 
@@ -2328,16 +2350,15 @@ void CodeEdit::duplicate_selection() {
 	begin_complex_operation();
 	begin_multicaret_edit();
 
-	// Duplicate lines first.
+	// Duplicate lines from carets without selections first.
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
 		}
-		// todo Only unhide lines?
 		for (int l = get_selection_from_line(i); l <= get_selection_to_line(i); l++) {
 			unfold_line(l);
 		}
-		if (!has_selection(i)) {
+		if (has_selection(i)) {
 			continue;
 		}
 
@@ -2355,9 +2376,19 @@ void CodeEdit::duplicate_selection() {
 			continue;
 		}
 
-		String text_to_insert = get_selected_text(i);
 		// Insert new text before the selection.
-		insert_text(text_to_insert, get_selection_from_line(i), get_selection_from_column(i));
+		String text_to_insert = get_selected_text(i);
+		int new_from_line = get_selection_to_line(i);
+		int new_from_column = get_selection_to_column(i);
+		// Don't insert before carets, in case another selection was touching it.
+		insert_text(text_to_insert, get_selection_from_line(i), get_selection_from_column(i), false);
+		if (is_selection_direction_right(i)) {
+			set_selection_origin_line(new_from_line, i);
+			set_selection_origin_column(new_from_column, i);
+		} else {
+			set_caret_line(new_from_line, false, true, -1, i);
+			set_caret_column(new_from_column, false, i);
+		}
 	}
 
 	end_multicaret_edit();
