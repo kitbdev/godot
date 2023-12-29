@@ -851,9 +851,7 @@ public:
 	void add_caret_at_carets(bool p_below);
 
 	bool is_line_col_in_range(int p_line, int p_column, int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_include_edges = true) const;
-
-	Vector<int> get_sorted_carets(bool p_include_ignored_carets = false) const; // ? dont cache so its const
-
+	Vector<int> get_sorted_carets(bool p_include_ignored_carets = false) const;
 	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_inclusive = false);
 
 	void merge_overlapping_carets();

@@ -327,9 +327,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK_FALSE("text_set");
 
-			// Remove must be from left to right?.
-			// todo auto swap?
-
 			// Remove mulitple lines.
 			lines_edited_args = build_array(build_array(2, 1));
 			text_edit->set_caret_line(2);
@@ -412,8 +409,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			text_edit->remove_secondary_carets();
 		}
-
-		// todo replace text?
 
 		SUBCASE("[TextEdit] set and get line") {
 			// Set / Get line is 0 indexed.
@@ -1432,10 +1427,16 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column() == 3);
 			CHECK_FALSE(text_edit->is_selection_direction_right());
 
-			// Toggle comment stops selection mode.
-			// todo cant test on textedit?
-
-			// todo click in non last?
+			// Entering text stops selecting.
+			text_edit->insert_text_at_caret("a");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "thiaelection");
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 10).get_center() + Point2i(2, 0), MouseButtonMask::NONE, Key::NONE);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
 		}
 
 		SUBCASE("[TextEdit] mouse word select") {
@@ -5080,7 +5081,6 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 		}
 
 		SUBCASE("[TextEdit] unicode") {
-			// TODO: Add undo / redo tests?
 			text_edit->set_text("\n");
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(0);
@@ -5099,6 +5099,26 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			SEND_GUI_KEY_EVENT(Key::A);
 			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK(text_edit->get_text() == "aA\naA");
+			CHECK(text_edit->get_caret_column() == 2);
+			CHECK(text_edit->get_caret_column(1) == 2);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Undo reverts both carets.
+			text_edit->undo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "a\na");
+			CHECK(text_edit->get_caret_column() == 1);
+			CHECK(text_edit->get_caret_column(1) == 1);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", reverse_nested(lines_edited_args));
+
+			// Redo.
+			text_edit->redo();
+			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "aA\naA");
 			CHECK(text_edit->get_caret_column() == 2);
 			CHECK(text_edit->get_caret_column(1) == 2);
@@ -5774,9 +5794,6 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 6);
 		CHECK(text_edit->is_selection_direction_right(0));
-	}
-
-	SUBCASE("[TextEdit] collapse carets") { // todo needed or private?
 	}
 
 	SUBCASE("[TextEdit] add caret at carets") {

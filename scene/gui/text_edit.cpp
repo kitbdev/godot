@@ -4675,7 +4675,7 @@ bool TextEdit::is_line_col_in_range(int p_line, int p_column, int p_from_line, i
 
 struct _CaretSortComparator {
 	_FORCE_INLINE_ bool operator()(const Vector3i &a, const Vector3i &b) const {
-		// x is column, y is line, z is index.
+		// x is column, y is line, z is caret index.
 		if (a.y == b.y) {
 			return a.x < b.x;
 		}
@@ -4685,7 +4685,6 @@ struct _CaretSortComparator {
 
 Vector<int> TextEdit::get_sorted_carets(bool p_include_ignored_carets) const {
 	// Returns caret indexes sorted by selection start or caret position from top to bottom of text.
-	// todo is v3 clean enough?
 	Vector<Vector3i> caret_line_col_indexes;
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (!p_include_ignored_carets && multicaret_edit_ignore_caret(i)) {
@@ -4703,9 +4702,9 @@ Vector<int> TextEdit::get_sorted_carets(bool p_include_ignored_carets) const {
 }
 
 void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_inclusive) {
-	// Collapse carets in the selected range(inclusive) to the from position.
+	// Collapse carets in the selected range (inclusive by default) to the from position.
 
-	// Clamp the collapse to position, but not the from and to positions.
+	// Clamp the collapse target position.
 	int collapse_line = CLAMP(p_from_line, 0, text.size() - 1);
 	int collapse_column = CLAMP(p_from_column, 0, text[p_from_line].length());
 
@@ -4765,8 +4764,7 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 }
 
 void TextEdit::merge_overlapping_carets() {
-	// todo this is used on mouse move, so maybe should cache sorted anyway?
-	Vector<int> sorted_carets = get_sorted_carets(true); // todo or just clear it first?
+	Vector<int> sorted_carets = get_sorted_carets(true);
 	for (int i = 0; i < sorted_carets.size() - 1; i++) {
 		int first_caret = sorted_carets[i];
 		int second_caret = sorted_carets[i + 1];
@@ -4861,7 +4859,7 @@ void TextEdit::check_overlapping_carets() { // todo use?
 		merge_overlapping_carets();
 		return;
 	}
-	multicaret_edit_ignore_carets.clear(); // todo only for merged carets now?
+	multicaret_edit_ignore_carets.clear();
 	Vector<int> sorted_carets = get_sorted_carets(true);
 	for (int i = 0; i < sorted_carets.size() - 1; i++) {
 		int first_caret = sorted_carets[i];
@@ -4994,7 +4992,6 @@ int TextEdit::get_caret_line(int p_caret) const {
 	return carets[p_caret].line;
 }
 
-// todo update bind param name
 void TextEdit::set_caret_column(int p_column, bool p_adjust_viewport, int p_caret) {
 	ERR_FAIL_INDEX(p_caret, carets.size());
 
@@ -5047,7 +5044,7 @@ String TextEdit::get_word_under_caret(int p_caret) const {
 		for (int i = 0; i < words.size(); i = i + 2) {
 			if (words[i] <= get_caret_column(c) && words[i + 1] > get_caret_column(c)) {
 				selected_text += text[get_caret_line(c)].substr(words[i], words[i + 1] - words[i]);
-				if (p_caret == -1 && c != 0) { // todo check this
+				if (p_caret == -1 && c != 0) {
 					selected_text += "\n";
 				}
 			}
@@ -6066,7 +6063,7 @@ void TextEdit::merge_gutters(int p_from_line, int p_to_line) {
 			text.set_line_gutter_item_color(p_to_line, i, text.get_line_gutter_item_color(p_from_line, i));
 		}
 
-		if (text.get_line_gutter_metadata(p_from_line, i) != "") { // todo is this a good variant check?
+		if (text.get_line_gutter_metadata(p_from_line, i) != "") {
 			text.set_line_gutter_metadata(p_to_line, i, text.get_line_gutter_metadata(p_from_line, i));
 		}
 
