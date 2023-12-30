@@ -287,8 +287,6 @@ private:
 	void _clear();
 	void _update_caches();
 
-	void _cancel_ime(); // todo public.
-	void _apply_ime();
 	void _close_ime_window();
 	void _update_ime_window_position();
 	void _update_ime_text();
@@ -629,7 +627,7 @@ protected:
 
 	virtual void _update_theme_item_cache() override;
 
-	/* Internal API for CodeEdit, pending public API. */
+	// --- Internal API for CodeEdit, pending public API. ---
 	// Brace matching.
 	struct BraceMatchingData {
 		int open_match_line = -1;
@@ -699,6 +697,8 @@ public:
 	// --- Text. ---
 	// Text properties.
 	bool has_ime_text() const;
+	void cancel_ime();
+	void apply_ime();
 
 	void set_editable(const bool p_editable);
 	bool is_editable() const;

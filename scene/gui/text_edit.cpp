@@ -1531,7 +1531,7 @@ void TextEdit::_notification(int p_what) {
 				caret_blink_timer->stop();
 			}
 
-			_cancel_ime();
+			apply_ime();
 
 			if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_VIRTUAL_KEYBOARD) && virtual_keyboard_enabled) {
 				DisplayServer::get_singleton()->virtual_keyboard_hide();
@@ -1557,6 +1557,7 @@ void TextEdit::_notification(int p_what) {
 				}
 
 				_update_ime_text();
+				adjust_viewport_to_caret(0);
 				queue_redraw();
 			}
 		} break;
@@ -1702,7 +1703,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 				int col = pos.x;
 
 				// Apply and close IME.
-				_apply_ime();
+				apply_ime();
 
 				// Gutters.
 				int left_margin = theme_cache.style_normal->get_margin(SIDE_LEFT);
@@ -1816,27 +1817,26 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 			}
 
 			if (is_middle_mouse_paste_enabled() && mb->get_button_index() == MouseButton::MIDDLE && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_CLIPBOARD_PRIMARY)) {
-				_apply_ime();
+				apply_ime();
 				paste_primary_clipboard();
 			}
 
 			if (mb->get_button_index() == MouseButton::RIGHT && (context_menu_enabled || is_move_caret_on_right_click_enabled())) {
 				_reset_caret_blink_timer();
 				_cancel_drag_and_drop_text();
+				apply_ime();
 
 				Point2i pos = get_line_column_at_pos(mpos);
-				int line = pos.y;
-				int col = pos.x;
-
-				_apply_ime();
+				int mouse_line = pos.y;
+				int mouse_column = pos.x;
 
 				if (is_move_caret_on_right_click_enabled()) {
-					bool selection_clicked = get_selection_at(line, col, true) >= 0;
+					bool selection_clicked = get_selection_at(mouse_line, mouse_column, true) >= 0;
 					if (!selection_clicked) {
 						deselect();
 						remove_secondary_carets();
-						set_caret_line(line, false, false, -1);
-						set_caret_column(col);
+						set_caret_line(mouse_line, false, false, -1);
+						set_caret_column(mouse_column);
 					}
 				}
 
@@ -1956,7 +1956,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 
 		if (drag_action && can_drop_data(mpos, get_viewport()->gui_get_drag_data())) {
-			_apply_ime();
+			apply_ime();
 			// Update drag and drop caret.
 			Point2i pos = get_line_column_at_pos(get_local_mouse_pos());
 
@@ -2786,30 +2786,6 @@ void TextEdit::_update_caches() {
 	}
 }
 
-void TextEdit::_cancel_ime() {
-	if (!has_ime_text()) {
-		return;
-	}
-	ime_text = String();
-	ime_selection = Point2();
-	_close_ime_window();
-	_update_ime_text();
-}
-
-void TextEdit::_apply_ime() {
-	if (!has_ime_text()) {
-		return;
-	}
-	// todo test how this works
-	// Force apply the IME text.
-	// String text = ime_text;
-	// ime_text = String();
-	// ime_selection = Point2();
-	// insert_text_at_caret(text);
-	_close_ime_window();
-	_update_ime_text();
-}
-
 void TextEdit::_close_ime_window() {
 	if (get_viewport()->get_window_id() != DisplayServer::INVALID_WINDOW_ID && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_IME)) {
 		DisplayServer::get_singleton()->window_set_ime_position(Point2(), get_viewport()->get_window_id());
@@ -2818,17 +2794,13 @@ void TextEdit::_close_ime_window() {
 }
 
 void TextEdit::_update_ime_window_position() {
-	// todo separate from activate?
-	// todo dont update position when no ime text? might not be able to
-	// todo closing the ime just deactivates but draw activates. problem?
-	// todo check - if closed and no draw was queued, does it not reactivate?
 	if (get_viewport()->get_window_id() != DisplayServer::INVALID_WINDOW_ID && DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_IME)) {
 		DisplayServer::get_singleton()->window_set_ime_active(true, get_viewport()->get_window_id());
-		// todo not updating with scroll.
 		Point2 pos = get_global_position() + get_caret_draw_pos();
 		if (get_window()->get_embedder()) {
 			pos += get_viewport()->get_popup_base_transform().get_origin();
 		}
+		// The window will move to the updated position the next time the IME is updated, not immediately.
 		DisplayServer::get_singleton()->window_set_ime_position(pos, get_viewport()->get_window_id());
 	}
 }
@@ -3000,6 +2972,26 @@ void TextEdit::set_tooltip_request_func(const Callable &p_tooltip_callback) {
 // Text properties.
 bool TextEdit::has_ime_text() const {
 	return !ime_text.is_empty();
+}
+
+void TextEdit::cancel_ime() {
+	if (!has_ime_text()) {
+		return;
+	}
+	ime_text = String();
+	ime_selection = Point2();
+	_close_ime_window();
+	_update_ime_text();
+}
+
+void TextEdit::apply_ime() {
+	if (!has_ime_text()) {
+		return;
+	}
+	// Force apply the current IME text.
+	String insert_ime_text = ime_text;
+	cancel_ime();
+	insert_text_at_caret(insert_ime_text);
 }
 
 void TextEdit::set_editable(const bool p_editable) {
@@ -4488,6 +4480,7 @@ int TextEdit::add_caret(int p_line, int p_column) {
 		return -1;
 	}
 	_cancel_drag_and_drop_text();
+	apply_ime();
 
 	p_line = CLAMP(p_line, 0, text.size() - 1);
 	p_column = CLAMP(p_column, 0, get_line(p_line).length());
@@ -4517,6 +4510,7 @@ int TextEdit::add_caret(int p_line, int p_column) {
 void TextEdit::remove_caret(int p_caret) {
 	ERR_FAIL_COND_MSG(carets.size() <= 1, "The main caret should not be removed.");
 	ERR_FAIL_INDEX(p_caret, carets.size());
+	apply_ime();
 
 	_caret_changed(p_caret);
 	carets.remove_at(p_caret);
@@ -4530,6 +4524,7 @@ void TextEdit::remove_secondary_carets() {
 	if (get_caret_count() == 1) {
 		return;
 	}
+	apply_ime();
 
 	_caret_changed();
 	Caret drag_caret;
@@ -4928,6 +4923,7 @@ void TextEdit::set_caret_line(int p_line, bool p_adjust_viewport, bool p_can_be_
 	if (setting_caret_line) {
 		return;
 	}
+	apply_ime();
 
 	setting_caret_line = true;
 	p_line = CLAMP(p_line, 0, text.size() - 1);
@@ -4994,6 +4990,7 @@ int TextEdit::get_caret_line(int p_caret) const {
 
 void TextEdit::set_caret_column(int p_column, bool p_adjust_viewport, int p_caret) {
 	ERR_FAIL_INDEX(p_caret, carets.size());
+	apply_ime();
 
 	p_column = CLAMP(p_column, 0, get_line(get_caret_line(p_caret)).length());
 
@@ -6778,7 +6775,7 @@ void TextEdit::_bind_methods() {
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), 1024);
 }
 
-/* Internal API for CodeEdit. */
+// --- Internal API for CodeEdit. ---
 // Line hiding.
 void TextEdit::_set_hiding_enabled(bool p_enabled) {
 	if (hiding_enabled == p_enabled) {
@@ -6953,6 +6950,7 @@ void TextEdit::_copy_internal(int p_caret) {
 		return;
 	}
 
+	// todo fix single caret copy paste line
 	// Copy full lines.
 	StringBuilder clipboard;
 	Vector<int> sorted_carets = get_sorted_carets();
