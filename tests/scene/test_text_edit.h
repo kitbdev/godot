@@ -2417,6 +2417,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 	}
 
 	SUBCASE("[TextEdit] overridable actions") {
+		DisplayServerMock *DS = (DisplayServerMock *)(DisplayServer::get_singleton());
+
 		SIGNAL_WATCH(text_edit, "text_set");
 		SIGNAL_WATCH(text_edit, "text_changed");
 		SIGNAL_WATCH(text_edit, "lines_edited_from");
@@ -2525,12 +2527,11 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 0));
 
-			ERR_PRINT_OFF;
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
-			ERR_PRINT_ON; // Can't check display server content.
-			lines_edited_args = build_array(build_array(1, 0));
+			CHECK(DS->clipboard_get() == "this is\n");
 			CHECK(text_edit->get_text() == "some\n");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 3); // In the default font, this is the same position.
@@ -2541,6 +2542,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Undo restores the cut text.
 			text_edit->undo();
 			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\n");
 			CHECK(text_edit->get_text() == "this is\nsome\n");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 6);
@@ -2551,6 +2553,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			// Redo.
 			text_edit->redo();
 			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\n");
 			CHECK(text_edit->get_text() == "some\n");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 3);
@@ -2560,32 +2563,42 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 			// Cut with a selection removes just the selection.
 			text_edit->set_text("this is\nsome\n");
+			text_edit->select(0, 5, 0, 7);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
-
 			lines_edited_args = build_array(build_array(0, 0));
-			text_edit->select(0, 5, 0, 7);
-			ERR_PRINT_OFF;
+
 			SEND_GUI_ACTION("ui_cut");
 			CHECK(text_edit->get_viewport()->is_input_handled());
 			MessageQueue::get_singleton()->flush();
-			ERR_PRINT_ON; // Can't check display server content.
+			CHECK(DS->clipboard_get() == "is");
 			CHECK(text_edit->get_text() == "this \nsome\n");
+			CHECK_FALSE(text_edit->get_caret_line());
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 5);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
-			// Cut does not change the text if not editable.
+			// Cut does not change the text if not editable. Text is still added to clipboard.
+			text_edit->set_text("this is\nsome\n");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(5);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+
 			text_edit->set_editable(false);
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
 			text_edit->set_editable(true);
-			CHECK(text_edit->get_text() == "this \nsome\n");
+			CHECK(DS->clipboard_get() == "this is\n");
+			CHECK(text_edit->get_text() == "this is\nsome\n");
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 5);
 			SIGNAL_CHECK_FALSE("caret_changed");
@@ -2593,19 +2606,22 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("lines_edited_from");
 
 			// Cut line with multiple carets.
+			text_edit->set_text("this is\nsome\n");
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(3);
 			text_edit->add_caret(0, 2);
 			text_edit->add_caret(0, 4);
 			text_edit->add_caret(2, 0);
 			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
 			SIGNAL_DISCARD("caret_changed");
 			lines_edited_args = build_array(build_array(1, 0), build_array(1, 0));
 
-			ERR_PRINT_OFF;
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
-			ERR_PRINT_ON; // Can't check display server content.
+			CHECK(DS->clipboard_get() == "this is\n\n");
 			CHECK(text_edit->get_text() == "some");
 			CHECK(text_edit->get_caret_count() == 3);
 			CHECK_FALSE(text_edit->has_selection(0));
@@ -2621,39 +2637,602 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			text_edit->remove_secondary_carets();
 
 			// Cut on the only line removes the contents.
-			text_edit->remove_secondary_carets();
 			text_edit->set_caret_line(0);
 			text_edit->set_caret_column(2);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 			lines_edited_args = build_array(build_array(0, 0));
 
-			ERR_PRINT_OFF;
 			text_edit->cut();
 			MessageQueue::get_singleton()->flush();
-			ERR_PRINT_ON; // Can't check display server content.
+			CHECK(DS->clipboard_get() == "some\n");
 			CHECK(text_edit->get_text() == "");
 			CHECK(text_edit->get_line_count() == 1);
-			CHECK(text_edit->get_caret_count() == 1);
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Cut empty line.
+			text_edit->cut();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "\n");
+			CHECK(text_edit->get_text() == "");
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 0);
+			SIGNAL_CHECK_FALSE("caret_changed");
+			// These signals are emitted even if there is no change.
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Cut multiple lines, in order.
+			text_edit->set_text("this is\nsome\ntext to\nbe\n\ncut");
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(7);
+			text_edit->add_caret(3, 0);
+			text_edit->add_caret(0, 2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 0), build_array(3, 2), build_array(2, 1));
+
+			text_edit->cut();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\ntext to\nbe\n");
+			CHECK(text_edit->get_text() == "some\n\ncut");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 2);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			text_edit->remove_secondary_carets();
+
+			// Cut multiple selections, in order. Ignores regular carets.
+			text_edit->set_text("this is\nsome\ntext to\nbe\n\ncut");
+			text_edit->add_caret(3, 0);
+			text_edit->add_caret(0, 2);
+			text_edit->add_caret(2, 0);
+			text_edit->select(1, 0, 1, 2, 0);
+			text_edit->select(3, 0, 4, 0, 1);
+			text_edit->select(0, 5, 0, 3, 2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 1), build_array(4, 3), build_array(0, 0));
+
+			text_edit->cut();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "s \nso\nbe\n");
+			CHECK(text_edit->get_text() == "thiis\nme\ntext to\n\ncut");
+			CHECK(text_edit->get_caret_count() == 4);
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 0);
+			CHECK(text_edit->get_caret_line(1) == 3);
+			CHECK(text_edit->get_caret_column(1) == 0);
+			CHECK(text_edit->get_caret_line(2) == 0);
+			CHECK(text_edit->get_caret_column(2) == 3);
+			CHECK(text_edit->get_caret_line(3) == 2);
+			CHECK(text_edit->get_caret_column(3) == 0);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 		}
 
 		SUBCASE("[TextEdit] copy") {
-			// TODO: Cannot test need display server support.
+			text_edit->set_text("this is\nsome\ntest\n\ntext");
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+
+			// Copy selected text.
+			text_edit->select(0, 0, 1, 2, 0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+			DS->clipboard_set_primary("");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\nso");
+			CHECK(DS->clipboard_get_primary() == "");
+			CHECK(text_edit->get_text() == "this is\nsome\ntest\n\ntext");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 0);
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 2);
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Copy with GUI action.
+			text_edit->select(0, 0, 0, 2, 0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_ACTION("ui_copy");
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "th");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Can copy even if not editable.
+			text_edit->select(2, 4, 1, 2, 0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->set_editable(false);
+			text_edit->copy();
+			text_edit->set_editable(true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "me\ntest");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+			text_edit->deselect();
+
+			// Copy full line when there is no selection.
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\n");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Copy empty line.
+			text_edit->set_caret_line(3);
+			text_edit->set_caret_column(0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "\n");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+			text_edit->deselect();
+
+			// Copy full line with multiple carets on that line only copies once.
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			text_edit->add_caret(1, 0);
+			text_edit->add_caret(1, 4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "some\n");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+			text_edit->remove_secondary_carets();
+
+			// Copy selected text from all selections with `\n` in between, in order. Ignore regular carets.
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(4);
+			text_edit->add_caret(4, 0);
+			text_edit->add_caret(0, 4);
+			text_edit->add_caret(1, 0);
+			text_edit->select(1, 3, 2, 4, 0);
+			text_edit->select(4, 4, 4, 0, 1);
+			text_edit->select(0, 5, 0, 4, 2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == " \ne\ntest\ntext");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+			text_edit->remove_secondary_carets();
+			text_edit->deselect();
+
+			// Copy multiple lines with multiple carets, in order.
+			text_edit->set_caret_line(3);
+			text_edit->set_caret_column(0);
+			text_edit->add_caret(4, 2);
+			text_edit->add_caret(0, 4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->copy();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "this is\n\ntext\n");
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 		}
 
 		SUBCASE("[TextEdit] paste") {
-			// TODO: Cannot test need display server support.
+			// Paste text from clipboard at caret.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 1));
+			DS->clipboard_set("paste");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste");
+			CHECK(text_edit->get_text() == "this is\nsopasteme\n\ntext");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 7);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Undo.
+			text_edit->undo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste");
+			CHECK(text_edit->get_text() == "this is\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 2);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Redo.
+			text_edit->redo();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste");
+			CHECK(text_edit->get_text() == "this is\nsopasteme\n\ntext");
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 7);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste on empty line. Use GUI action.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(2);
+			text_edit->set_caret_column(0);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(2, 2));
+			DS->clipboard_set("paste2");
+
+			SEND_GUI_ACTION("ui_paste");
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste2");
+			CHECK(text_edit->get_text() == "this is\nsome\npaste2\ntext");
+			CHECK(text_edit->get_caret_line() == 2);
+			CHECK(text_edit->get_caret_column() == 6);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste removes selection before pasting.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->select(0, 5, 1, 3);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 0), build_array(0, 0));
+			DS->clipboard_set("paste");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste");
+			CHECK(text_edit->get_text() == "this pastee\n\ntext");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 10);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste multiple lines.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 3));
+			DS->clipboard_set("multi\n\nline\npaste");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "multi\n\nline\npaste");
+			CHECK(text_edit->get_text() == "tmulti\n\nline\npastehis is\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 3);
+			CHECK(text_edit->get_caret_column() == 5);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste full line after copying it.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 2));
+			DS->clipboard_set("");
+			text_edit->copy();
+			text_edit->set_caret_column(3);
+			CHECK(DS->clipboard_get() == "some\n");
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("caret_changed");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "some\n");
+			CHECK(text_edit->get_text() == "this is\nsome\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 2);
+			CHECK(text_edit->get_caret_column() == 3);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Do not paste as line since it wasn't copied.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 1));
+			DS->clipboard_set("paste\n");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste\n");
+			CHECK(text_edit->get_text() == "thispaste\n is\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 0);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste text at each caret.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			text_edit->add_caret(3, 4);
+			text_edit->add_caret(0, 4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 1), build_array(2, 3), build_array(5, 6));
+			DS->clipboard_set("paste\ntest");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste\ntest");
+			CHECK(text_edit->get_text() == "thispaste\ntest is\nsopaste\ntestme\n\ntextpaste\ntest");
+			CHECK(text_edit->get_caret_count() == 3);
+			CHECK(text_edit->get_caret_line(0) == 3);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			CHECK(text_edit->get_caret_line(1) == 6);
+			CHECK(text_edit->get_caret_column(1) == 4);
+			CHECK(text_edit->get_caret_line(2) == 1);
+			CHECK(text_edit->get_caret_column(2) == 4);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			text_edit->remove_secondary_carets();
+
+			// Paste line per caret when the amount of lines is equal to the number of carets.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(2);
+			text_edit->add_caret(3, 4);
+			text_edit->add_caret(0, 4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1), build_array(3, 3));
+			DS->clipboard_set("paste\ntest\n1");
+
+			text_edit->paste();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "paste\ntest\n1");
+			CHECK(text_edit->get_text() == "thispaste is\nsotestme\n\ntext1");
+			CHECK(text_edit->get_caret_count() == 3);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 6);
+			CHECK(text_edit->get_caret_line(1) == 3);
+			CHECK(text_edit->get_caret_column(1) == 5);
+			CHECK(text_edit->get_caret_line(2) == 0);
+			CHECK(text_edit->get_caret_column(2) == 9);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			text_edit->remove_secondary_carets();
+
+			// Cannot paste when not editable.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(4);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			DS->clipboard_set("no paste");
+
+			text_edit->set_editable(false);
+			text_edit->paste();
+			text_edit->set_editable(true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "no paste");
+			CHECK(text_edit->get_text() == "this is\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 		}
 
 		SUBCASE("[TextEdit] paste primary") {
-			// TODO: Cannot test need display server support.
+			// Set size for mouse input.
+			text_edit->set_size(Size2(200, 200));
+
+			text_edit->grab_focus();
+			DS->clipboard_set("");
+			DS->clipboard_set_primary("");
+			CHECK(DS->clipboard_get_primary() == "");
+
+			// Select text with mouse to put into primary clipboard.
+			text_edit->set_text("this is\nsome\n\ntext");
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 2).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 3).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
+			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 3).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
+			CHECK(DS->clipboard_get() == "");
+			CHECK(DS->clipboard_get_primary() == "is is\nsom");
+			CHECK(text_edit->get_text() == "this is\nsome\n\ntext");
+			CHECK(text_edit->has_selection());
+			CHECK(text_edit->get_selected_text() == "is is\nsom");
+			CHECK(text_edit->get_selection_origin_line() == 0);
+			CHECK(text_edit->get_selection_origin_column() == 2);
+			CHECK(text_edit->get_caret_line() == 1);
+			CHECK(text_edit->get_caret_column() == 3);
+			SIGNAL_CHECK_FALSE("text_set");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
+
+			// Middle click to paste at mouse.
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(3, 4));
+
+			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(3, 2).get_center() + Point2i(2, 0), MouseButton::MIDDLE, MouseButtonMask::MIDDLE, Key::NONE);
+			CHECK(DS->clipboard_get_primary() == "is is\nsom");
+			CHECK(text_edit->get_text() == "this is\nsome\n\nteis is\nsomxt");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 4);
+			CHECK(text_edit->get_caret_column() == 3);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste at mouse position if there is only one caret.
+			text_edit->set_text("this is\nsome\n\ntext");
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::NONE, Key::NONE);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			DS->clipboard_set_primary("paste");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			text_edit->paste_primary_clipboard();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get_primary() == "paste");
+			CHECK(text_edit->get_text() == "tpastehis is\nsome\n\ntext");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 6);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Paste at all carets if there are multiple carets.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(0);
+			text_edit->add_caret(2, 0);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 1).get_center() + Point2i(2, 0), MouseButtonMask::NONE, Key::NONE);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			DS->clipboard_set_primary("paste");
+			lines_edited_args = build_array(build_array(1, 1), build_array(2, 2));
+
+			text_edit->paste_primary_clipboard();
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get_primary() == "paste");
+			CHECK(text_edit->get_text() == "this is\npastesome\npaste\ntext");
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->get_caret_line(0) == 1);
+			CHECK(text_edit->get_caret_column(0) == 5);
+			CHECK(text_edit->get_caret_line(1) == 2);
+			CHECK(text_edit->get_caret_column(1) == 5);
+			SIGNAL_CHECK("caret_changed", empty_signal_args);
+			SIGNAL_CHECK("text_changed", empty_signal_args);
+			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Cannot paste if not editable.
+			text_edit->set_text("this is\nsome\n\ntext");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(4);
+			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(1, 3).get_center() + Point2i(2, 0), MouseButtonMask::NONE, Key::NONE);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("caret_changed");
+			DS->clipboard_set("no paste");
+
+			text_edit->set_editable(false);
+			text_edit->paste_primary_clipboard();
+			text_edit->set_editable(true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(DS->clipboard_get() == "no paste");
+			CHECK(text_edit->get_text() == "this is\nsome\n\ntext");
+			CHECK(text_edit->get_caret_line() == 0);
+			CHECK(text_edit->get_caret_column() == 4);
+			SIGNAL_CHECK_FALSE("caret_changed");
+			SIGNAL_CHECK_FALSE("text_changed");
+			SIGNAL_CHECK_FALSE("lines_edited_from");
 		}
 
 		SIGNAL_UNWATCH(text_edit, "text_set");

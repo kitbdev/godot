@@ -6913,18 +6913,21 @@ void TextEdit::_backspace_internal(int p_caret) {
 
 void TextEdit::_cut_internal(int p_caret) {
 	ERR_FAIL_COND(p_caret >= get_caret_count() || p_caret < -1);
+
+	_copy_internal(p_caret);
+
 	if (!editable) {
 		return;
 	}
-
-	_copy_internal(p_caret);
 
 	if (has_selection(p_caret)) {
 		delete_selection(p_caret);
 		return;
 	}
 
-	// Cut full lines.
+	// Remove full lines.
+	begin_complex_operation();
+	begin_multicaret_edit();
 	Vector<Point2i> line_ranges;
 	if (p_caret == -1) {
 		line_ranges = get_line_ranges_from_carets(false, true);
@@ -6940,6 +6943,8 @@ void TextEdit::_cut_internal(int p_caret) {
 		}
 		line_offset += line_range.x - line_range.y - 1;
 	}
+	end_multicaret_edit();
+	end_complex_operation();
 }
 
 void TextEdit::_copy_internal(int p_caret) {
@@ -6952,16 +6957,18 @@ void TextEdit::_copy_internal(int p_caret) {
 
 	// Copy full lines.
 	StringBuilder clipboard;
-	Vector<int> sorted_carets = get_sorted_carets();
-	for (int i = 0; i < get_caret_count(); i++) {
-		int caret_index = sorted_carets[i];
-		if (p_caret != -1 && p_caret != caret_index) {
-			continue;
-		}
-
-		int cl = get_caret_line(caret_index);
-		if (text[cl].length() != 0) {
-			clipboard += _base_get_text(cl, 0, cl, text[cl].length());
+	Vector<Point2i> line_ranges;
+	if (p_caret == -1) {
+		// When there are multiple carets on a line, only copy it once.
+		line_ranges = get_line_ranges_from_carets(false, true);
+	} else {
+		line_ranges.push_back(Point2i(get_caret_line(p_caret), get_caret_line(p_caret)));
+	}
+	for (Point2i line_range : line_ranges) {
+		for (int i = line_range.x; i <= line_range.y; i++) {
+			if (text[i].length() != 0) {
+				clipboard += _base_get_text(i, 0, i, text[i].length());
+			}
 			clipboard += "\n";
 		}
 	}
@@ -6984,15 +6991,13 @@ void TextEdit::_paste_internal(int p_caret) {
 
 	String clipboard = DisplayServer::get_singleton()->clipboard_get();
 
-	// Paste a full line. Ignore '\r' characters that may have been added by the OS.
-	// todo \r needed?
+	// Paste a full line. Ignore '\r' characters that may have been added to the clipboard by the OS.
 	if (get_caret_count() == 1 && !has_selection(0) && !cut_copy_line.is_empty() && cut_copy_line == clipboard.replace("\r", "")) {
 		insert_text(clipboard, get_caret_line(), 0);
 		return;
 	}
 
 	// Paste text at each caret or one line per caret.
-	// todo off by one since last split is empty? matters for multi-line pasting
 	Vector<String> clipboad_lines = clipboard.split("\n");
 	bool insert_line_per_caret = p_caret == -1 && get_caret_count() > 1 && clipboad_lines.size() == get_caret_count();
 
