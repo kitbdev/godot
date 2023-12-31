@@ -6950,7 +6950,6 @@ void TextEdit::_copy_internal(int p_caret) {
 		return;
 	}
 
-	// todo fix single caret copy paste line
 	// Copy full lines.
 	StringBuilder clipboard;
 	Vector<int> sorted_carets = get_sorted_carets();
@@ -6969,7 +6968,12 @@ void TextEdit::_copy_internal(int p_caret) {
 
 	String clipboard_string = clipboard.as_string();
 	DisplayServer::get_singleton()->clipboard_set(clipboard_string);
-	cut_copy_line = clipboard_string;
+	// Set the cut copy line so we know to paste as a line.
+	if (get_caret_count() == 1) {
+		cut_copy_line = clipboard_string;
+	} else {
+		cut_copy_line = "";
+	}
 }
 
 void TextEdit::_paste_internal(int p_caret) {
@@ -6979,33 +6983,37 @@ void TextEdit::_paste_internal(int p_caret) {
 	}
 
 	String clipboard = DisplayServer::get_singleton()->clipboard_get();
+
+	// Paste a full line. Ignore '\r' characters that may have been added by the OS.
+	// todo \r needed?
+	if (get_caret_count() == 1 && !has_selection(0) && !cut_copy_line.is_empty() && cut_copy_line == clipboard.replace("\r", "")) {
+		insert_text(clipboard, get_caret_line(), 0);
+		return;
+	}
+
+	// Paste text at each caret or one line per caret.
+	// todo off by one since last split is empty? matters for multi-line pasting
 	Vector<String> clipboad_lines = clipboard.split("\n");
 	bool insert_line_per_caret = p_caret == -1 && get_caret_count() > 1 && clipboad_lines.size() == get_caret_count();
-	bool is_full_line = !cut_copy_line.is_empty() && cut_copy_line == clipboard;
 
 	begin_complex_operation();
 	begin_multicaret_edit();
-	int clipboad_line = clipboad_lines.size() - 1;
+	Vector<int> sorted_carets = get_sorted_carets();
 	for (int i = 0; i < get_caret_count(); i++) {
-		if (p_caret == -1 && multicaret_edit_ignore_caret(i)) {
-			continue;
-		}
-		if (p_caret != -1 && p_caret != i) {
+		int caret_index = sorted_carets[i];
+		if (p_caret != -1 && p_caret != caret_index) {
 			continue;
 		}
 
-		if (has_selection(i)) {
-			delete_selection(i);
-		} else if (is_full_line) {
-			set_caret_column(0, i == 0, i);
+		if (has_selection(caret_index)) {
+			delete_selection(caret_index);
 		}
 
 		if (insert_line_per_caret) {
-			clipboard = clipboad_lines[clipboad_line];
+			clipboard = clipboad_lines[i];
 		}
 
-		insert_text_at_caret(clipboard, i);
-		clipboad_line--;
+		insert_text_at_caret(clipboard, caret_index);
 	}
 	end_multicaret_edit();
 	end_complex_operation();
