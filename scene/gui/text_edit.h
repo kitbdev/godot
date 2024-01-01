@@ -844,6 +844,9 @@ public:
 	void set_multiple_carets_enabled(bool p_enabled);
 	bool is_multiple_carets_enabled() const;
 
+	Dictionary get_carets_state() const;
+	void set_carets_state(Dictionary p_caret_state);
+
 	int add_caret(int p_line, int p_column);
 	void remove_caret(int p_caret);
 	void remove_secondary_carets();

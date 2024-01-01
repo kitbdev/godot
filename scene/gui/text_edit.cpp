@@ -2968,6 +2968,7 @@ void TextEdit::set_tooltip_request_func(const Callable &p_tooltip_callback) {
 	tooltip_callback = p_tooltip_callback;
 }
 
+// todo block style ok for headers? /**/
 // --- Text. ---
 // Text properties.
 bool TextEdit::has_ime_text() const {
@@ -3291,7 +3292,6 @@ void TextEdit::set_line(int p_line, const String &p_new_text) {
 		}
 	}
 	end_complex_operation();
-	queue_redraw();
 }
 
 String TextEdit::get_line(int p_line) const {
@@ -3503,6 +3503,7 @@ void TextEdit::insert_text(const String &p_text, int p_line, int p_column, bool 
 
 	int new_line, new_column;
 	_insert_text(p_line, p_column, p_text, &new_line, &new_column);
+	// todo before split between start and end of selection?
 	if (p_before_carets) {
 		_offset_carets_after(p_line, p_column, new_line, new_column);
 	} else {
@@ -4473,6 +4474,41 @@ void TextEdit::set_multiple_carets_enabled(bool p_enabled) {
 
 bool TextEdit::is_multiple_carets_enabled() const {
 	return multi_carets_enabled;
+}
+
+Dictionary TextEdit::get_carets_state() const {
+	Dictionary carets_state;
+	Array carets_array;
+	for (int i = 0; i < get_caret_count(); i++) {
+		Dictionary state;
+		state["caret_column"] = get_caret_column();
+		state["caret_line"] = get_caret_line();
+		state["selection"] = has_selection();
+		if (has_selection()) {
+			state["selection_origin_line"] = get_selection_origin_line();
+			state["selection_origin_column"] = get_selection_origin_column();
+		}
+		carets_array.push_back(state);
+	}
+
+	carets_state["carets"] = carets_array;
+	return carets_state;
+}
+
+void TextEdit::set_carets_state(Dictionary p_caret_state) {
+	ERR_FAIL_COND_MSG(!p_caret_state.has("carets"), "Invalid carets state.");
+	remove_secondary_carets();
+	deselect();
+	Array carets_array = p_caret_state["carets"];
+	for (int i = 0; i < carets_array.size(); i++) {
+		Dictionary state = (Dictionary)carets_array[i];
+		if (state.get("selection", false)) {
+			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
+		} else {
+			set_caret_line(state["caret_line"], false, true, -1, i);
+			set_caret_column(state["caret_column"], false, i);
+		}
+	}
 }
 
 int TextEdit::add_caret(int p_line, int p_column) {

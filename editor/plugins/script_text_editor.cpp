@@ -327,6 +327,7 @@ void ScriptTextEditor::_error_clicked(Variant p_line) {
 void ScriptTextEditor::reload_text() {
 	ERR_FAIL_COND(script.is_null());
 
+	// todo mulicaret
 	CodeEdit *te = code_editor->get_text_editor();
 	int column = te->get_caret_column();
 	int row = te->get_caret_line();
@@ -349,20 +350,22 @@ void ScriptTextEditor::add_callback(const String &p_function, PackedStringArray 
 	String code = code_editor->get_text_editor()->get_text();
 	int pos = script->get_language()->find_function(p_function, code);
 	code_editor->get_text_editor()->remove_secondary_carets();
+	// todo begin complex action for undo?
+	code_editor->get_text_editor()->deselect();
 	if (pos == -1) {
-		// todo what is this?
-		//does not exist
-		code_editor->get_text_editor()->deselect();
-		pos = code_editor->get_text_editor()->get_line_count() + 2;
+		// Function does not exist, create it at the end of the file.
+		int last_line = code_editor->get_text_editor()->get_line_count() - 1;
 		String func = script->get_language()->make_function("", p_function, p_args);
-		//code=code+func;
-		// todo just use insert text?
-		code_editor->get_text_editor()->set_caret_line(pos + 1, true, true, -1);
-		code_editor->get_text_editor()->set_caret_column(INT_MAX);
-		code_editor->get_text_editor()->insert_text_at_caret("\n\n" + func);
+		code_editor->get_text_editor()->insert_text("\n\n" + func, last_line, code_editor->get_text_editor()->get_line(last_line).length());
+		pos = last_line + 3;
+	}
+	// Put caret on the line after the function, after the indent.
+	int indent_column = 1;
+	if (EDITOR_GET("text_editor/behavior/indent/type")) {
+		indent_column = EDITOR_GET("text_editor/behavior/indent/size");
 	}
 	code_editor->get_text_editor()->set_caret_line(pos, true, true, -1);
-	code_editor->get_text_editor()->set_caret_column(1);
+	code_editor->get_text_editor()->set_caret_column(indent_column);
 }
 
 bool ScriptTextEditor::show_members_overview() {

@@ -192,10 +192,11 @@ bool FindReplaceBar::_search(uint32_t p_flags, int p_from_line, int p_from_col) 
 }
 
 void FindReplaceBar::_replace() {
+	text_editor->begin_complex_operation();
 	text_editor->remove_secondary_carets();
-	bool selection_enabled = text_editor->has_selection(0);
+	bool has_selection = text_editor->has_selection(0);
 	Point2i selection_begin, selection_end;
-	if (selection_enabled) {
+	if (has_selection) {
 		selection_begin = Point2i(text_editor->get_selection_from_line(0), text_editor->get_selection_from_column(0));
 		selection_end = Point2i(text_editor->get_selection_to_line(0), text_editor->get_selection_to_column(0));
 	}
@@ -203,46 +204,49 @@ void FindReplaceBar::_replace() {
 	String repl_text = get_replace_text();
 	int search_text_len = get_search_text().length();
 
-	text_editor->begin_complex_operation();
-	if (selection_enabled && is_selection_only()) {
+	if (has_selection && is_selection_only()) {
 		// Restrict search_current() to selected region.
-		text_editor->set_caret_line(selection_begin.width, false, true, -1, 0);
-		text_editor->set_caret_column(selection_begin.height, true, 0);
+		// todo
+		// text_editor->set_caret_line(selection_begin.x, false, true, -1, 0);
+		// text_editor->set_caret_column(selection_begin.y, true, 0);
+		preserve_cursor = true;
 	}
 
 	if (search_current()) {
 		text_editor->unfold_line(result_line);
-		text_editor->select(result_line, result_col, result_line, result_col + search_text_len, 0);
 
-		if (selection_enabled && is_selection_only()) {
+		if (has_selection && is_selection_only()) {
 			Point2i match_from(result_line, result_col);
 			Point2i match_to(result_line, result_col + search_text_len);
-			if (!(match_from < selection_begin || match_to > selection_end)) {
-				text_editor->insert_text_at_caret(repl_text, 0);
-				if (match_to.x == selection_end.x) {
-					// Adjust selection bounds if necessary.
-					selection_end.y += repl_text.length() - search_text_len;
-				}
+			if (match_from >= selection_begin && match_to <= selection_end) {
+				// todo insert inside selection, not before or after.
+				// text_editor->get_selection_at(result_line, result_col, true);// todo == match end as well
+				text_editor->remove_text(result_line, result_col, result_line, result_col + search_text_len);
+				text_editor->insert_text(repl_text, result_line, result_col);
 			}
 		} else {
-			// todo cursor is moved from selection!
-			text_editor->insert_text_at_caret(repl_text, 0);
+			text_editor->remove_text(result_line, result_col, result_line, result_col + search_text_len);
+			text_editor->insert_text(repl_text, result_line, result_col);
 		}
 	}
-	text_editor->end_complex_operation();
 	results_count = -1;
 	results_count_to_current = -1;
 	needs_to_count_results = true;
 
-	if (selection_enabled && is_selection_only()) {
+	if (has_selection && is_selection_only()) {
+		// todo need this flag on and off?
+		preserve_cursor = false;
 		// Reselect in order to keep 'Replace' restricted to selection.
-		text_editor->select(selection_begin.x, selection_begin.y, selection_end.x, selection_end.y, 0);
+		// text_editor->select(selection_begin.x, selection_begin.y, selection_end.x, selection_end.y, 0);
 	} else {
 		text_editor->deselect(0);
 	}
+
+	text_editor->end_complex_operation();
 }
 
 void FindReplaceBar::_replace_all() {
+	text_editor->begin_complex_operation();
 	text_editor->remove_secondary_carets();
 	text_editor->disconnect("text_changed", callable_mp(this, &FindReplaceBar::_editor_text_changed));
 	// Line as x so it gets priority in comparison, column as y.
@@ -273,11 +277,9 @@ void FindReplaceBar::_replace_all() {
 
 	replace_all_mode = true;
 
-	text_editor->begin_complex_operation();
-
 	if (selection_enabled && is_selection_only()) {
-		text_editor->set_caret_line(selection_begin.width, false, true, -1, 0);
-		text_editor->set_caret_column(selection_begin.height, true, 0);
+		text_editor->set_caret_line(selection_begin.x, false, true, -1, 0);
+		text_editor->set_caret_column(selection_begin.y, true, 0);
 	} else {
 		text_editor->set_caret_line(0, false, true, -1, 0);
 		text_editor->set_caret_column(0, true, 0);
@@ -318,10 +320,9 @@ void FindReplaceBar::_replace_all() {
 		} while (search_next());
 	}
 
-	text_editor->end_complex_operation();
-
 	replace_all_mode = false;
 
+	// todo fix
 	// Restore editor state (selection, cursor, scroll).
 	text_editor->set_caret_line(orig_cursor.x, false, true, 0, 0);
 	text_editor->set_caret_column(orig_cursor.y, true, 0);
@@ -339,6 +340,8 @@ void FindReplaceBar::_replace_all() {
 	results_count = -1;
 	results_count_to_current = -1;
 	needs_to_count_results = true;
+
+	text_editor->end_complex_operation();
 }
 
 void FindReplaceBar::_get_search_from(int &r_line, int &r_col, bool p_is_searching_next) {
@@ -1264,9 +1267,7 @@ void CodeTextEditor::goto_line(int p_line) {
 void CodeTextEditor::goto_line_selection(int p_line, int p_begin, int p_end) {
 	text_editor->remove_secondary_carets();
 	text_editor->unfold_line(p_line);
-	callable_mp((TextEdit *)text_editor, &TextEdit::set_caret_line).call_deferred(p_line, true, true, 0, 0);
-	callable_mp((TextEdit *)text_editor, &TextEdit::set_caret_column).call_deferred(p_begin, true, 0);
-	text_editor->select(p_line, p_begin, p_line, p_end);
+	text_editor->select(p_line, p_end, p_line, p_begin);
 }
 
 void CodeTextEditor::goto_line_centered(int p_line) {
@@ -1299,17 +1300,9 @@ Variant CodeTextEditor::get_edit_state() {
 void CodeTextEditor::set_edit_state(const Variant &p_state) {
 	Dictionary state = p_state;
 
-	// Update the row first as it sets the column to 0.
-	text_editor->set_caret_line(state["caret_line"]);
-	text_editor->set_caret_column(state["caret_column"]);
+	text_editor->set_carets_state(state["carets"]);
 	text_editor->set_v_scroll(state["scroll_position"]);
 	text_editor->set_h_scroll(state["h_scroll_position"]);
-
-	if (state.get("selection", false)) {
-		text_editor->select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"]);
-	} else {
-		text_editor->deselect();
-	}
 
 	if (state.has("folded_lines")) {
 		Vector<int> folded_lines = state["folded_lines"];
@@ -1336,16 +1329,10 @@ void CodeTextEditor::set_edit_state(const Variant &p_state) {
 Variant CodeTextEditor::get_navigation_state() {
 	Dictionary state;
 
+	// todo changing keys breaks compat?... do it separate? def find a concrete issue with it first...
 	state["scroll_position"] = text_editor->get_v_scroll();
 	state["h_scroll_position"] = text_editor->get_h_scroll();
-	state["caret_column"] = text_editor->get_caret_column();
-	state["caret_line"] = text_editor->get_caret_line();
-	// todo for all carets...
-	state["selection"] = get_text_editor()->has_selection();
-	if (get_text_editor()->has_selection()) {
-		state["selection_origin_line"] = text_editor->get_selection_origin_line();
-		state["selection_origin_column"] = text_editor->get_selection_origin_column();
-	}
+	state["carets"] = text_editor->get_carets_state();
 
 	return state;
 }
