@@ -4501,12 +4501,16 @@ void TextEdit::set_carets_state(Dictionary p_caret_state) {
 	deselect();
 	Array carets_array = p_caret_state["carets"];
 	for (int i = 0; i < carets_array.size(); i++) {
+		// todo clamp?
 		Dictionary state = (Dictionary)carets_array[i];
-		if (state.get("selection", false)) {
-			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
+		if (i > 0) {
+			add_caret(state["caret_line"], state["caret_line"]);
 		} else {
 			set_caret_line(state["caret_line"], false, true, -1, i);
 			set_caret_column(state["caret_column"], false, i);
+		}
+		if (state.get("selection", false)) {
+			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
 		}
 	}
 }
