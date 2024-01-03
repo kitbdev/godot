@@ -761,7 +761,6 @@ public:
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
 	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets = true);
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
-	String get_text_at(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	int get_last_unhidden_line() const;
 	int get_next_visible_line_offset_from(int p_line_from, int p_visible_amount) const;

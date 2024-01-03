@@ -2883,20 +2883,22 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 				return;
 			}
 
+			// Remove drag caret before the complex operation starts so it won't appear in undo.
+			remove_caret(drag_caret_index);
+
 			begin_complex_operation();
 			if (Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
 				// Deselect all.
 				deselect();
 			} else {
 				// Delete all.
-				set_caret_line(drop_at_line, false, true, -1, drag_caret_index);
-				set_caret_column(drop_at_column, false, drag_caret_index);
+				int temp_caret = add_caret(drop_at_line, drop_at_column);
 
 				delete_selection();
 
-				// Use drag caret to update drop at position.
-				drop_at_line = get_caret_line(drag_caret_index);
-				drop_at_column = get_caret_column(drag_caret_index);
+				// Use a temporary caret to update the drop at position.
+				drop_at_line = get_caret_line(temp_caret);
+				drop_at_column = get_caret_column(temp_caret);
 			}
 		} else {
 			// Drop from elsewhere.
@@ -3535,26 +3537,6 @@ void TextEdit::remove_text(int p_from_line, int p_from_column, int p_to_line, in
 	end_complex_operation();
 }
 
-String TextEdit::get_text_at(int p_from_line, int p_from_column, int p_to_line, int p_to_column) {
-	p_from_line = CLAMP(p_from_line, 0, text.size() - 1);
-	p_from_column = CLAMP(p_from_column, 0, text[p_from_line].length());
-	p_to_line = CLAMP(p_to_line, 0, text.size() - 1);
-	p_to_column = CLAMP(p_to_column, 0, text[p_to_line].length());
-	if (p_from_line > p_to_line) {
-		SWAP(p_from_line, p_to_line);
-		SWAP(p_from_column, p_to_column);
-	}
-	if (p_from_line == p_to_line && p_from_column > p_to_column) {
-		SWAP(p_from_column, p_to_column);
-	}
-
-	if (p_from_line == p_to_line) {
-		return text[p_from_line].substr(p_from_column, p_to_column - p_from_column);
-	}
-
-	return _base_get_text(p_from_line, p_from_column, p_to_line, p_to_column);
-}
-
 int TextEdit::get_last_unhidden_line() const {
 	// Returns the last line in the text that is not hidden.
 	if (!_is_hiding_enabled()) {
@@ -3964,7 +3946,6 @@ void TextEdit::undo() {
 		}
 	}
 
-	// todo no drag caret!
 	carets = undo_stack_pos->get().start_carets;
 	// todo force unhide carets (and in redo)
 
@@ -5529,7 +5510,6 @@ void TextEdit::delete_selection(int p_caret) {
 		int selection_to_line = get_selection_to_line(i);
 		int selection_to_column = get_selection_to_column(i);
 
-		set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
 		_remove_text(selection_from_line, selection_from_column, selection_to_line, selection_to_column);
 		_offset_carets_after(selection_to_line, selection_to_column, selection_from_line, selection_from_column);
 		queue_merge_carets();

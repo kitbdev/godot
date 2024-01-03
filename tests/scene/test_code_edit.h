@@ -4323,12 +4323,12 @@ TEST_CASE("[SceneTree][CodeEdit] line length guidelines") {
 	memdelete(code_edit);
 }
 
-TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
+TEST_CASE("[SceneTree][CodeEdit] text manipulation") {
 	CodeEdit *code_edit = memnew(CodeEdit);
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);
 	code_edit->grab_focus();
 
-	SUBCASE("[SceneTree][CodeEdit] Backspace delete") {
+	SUBCASE("[SceneTree][CodeEdit] backspace") {
 		// Backspace with selection on first line.
 		code_edit->set_text("test backspace");
 		code_edit->select(0, 0, 0, 5);
@@ -4401,7 +4401,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_caret_column() == 0);
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] New Line") {
+	SUBCASE("[SceneTree][CodeEdit] new line") {
 		// Add a new line.
 		code_edit->set_text("test new line");
 		code_edit->set_caret_line(0);
@@ -4499,7 +4499,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		// See '[CodeEdit] auto indent' tests for tests about new line with indentation.
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] Move Lines Up") {
+	SUBCASE("[SceneTree][CodeEdit] move lines up") {
 		code_edit->set_text("test\nlines\nto\n\nmove\naround");
 
 		// Move line up with caret on it.
@@ -4614,7 +4614,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_caret_column(1) == 1);
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] Move Lines Down") {
+	SUBCASE("[SceneTree][CodeEdit] move lines down") {
 		code_edit->set_text("test\nlines\nto\n\nmove\naround");
 
 		// Move line down with caret on it.
@@ -4729,7 +4729,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_caret_column(1) == 2);
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] Delete Lines") {
+	SUBCASE("[SceneTree][CodeEdit] delete lines") {
 		code_edit->set_text("test\nlines\nto\n\ndelete");
 
 		// Delete line with caret on it.
@@ -4835,7 +4835,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_caret_column() == 0);
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] Duplicate Selection") {
+	SUBCASE("[SceneTree][CodeEdit] duplicate selection") {
 		code_edit->set_text("test\nlines\nto\n\nduplicate");
 
 		// Duplicate selected text.
@@ -4985,7 +4985,7 @@ TEST_CASE("[SceneTree][CodeEdit] Text manipulation") {
 		CHECK(code_edit->get_caret_column(2) == 6);
 	}
 
-	SUBCASE("[SceneTree][CodeEdit] Duplicate Lines") {
+	SUBCASE("[SceneTree][CodeEdit] duplicate lines") {
 		String reset_text = R"(extends Node
 
 func _ready():
