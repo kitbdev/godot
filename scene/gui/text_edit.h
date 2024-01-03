@@ -756,7 +756,7 @@ public:
 	void swap_lines(int p_from_line, int p_to_line, bool p_swap_carets = true);
 
 	void insert_line_at(int p_line, const String &p_text);
-	void remove_line_at(int p_line, bool p_move_cursors_down = true);
+	void remove_line_at(int p_line, bool p_move_carets_down = true);
 
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
 	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets = true);

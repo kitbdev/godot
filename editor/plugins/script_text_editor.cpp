@@ -1475,7 +1475,7 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			quick_open->set_title(TTR("Go to Function"));
 		} break;
 		case SEARCH_GOTO_LINE: {
-			goto_line_dialog->popup_find_line(tx);
+			goto_line_dialog->popup_find_line(code_editor);
 		} break;
 		case BOOKMARK_TOGGLE: {
 			code_editor->toggle_bookmark();

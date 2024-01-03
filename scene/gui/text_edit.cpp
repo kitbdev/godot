@@ -1516,7 +1516,7 @@ void TextEdit::_notification(int p_what) {
 					caret_start = full_text.length();
 				} else {
 					String pre_text = _base_get_text(0, 0, get_selection_from_line(), get_selection_from_column());
-					String post_text = get_selected_text(0); // todo what is this stuff?
+					String post_text = get_selected_text(0);
 
 					caret_start = pre_text.length();
 					caret_end = caret_start + post_text.length();
@@ -1590,6 +1590,11 @@ void TextEdit::_notification(int p_what) {
 			}
 			selection_drag_attempt = false;
 			drag_action = false;
+			drag_caret_force_displayed = false;
+		} break;
+
+		case NOTIFICATION_MOUSE_EXIT_SELF: {
+			// todo test
 			drag_caret_force_displayed = false;
 		} break;
 	}
@@ -1768,46 +1773,44 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 							return;
 						}
 
-						last_dblclk = 0; // todo look into this
-					} else if (!mb->is_shift_pressed() && mouse_over_selection_caret == -1) {
-						// A regular click clears all other carets.
-						caret = 0;
-						remove_secondary_carets();
-						deselect();
-					} else if (!mb->is_shift_pressed() && drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
-						// Try to drag and drop.
-						set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
-						selection_drag_attempt = true;
-						drag_and_drop_origin_caret_index = mouse_over_selection_caret;
 						last_dblclk = 0;
-						// Don't update cursor until we know if it is not drag and drop.
-						return;
+					} else if (!mb->is_shift_pressed()) {
+						if (drag_and_drop_selection_enabled && mouse_over_selection_caret >= 0) {
+							// Try to drag and drop.
+							set_selection_mode(SelectionMode::SELECTION_MODE_NONE);
+							selection_drag_attempt = true;
+							drag_and_drop_origin_caret_index = mouse_over_selection_caret;
+							last_dblclk = 0;
+							// Don't update caret until we know if it is not drag and drop.
+							return;
+						} else {
+							// A regular click clears all other carets.
+							caret = 0;
+							remove_secondary_carets();
+							deselect();
+						}
 					}
 
 					set_caret_line(line, false, true, -1, caret);
 					set_caret_column(col, false, caret);
 					selection_drag_attempt = false;
+					bool caret_moved = get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line;
 
-					if (selecting_enabled && mb->is_shift_pressed() && (get_caret_column(caret) != prev_col || get_caret_line(caret) != prev_line)) {
-						// Select from the old cursor.
-						if (!has_selection(caret)) {
-							select(prev_line, prev_col, line, col, caret);
-						}
-					} else if (caret == 0) { // todo any caret? needed?
-						// ? happens when mouse is not over a selection and not pressing shift and there is one caret. can be dbl click...
-						deselect();
+					if (selecting_enabled && mb->is_shift_pressed() && !has_selection(caret) && caret_moved) {
+						// Select from the previous caret position.
+						select(prev_line, prev_col, line, col, caret);
 					}
 
-					// Regular selection mode.
+					// Start regular select mode.
 					set_selection_mode(SelectionMode::SELECTION_MODE_POINTER);
 					_update_selection_mode_pointer(true);
 				} else if (is_triple_click) {
-					// Triple-click select line.
+					// Start triple-click select line mode.
 					set_selection_mode(SelectionMode::SELECTION_MODE_LINE);
 					_update_selection_mode_line(true);
 					last_dblclk = 0;
 				} else if (mb->is_double_click()) {
-					// Double-click select word.
+					// Start double-click select word mode.
 					set_selection_mode(SelectionMode::SELECTION_MODE_WORD);
 					_update_selection_mode_word(true);
 					last_dblclk = OS::get_singleton()->get_ticks_msec();
@@ -1856,7 +1859,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 
 			if (mb->get_button_index() == MouseButton::LEFT) {
 				if (!drag_action && selection_drag_attempt && is_mouse_over_selection()) {
-					// This is not a drag and drop attempt, update the cursor.
+					// This is not a drag and drop attempt, update the caret.
 					selection_drag_attempt = false;
 					remove_secondary_carets();
 					deselect();
@@ -2889,7 +2892,7 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 
 				delete_selection();
 
-				// Use drag cursor to update drop at position.
+				// Use drag caret to update drop at position.
 				drop_at_line = get_caret_line(drag_caret_index);
 				drop_at_column = get_caret_column(drag_caret_index);
 			}
@@ -3399,7 +3402,7 @@ void TextEdit::insert_line_at(int p_line, const String &p_text) {
 	end_complex_operation();
 }
 
-void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
+void TextEdit::remove_line_at(int p_line, bool p_move_carets_down) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
 	if (get_line_count() == 1) {
@@ -3420,7 +3423,7 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 	int from_column = is_last_line ? get_line(from_line).length() : 0;
 	int next_column = is_last_line ? get_line(next_line).length() : 0;
 
-	if ((!is_last_line && p_move_cursors_down) || (p_line != 0 && !p_move_cursors_down)) {
+	if ((!is_last_line && p_move_carets_down) || (p_line != 0 && !p_move_carets_down)) {
 		// Set the carets to update their last offset x.
 		for (int i = 0; i < get_caret_count(); i++) { // todo needed?
 			if (get_caret_line(i) == p_line) {
@@ -3436,12 +3439,12 @@ void TextEdit::remove_line_at(int p_line, bool p_move_cursors_down) {
 	_remove_text(from_line, from_column, next_line, next_column);
 
 	begin_multicaret_edit();
-	if ((is_last_line && p_move_cursors_down) || (p_line == 0 && !p_move_cursors_down)) {
+	if ((is_last_line && p_move_carets_down) || (p_line == 0 && !p_move_carets_down)) {
 		// Collapse carets.
 		collapse_carets(from_line, from_column, next_line, next_column, true);
 	} else {
 		// Move carets to visually line up.
-		int target_line = p_move_cursors_down ? p_line : p_line - 1;
+		int target_line = p_move_carets_down ? p_line : p_line - 1;
 		for (int i = 0; i < get_caret_count(); i++) {
 			bool selected = has_selection(i);
 			if (get_caret_line(i) == p_line) {
@@ -3480,7 +3483,7 @@ void TextEdit::insert_text_at_caret(const String &p_text, int p_caret) {
 
 		int new_line, new_column;
 		_insert_text(from_line, from_col, p_text, &new_line, &new_column);
-		_update_scrollbars(); // todo why? needed?
+		_update_scrollbars();
 		_offset_carets_after(from_line, from_col, new_line, new_column);
 
 		set_caret_line(new_line, false, true, -1, i);
@@ -4481,12 +4484,12 @@ Dictionary TextEdit::get_carets_state() const {
 	Array carets_array;
 	for (int i = 0; i < get_caret_count(); i++) {
 		Dictionary state;
-		state["caret_column"] = get_caret_column();
-		state["caret_line"] = get_caret_line();
-		state["selection"] = has_selection();
-		if (has_selection()) {
-			state["selection_origin_line"] = get_selection_origin_line();
-			state["selection_origin_column"] = get_selection_origin_column();
+		state["caret_column"] = get_caret_column(i);
+		state["caret_line"] = get_caret_line(i);
+		state["selection"] = has_selection(i);
+		if (has_selection(i)) {
+			state["selection_origin_line"] = get_selection_origin_line(i);
+			state["selection_origin_column"] = get_selection_origin_column(i);
 		}
 		carets_array.push_back(state);
 	}
@@ -4496,15 +4499,15 @@ Dictionary TextEdit::get_carets_state() const {
 }
 
 void TextEdit::set_carets_state(Dictionary p_caret_state) {
+	// todo silent?
 	ERR_FAIL_COND_MSG(!p_caret_state.has("carets"), "Invalid carets state.");
 	remove_secondary_carets();
 	deselect();
 	Array carets_array = p_caret_state["carets"];
 	for (int i = 0; i < carets_array.size(); i++) {
-		// todo clamp?
 		Dictionary state = (Dictionary)carets_array[i];
 		if (i > 0) {
-			add_caret(state["caret_line"], state["caret_line"]);
+			add_caret(state["caret_line"], state["caret_column"]);
 		} else {
 			set_caret_line(state["caret_line"], false, true, -1, i);
 			set_caret_column(state["caret_column"], false, i);
@@ -6976,7 +6979,7 @@ void TextEdit::_cut_internal(int p_caret) {
 	}
 	int line_offset = 0;
 	for (Point2i line_range : line_ranges) {
-		// Preserve cursors on the last line.
+		// Preserve carets on the last line.
 		remove_line_at(line_range.y + line_offset);
 		if (line_range.x != line_range.y) {
 			remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
@@ -7559,11 +7562,12 @@ void TextEdit::_update_selection_mode_word(bool p_initial) {
 	}
 
 	if (p_initial && !has_selection(caret_index)) {
-		// Only set the selection origin if there is no selection, otherwise we want to expand the selection.
+		// Set the selection origin if there is no existing selection.
 		select(line, beg, line, end, caret_index);
 		carets.write[caret_index].selection.word_begin_column = beg;
 		carets.write[caret_index].selection.word_end_column = end;
 	} else {
+		// Expand the word selection to the mouse.
 		int origin_line = get_selection_origin_line(caret_index);
 		bool is_new_selection_dir_right = line > origin_line || (line == origin_line && column >= carets[caret_index].selection.word_begin_column);
 		int origin_col = is_new_selection_dir_right ? carets[caret_index].selection.word_begin_column : carets[caret_index].selection.word_end_column;
@@ -7599,7 +7603,7 @@ void TextEdit::_update_selection_mode_line(bool p_initial) {
 	adjust_viewport_to_caret(caret_index);
 
 	if (p_initial) {
-		// Set the word begin and end to the start and end of the origin line in case it changes later.
+		// Set the word begin and end to the start and end of the origin line in case the mode changes later.
 		carets.write[caret_index].selection.word_begin_column = 0;
 		carets.write[caret_index].selection.word_end_column = get_line(origin_line).length();
 	}

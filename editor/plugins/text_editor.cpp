@@ -460,7 +460,7 @@ void TextEditor::_edit_option(int p_op) {
 			emit_signal(SNAME("replace_in_files_requested"), selected_text);
 		} break;
 		case SEARCH_GOTO_LINE: {
-			goto_line_dialog->popup_find_line(tx);
+			goto_line_dialog->popup_find_line(code_editor);
 		} break;
 		case BOOKMARK_TOGGLE: {
 			code_editor->toggle_bookmark();

@@ -40,24 +40,24 @@
 #include "scene/gui/line_edit.h"
 #include "scene/main/timer.h"
 
+class CodeTextEditor;
+
 class GotoLineDialog : public ConfirmationDialog {
 	GDCLASS(GotoLineDialog, ConfirmationDialog);
 
 	Label *line_label = nullptr;
 	LineEdit *line = nullptr;
 
-	CodeEdit *text_editor = nullptr;
+	CodeTextEditor *text_editor = nullptr;
 
 	virtual void ok_pressed() override;
 
 public:
-	void popup_find_line(CodeEdit *p_edit);
+	void popup_find_line(CodeTextEditor *p_text_editor);
 	int get_line() const;
 
 	GotoLineDialog();
 };
-
-class CodeTextEditor;
 
 class FindReplaceBar : public HBoxContainer {
 	GDCLASS(FindReplaceBar, HBoxContainer);

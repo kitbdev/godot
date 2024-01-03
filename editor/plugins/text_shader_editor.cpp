@@ -700,7 +700,7 @@ void TextShaderEditor::_menu_option(int p_option) {
 			shader_editor->get_find_replace_bar()->popup_replace();
 		} break;
 		case SEARCH_GOTO_LINE: {
-			goto_line_dialog->popup_find_line(shader_editor->get_text_editor());
+			goto_line_dialog->popup_find_line(shader_editor);
 		} break;
 		case BOOKMARK_TOGGLE: {
 			shader_editor->toggle_bookmark();
