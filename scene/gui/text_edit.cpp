@@ -1594,8 +1594,10 @@ void TextEdit::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_MOUSE_EXIT_SELF: {
-			// todo test
-			drag_caret_force_displayed = false;
+			if (drag_caret_force_displayed) {
+				drag_caret_force_displayed = false;
+				queue_redraw();
+			}
 		} break;
 	}
 }
@@ -3962,6 +3964,7 @@ void TextEdit::undo() {
 		}
 	}
 
+	// todo no drag caret!
 	carets = undo_stack_pos->get().start_carets;
 	// todo force unhide carets (and in redo)
 
