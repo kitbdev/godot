@@ -347,11 +347,11 @@ void ScriptTextEditor::reload_text() {
 }
 
 void ScriptTextEditor::add_callback(const String &p_function, PackedStringArray p_args) {
+	code_editor->get_text_editor()->begin_complex_operation();
+	code_editor->get_text_editor()->remove_secondary_carets();
+	code_editor->get_text_editor()->deselect();
 	String code = code_editor->get_text_editor()->get_text();
 	int pos = script->get_language()->find_function(p_function, code);
-	code_editor->get_text_editor()->remove_secondary_carets();
-	// todo begin complex action for undo?
-	code_editor->get_text_editor()->deselect();
 	if (pos == -1) {
 		// Function does not exist, create it at the end of the file.
 		int last_line = code_editor->get_text_editor()->get_line_count() - 1;
@@ -366,6 +366,7 @@ void ScriptTextEditor::add_callback(const String &p_function, PackedStringArray 
 	}
 	code_editor->get_text_editor()->set_caret_line(pos, true, true, -1);
 	code_editor->get_text_editor()->set_caret_column(indent_column);
+	code_editor->get_text_editor()->end_complex_operation();
 }
 
 bool ScriptTextEditor::show_members_overview() {
