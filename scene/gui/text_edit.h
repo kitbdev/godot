@@ -432,7 +432,7 @@ private:
 
 	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
 
-	void _offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
+	void _offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column, bool p_include_selection_begin = true, bool p_include_selection_end = true);
 
 	void _cancel_drag_and_drop_text();
 
@@ -758,7 +758,7 @@ public:
 	void remove_line_at(int p_line, bool p_move_carets_down = true);
 
 	void insert_text_at_caret(const String &p_text, int p_caret = -1);
-	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_carets = true);
+	void insert_text(const String &p_text, int p_line, int p_column, bool p_before_selection_begin = true, bool p_before_selection_end = false);
 	void remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
 	int get_last_unhidden_line() const;

@@ -1082,7 +1082,7 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 		if (p_split_current_line) {
 			insert_text_at_caret(ins, i);
 		} else {
-			insert_text(ins, cl, p_above ? 0 : get_line(cl).length());
+			insert_text(ins, cl, p_above ? 0 : get_line(cl).length(), p_above, p_above);
 			deselect(i);
 			set_caret_line(p_above ? cl : cl + 1, false, true, -1, i);
 			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
@@ -2378,18 +2378,7 @@ void CodeEdit::duplicate_selection() {
 		}
 
 		// Insert new text before the selection.
-		String text_to_insert = get_selected_text(i);
-		int new_from_line = get_selection_to_line(i);
-		int new_from_column = get_selection_to_column(i);
-		// Don't insert before carets, in case another selection was touching it.
-		insert_text(text_to_insert, get_selection_from_line(i), get_selection_from_column(i), false);
-		if (is_selection_direction_right(i)) {
-			set_selection_origin_line(new_from_line, i);
-			set_selection_origin_column(new_from_column, i);
-		} else {
-			set_caret_line(new_from_line, false, true, -1, i);
-			set_caret_column(new_from_column, false, i);
-		}
+		insert_text(get_selected_text(i), get_selection_from_line(i), get_selection_from_column(i));
 	}
 
 	end_multicaret_edit();

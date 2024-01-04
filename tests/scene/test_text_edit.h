@@ -232,6 +232,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_set");
 
 			// Insert text when there is no text.
+			lines_edited_args = build_array(build_array(0, 0));
+
 			text_edit->insert_text("tes", 0, 0);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "tes");
@@ -293,23 +295,26 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("text_set");
 
 			// Insert offsets carets after the edit.
-			lines_edited_args = build_array(build_array(1, 2));
 			text_edit->add_caret(1, 1);
 			text_edit->add_caret(1, 4);
 			text_edit->select(1, 4, 1, 6, 2);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(1, 2));
 
 			text_edit->insert_text("\n ", 1, 2);
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->get_text() == "test\nin\n midserting text");
+			CHECK(text_edit->get_caret_count() == 3);
+			CHECK_FALSE(text_edit->has_selection(0));
 			CHECK(text_edit->get_caret_line(0) == 2);
 			CHECK(text_edit->get_caret_column(0) == 16);
+			CHECK_FALSE(text_edit->has_selection(1));
 			CHECK(text_edit->get_caret_line(1) == 1);
 			CHECK(text_edit->get_caret_column(1) == 1);
+			CHECK(text_edit->has_selection(2));
 			CHECK(text_edit->get_caret_line(2) == 2);
 			CHECK(text_edit->get_caret_column(2) == 5);
-			CHECK(text_edit->has_selection(2));
 			CHECK(text_edit->get_selection_origin_line(2) == 2);
 			CHECK(text_edit->get_selection_origin_column(2) == 3);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
@@ -317,8 +322,110 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_set");
 			text_edit->remove_secondary_carets();
+			text_edit->deselect();
 
-			// todo insert after carets?
+			// Insert text outside of selections.
+			text_edit->set_text("test text");
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 1, 0, 4, 0);
+			text_edit->select(0, 4, 0, 8, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			text_edit->insert_text("a", 0, 4, true, false);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testa text");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 1);
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 9);
+			CHECK(text_edit->get_selection_origin_line(1) == 0);
+			CHECK(text_edit->get_selection_origin_column(1) == 5);
+
+			// Insert text to beginning of selections.
+			text_edit->set_text("test text");
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 1, 0, 4, 0);
+			text_edit->select(0, 4, 0, 8, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			text_edit->insert_text("a", 0, 4, false, false);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testa text");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 1);
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 9);
+			CHECK(text_edit->get_selection_origin_line(1) == 0);
+			CHECK(text_edit->get_selection_origin_column(1) == 4);
+
+			// Insert text to end of selections.
+			text_edit->set_text("test text");
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 1, 0, 4, 0);
+			text_edit->select(0, 4, 0, 8, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			text_edit->insert_text("a", 0, 4, true, true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testa text");
+			CHECK(text_edit->get_caret_count() == 2);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 5);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 1);
+			CHECK(text_edit->has_selection(1));
+			CHECK(text_edit->get_caret_line(1) == 0);
+			CHECK(text_edit->get_caret_column(1) == 9);
+			CHECK(text_edit->get_selection_origin_line(1) == 0);
+			CHECK(text_edit->get_selection_origin_column(1) == 5);
+
+			// Insert text inside of selections.
+			text_edit->set_text("test text");
+			text_edit->add_caret(0, 8);
+			text_edit->select(0, 1, 0, 4, 0);
+			text_edit->select(0, 4, 0, 8, 1);
+			MessageQueue::get_singleton()->flush();
+			SIGNAL_DISCARD("text_set");
+			SIGNAL_DISCARD("lines_edited_from");
+			SIGNAL_DISCARD("text_changed");
+			SIGNAL_DISCARD("caret_changed");
+			lines_edited_args = build_array(build_array(0, 0));
+
+			text_edit->insert_text("a", 0, 4, false, true);
+			MessageQueue::get_singleton()->flush();
+			CHECK(text_edit->get_text() == "testa text");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->has_selection(0));
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 9);
+			CHECK(text_edit->get_selection_origin_line(0) == 0);
+			CHECK(text_edit->get_selection_origin_column(0) == 1);
 		}
 
 		SUBCASE("[TextEdit] remove text") {
