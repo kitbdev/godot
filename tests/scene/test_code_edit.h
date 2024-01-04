@@ -3274,6 +3274,64 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK(code_edit->get_next_visible_line_offset_from(1, 1) == 4);
 	}
 
+	SUBCASE("[CodeEdit] folding carets") {
+		code_edit->set_line_folding_enabled(true);
+
+		// Folding a line moves all carets that would be hidden.
+		code_edit->set_text("test\n\tline1\n\t\tline 2\n");
+		code_edit->set_caret_line(1);
+		code_edit->set_caret_column(0);
+		code_edit->add_caret(1, 3);
+		code_edit->add_caret(2, 8);
+		code_edit->add_caret(2, 1);
+		code_edit->select(2, 0, 2, 1, 3);
+
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 4);
+
+		// Undoing an action that puts the caret on a folded line unfolds it.
+		code_edit->set_text("test\n\tline1");
+		code_edit->select(1, 1, 1, 2);
+		code_edit->duplicate_selection();
+		CHECK(code_edit->get_text() == "test\n\tlline1");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 3);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 4);
+
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "test\n\tline1");
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 2);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 1);
+		CHECK_FALSE(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+
+		// Redoing doesn't refold.
+		code_edit->redo();
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 3);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 2);
+		CHECK_FALSE(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(1));
+	}
+
 	memdelete(code_edit);
 }
 
@@ -3282,7 +3340,7 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);
 	code_edit->grab_focus();
 
-	SUBCASE("[CodeEdit] region folding") {
+	SUBCASE("[CodeEdit] region tags") {
 		code_edit->set_line_folding_enabled(true);
 
 		// Region tag detection.
@@ -3319,16 +3377,51 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		ERR_PRINT_ON;
 		CHECK(code_edit->get_code_region_start_tag() == "region");
 		CHECK(code_edit->get_code_region_end_tag() == "endregion");
+	}
 
-		// Region creation with selection adds start / close region lines.
+	SUBCASE("[CodeEdit] create code region") {
+		code_edit->set_line_folding_enabled(true);
+
+		// Region creation with selection adds start and close region lines. Region name is selected and the region is folded.
 		code_edit->set_text("line1\nline2\nline3");
 		code_edit->clear_comment_delimiters();
 		code_edit->add_comment_delimiter("#", "");
 		code_edit->select(1, 0, 1, 4);
 		code_edit->create_code_region();
 		CHECK(code_edit->is_line_code_region_start(1));
-		CHECK(code_edit->get_line(2).contains("line2"));
 		CHECK(code_edit->is_line_code_region_end(3));
+		CHECK(code_edit->get_text() == "line1\n#region New Code Region\nline2\n#endregion\nline3");
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selected_text() == "New Code Region");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 23);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK(code_edit->is_line_folded(1));
+
+		// Undo region creation. Line get unfolded.
+		code_edit->undo();
+		CHECK(code_edit->get_text() == "line1\nline2\nline3");
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 4);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 0);
+		CHECK_FALSE(code_edit->is_line_folded(1));
+
+		// Redo region creation.
+		code_edit->redo();
+		CHECK(code_edit->get_text() == "line1\n#region New Code Region\nline2\n#endregion\nline3");
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selected_text() == "New Code Region");
+		CHECK(code_edit->get_caret_line() == 1);
+		CHECK(code_edit->get_caret_column() == 23);
+		CHECK(code_edit->get_selection_origin_line() == 1);
+		CHECK(code_edit->get_selection_origin_column() == 8);
+		CHECK_FALSE(code_edit->is_line_folded(1));
 
 		// Region creation without any selection has no effect.
 		code_edit->set_text("line1\nline2\nline3");
@@ -3337,7 +3430,7 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "line1\nline2\nline3");
 
-		// Region creation with multiple selections.
+		// Region creation with multiple selections. Secondary carets are removed and the firt region name is selected.
 		code_edit->set_text("line1\nline2\nline3");
 		code_edit->clear_comment_delimiters();
 		code_edit->add_comment_delimiter("#", "");
@@ -3346,6 +3439,13 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->select(2, 0, 2, 5, 1);
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "#region New Code Region\nline1\n#endregion\nline2\n#region New Code Region\nline3\n#endregion");
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selected_text() == "New Code Region");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 23);
+		CHECK(code_edit->get_selection_origin_line() == 0);
+		CHECK(code_edit->get_selection_origin_column() == 8);
 
 		// Region creation with mixed selection and non-selection carets. Regular carets are ignored.
 		code_edit->set_text("line1\nline2\nline3");
@@ -3355,6 +3455,9 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->add_caret(2, 5);
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "#region New Code Region\nline1\n#endregion\nline2\nline3");
+		CHECK(code_edit->get_caret_count() == 1);
+		CHECK(code_edit->has_selection());
+		CHECK(code_edit->get_selected_text() == "New Code Region");
 
 		// Two selections on the same line create only one region.
 		code_edit->set_text("test line1\ntest line2\ntest line3");
@@ -3381,6 +3484,10 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->add_comment_delimiter("/*", "*/");
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "line1\nline2\nline3");
+	}
+
+	SUBCASE("[CodeEdit] region comment delimiters") {
+		code_edit->set_line_folding_enabled(true);
 
 		// Choose one line comment delimiter.
 		code_edit->set_text("//region region_name\nline2\n//endregion");
@@ -3414,6 +3521,10 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->clear_comment_delimiters();
 		CHECK_FALSE(code_edit->is_line_code_region_start(0));
 		CHECK_FALSE(code_edit->is_line_code_region_end(2));
+	}
+
+	SUBCASE("[CodeEdit] fold region") {
+		code_edit->set_line_folding_enabled(true);
 
 		// Fold region.
 		code_edit->clear_comment_delimiters();

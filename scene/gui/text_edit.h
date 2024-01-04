@@ -651,6 +651,7 @@ protected:
 	bool _is_line_hidden(int p_line) const;
 
 	void _unhide_all_lines();
+	virtual void _unhide_carets();
 
 	// Symbol lookup.
 	String lookup_symbol_word;

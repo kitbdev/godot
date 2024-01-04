@@ -3950,7 +3950,8 @@ void TextEdit::undo() {
 	}
 
 	carets = undo_stack_pos->get().start_carets;
-	// todo force unhide carets (and in redo)
+
+	_unhide_carets();
 
 	if (dirty_carets) {
 		_caret_changed();
@@ -4005,6 +4006,8 @@ void TextEdit::redo() {
 
 	carets = undo_stack_pos->get().end_carets;
 	undo_stack_pos = undo_stack_pos->next();
+
+	_unhide_carets();
 
 	if (dirty_carets) {
 		_caret_changed();
@@ -4751,7 +4754,9 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 				// Caret was in the collapsed area.
 				set_caret_line(collapse_line, false, true, -1, i);
 				set_caret_column(collapse_column, false, i);
-				multicaret_edit_ignore_carets.insert(i);
+				if (is_in_mulitcaret_edit()) {
+					multicaret_edit_ignore_carets.insert(i);
+				}
 				any_collapsed = true;
 			}
 		} else {
@@ -4762,7 +4767,9 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 				deselect(i);
 				set_caret_line(collapse_line, false, true, -1, i);
 				set_caret_column(collapse_column, false, i);
-				multicaret_edit_ignore_carets.insert(i);
+				if (is_in_mulitcaret_edit()) {
+					multicaret_edit_ignore_carets.insert(i);
+				}
 				any_collapsed = true;
 			} else if (is_caret_in) {
 				// Only caret was inside.
@@ -6839,6 +6846,10 @@ void TextEdit::_unhide_all_lines() {
 	queue_redraw();
 }
 
+void TextEdit::_unhide_carets() {
+	// Override for functionality.
+}
+
 void TextEdit::_set_line_as_hidden(int p_line, bool p_hidden) {
 	ERR_FAIL_INDEX(p_line, text.size());
 
@@ -6929,9 +6940,7 @@ void TextEdit::_backspace_internal(int p_caret) {
 		int from_line = to_column > 0 ? to_line : to_line - 1;
 		int from_column = to_column > 0 ? (to_column - 1) : (text[to_line - 1].length());
 
-		// todo doesnt work. also should be in other places? also not undoable.
 		merge_gutters(from_line, to_line);
-		// todo undo force unhidden carets?
 
 		_remove_text(from_line, from_column, to_line, to_column);
 		collapse_carets(from_line, from_column, to_line, to_column, i);

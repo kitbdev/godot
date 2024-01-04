@@ -623,6 +623,18 @@ Control::CursorShape CodeEdit::get_cursor_shape(const Point2 &p_pos) const {
 	return TextEdit::get_cursor_shape(p_pos);
 }
 
+void CodeEdit::_unhide_carets() {
+	// Unfold caret and selection origin.
+	for (int i = 0; i < get_caret_count(); i++) {
+		if (_is_line_hidden(get_caret_line(i))) {
+			unfold_line(get_caret_line(i));
+		}
+		if (has_selection(i) && _is_line_hidden(get_selection_origin_line(i))) {
+			unfold_line(get_selection_origin_line(i));
+		}
+	}
+}
+
 // --- Text manipulation. ---
 
 // Overridable actions.
@@ -1586,9 +1598,7 @@ void CodeEdit::fold_line(int p_line) {
 	}
 
 	// Collapse any carets in the hidden area.
-	begin_multicaret_edit();
-	collapse_carets(p_line + 1, 0, end_line, get_line(p_line).length(), true);
-	end_multicaret_edit();
+	collapse_carets(p_line, get_line(p_line).length(), end_line, get_line(end_line).length(), true);
 }
 
 void CodeEdit::unfold_line(int p_line) {
@@ -1663,23 +1673,25 @@ void CodeEdit::create_code_region() {
 		WARN_PRINT_ONCE("Cannot create code region without any one line comment delimiters");
 		return;
 	}
+	String region_name = RTR("New Code Region");
+
 	begin_complex_operation();
 	begin_multicaret_edit();
 	Vector<Point2i> line_ranges = get_line_ranges_from_carets(true, false);
 
 	// Add start and end region tags.
-	int first_region_start = -1;
 	int line_offset = 0;
 	for (Point2i line_range : line_ranges) {
 		insert_text("\n" + code_region_end_string, line_range.y + line_offset, get_line(line_range.y + line_offset).length());
-		insert_line_at(line_range.x + line_offset, code_region_start_string + " " + RTR("New Code Region"));
+		insert_line_at(line_range.x + line_offset, code_region_start_string + " " + region_name);
 		fold_line(line_range.x + line_offset);
 		line_offset += 2;
 	}
+	int first_region_start = line_ranges[0].x;
 
 	// Select name of the first region to allow quick edit.
 	remove_secondary_carets();
-	int tag_length = code_region_start_string.length() + RTR("New Code Region").length() + 1;
+	int tag_length = code_region_start_string.length() + region_name.length() + 1;
 	select(first_region_start, code_region_start_string.length() + 1, first_region_start, tag_length);
 
 	end_multicaret_edit();
