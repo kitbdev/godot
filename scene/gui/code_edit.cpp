@@ -961,7 +961,7 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 		}
 
 		if (line_changed) {
-			// Use set line to preserve carets visual position. // todo param
+			// Use set line to preserve carets visual position.
 			set_line(i, line);
 		}
 	}
@@ -2432,7 +2432,7 @@ Color CodeEdit::_get_code_folding_color() const {
 Ref<Texture2D> CodeEdit::_get_folded_eol_icon() const {
 	return theme_cache.folded_eol_icon;
 }
-// todo fix sentence case (capitalize) and period
+
 void CodeEdit::_bind_methods() {
 	// --- Indent management. ---
 	ClassDB::bind_method(D_METHOD("set_indent_size", "size"), &CodeEdit::set_indent_size);
@@ -2788,7 +2788,7 @@ void CodeEdit::_gutter_clicked(int p_line, int p_gutter) {
 	if (p_gutter == line_number_gutter) {
 		remove_secondary_carets();
 		set_selection_mode(TextEdit::SelectionMode::SELECTION_MODE_LINE);
-		if (p_line == get_line_count() - 1) { // todo if end line is clamped, do automatically in select?
+		if (p_line == get_line_count() - 1) {
 			select(p_line, 0, p_line, INT_MAX);
 		} else {
 			select(p_line, 0, p_line + 1, 0);
@@ -3489,7 +3489,7 @@ void CodeEdit::_lines_edited_from(int p_from_line, int p_to_line) {
 
 void CodeEdit::_text_set() {
 	lines_edited_from = 0;
-	lines_edited_to = 9999; // todo maxint. also this is not used...
+	lines_edited_to = 9999;
 	_text_changed();
 }
 
@@ -3508,16 +3508,7 @@ void CodeEdit::_text_changed() {
 		set_gutter_width(line_number_gutter, (line_number_digits + 1) * theme_cache.font->get_char_size('0', theme_cache.font_size).width);
 	}
 
-	// (?) Send breakpoint_toggled signal if the line was removed.
-	// todo what vscode does is clamp it to the last line
-	// todo look into breakpoints generally
-
-	// todo why is breakpointed_lines a hashmap instead of a hashset? its always true...
-	// todo and it is only really used here...
-
-	// todo why not just update this stuff immediately in lines edited from?
-	// maybe because if a line is removed and re-added then it shouldnt be affected?
-
+	// Send breakpoint_toggled signal if the line was removed.
 	int lc = get_line_count();
 	List<int> breakpoints;
 	for (const KeyValue<int, bool> &E : breakpointed_lines) {
@@ -3533,7 +3524,7 @@ void CodeEdit::_text_changed() {
 
 		int next_line = line + lines_edited_changed;
 		if (next_line > -1 && next_line < lc && is_line_breakpointed(next_line)) {
-			emit_signal(SNAME("breakpoint_toggled"), next_line); // todo called twice potentially?
+			emit_signal(SNAME("breakpoint_toggled"), next_line);
 			breakpointed_lines[next_line] = true;
 			continue;
 		}

@@ -284,8 +284,7 @@ void ScriptTextEditor::_warning_clicked(Variant p_line) {
 		if (prev_line.contains("@warning_ignore")) {
 			const int closing_bracket_idx = prev_line.find(")");
 			const String text_to_insert = ", " + code.quote(quote_style);
-			prev_line = prev_line.insert(closing_bracket_idx, text_to_insert);
-			text_editor->set_line(line - 1, prev_line);
+			text_editor->insert_text(text_to_insert, line - 1, closing_bracket_idx);
 		} else {
 			const int indent = text_editor->get_indent_level(line) / text_editor->get_indent_size();
 			String annotation_indent;
@@ -2109,7 +2108,6 @@ void ScriptTextEditor::_color_changed(const Color &p_color) {
 	code_editor->get_text_editor()->begin_complex_operation();
 	code_editor->get_text_editor()->set_line(color_position.x, line_with_replaced_args);
 	code_editor->get_text_editor()->end_complex_operation();
-	code_editor->get_text_editor()->queue_redraw();
 }
 
 void ScriptTextEditor::_prepare_edit_menu() {

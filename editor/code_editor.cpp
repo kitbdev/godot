@@ -1113,7 +1113,7 @@ void CodeTextEditor::trim_trailing_whitespace() {
 					break;
 				}
 			}
-			text_editor->set_line(i, line.substr(0, end));
+			text_editor->remove_text(i, end, i, line.length());
 		}
 	}
 
@@ -1126,18 +1126,11 @@ void CodeTextEditor::trim_trailing_whitespace() {
 
 void CodeTextEditor::insert_final_newline() {
 	int final_line = text_editor->get_line_count() - 1;
-
 	String line = text_editor->get_line(final_line);
 
 	// Length 0 means it's already an empty line, no need to add a newline.
 	if (line.length() > 0 && !line.ends_with("\n")) {
-		text_editor->begin_complex_operation();
-
-		line += "\n";
-		text_editor->set_line(final_line, line);
-
-		text_editor->end_complex_operation();
-		text_editor->queue_redraw();
+		text_editor->insert_text("\n", final_line, line.length(), false);
 	}
 }
 
@@ -1147,7 +1140,6 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 	}
 	text_editor->begin_complex_operation();
 	text_editor->begin_multicaret_edit();
-	// todo why is the CodeEdit called text_editor?
 
 	for (int c = 0; c < text_editor->get_caret_count(); c++) {
 		if (text_editor->multicaret_edit_ignore_caret(c)) {
@@ -1190,7 +1182,7 @@ void CodeTextEditor::convert_case(CaseStyle p_case) {
 			if (i == end) {
 				new_line = new_line + text_editor->get_line(i).substr(end_col);
 			}
-			text_editor->set_line(i, new_line);
+			text_editor->set_line(i, new_line, false);
 		}
 	}
 	text_editor->end_multicaret_edit();

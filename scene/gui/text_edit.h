@@ -433,7 +433,6 @@ private:
 	int _get_column_x_offset_for_line(int p_char, int p_line, int p_column) const;
 
 	void _offset_carets_after(int p_old_line, int p_old_column, int p_new_line, int p_new_column);
-	void _clamp_carets(int p_line);
 
 	void _cancel_drag_and_drop_text();
 
@@ -744,7 +743,7 @@ public:
 	void set_placeholder(const String &p_text);
 	String get_placeholder() const;
 
-	void set_line(int p_line, const String &p_new_text);
+	void set_line(int p_line, const String &p_new_text, bool p_keep_carets_visually = true);
 	String get_line(int p_line) const;
 
 	int get_line_width(int p_line, int p_wrap_index = -1) const;
