@@ -2641,6 +2641,10 @@ void CodeEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_symbol_lookup_word_as_valid", "valid"), &CodeEdit::set_symbol_lookup_word_as_valid);
 
 	// --- Text manipulation. ---
+	ClassDB::bind_method(D_METHOD("move_lines_up"), &CodeEdit::move_lines_up);
+	ClassDB::bind_method(D_METHOD("move_lines_down"), &CodeEdit::move_lines_down);
+	ClassDB::bind_method(D_METHOD("delete_lines"), &CodeEdit::delete_lines);
+	ClassDB::bind_method(D_METHOD("duplicate_selection"), &CodeEdit::duplicate_selection);
 	ClassDB::bind_method(D_METHOD("duplicate_lines"), &CodeEdit::duplicate_lines);
 
 	// --- Inspector. ---

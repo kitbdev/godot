@@ -887,7 +887,7 @@ public:
 	void set_drag_and_drop_selection_enabled(const bool p_enabled);
 	bool is_drag_and_drop_selection_enabled() const;
 
-	void set_selection_mode(SelectionMode p_mode);
+	void set_selection_mode(SelectionMode p_mode, int p_line = -1, int p_column = -1, int p_caret = 0);
 	SelectionMode get_selection_mode() const;
 
 	void select_all();
@@ -1051,6 +1051,15 @@ public:
 	bool is_drawing_spaces() const;
 
 	Color get_font_color() const;
+
+	// --- Deprecated. ---
+#ifndef DISABLE_DEPRECATED
+	Vector<int> get_caret_index_edit_order();
+	void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);
+
+	int get_selection_line(int p_caret = 0) const;
+	int get_selection_column(int p_caret = 0) const;
+#endif
 
 	TextEdit(const String &p_placeholder = String());
 };

@@ -5134,7 +5134,7 @@ bool TextEdit::is_drag_and_drop_selection_enabled() const {
 	return drag_and_drop_selection_enabled;
 }
 
-void TextEdit::set_selection_mode(SelectionMode p_mode) {
+void TextEdit::set_selection_mode(SelectionMode p_mode, int p_line, int p_column, int p_caret) {
 	selecting_mode = p_mode;
 }
 
@@ -6509,14 +6509,17 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_caret", "line", "column"), &TextEdit::add_caret);
 	ClassDB::bind_method(D_METHOD("remove_caret", "caret"), &TextEdit::remove_caret);
 	ClassDB::bind_method(D_METHOD("remove_secondary_carets"), &TextEdit::remove_secondary_carets);
-	ClassDB::bind_method(D_METHOD("merge_overlapping_carets"), &TextEdit::merge_overlapping_carets);
 	ClassDB::bind_method(D_METHOD("get_caret_count"), &TextEdit::get_caret_count);
 	ClassDB::bind_method(D_METHOD("add_caret_at_carets", "below"), &TextEdit::add_caret_at_carets);
 
-	// ClassDB::bind_method(D_METHOD("get_caret_index_edit_order"), &TextEdit::get_caret_index_edit_order);
 	ClassDB::bind_method(D_METHOD("get_sorted_carets"), &TextEdit::get_sorted_carets);
-	// todo deprecate properly. keep old name?
-	// ClassDB::bind_method(D_METHOD("adjust_carets_after_edit", "caret", "from_line", "from_col", "to_line", "to_col"), &TextEdit::adjust_carets_after_edit);
+
+	ClassDB::bind_method(D_METHOD("merge_overlapping_carets"), &TextEdit::merge_overlapping_carets);
+	ClassDB::bind_method(D_METHOD("queue_merge_carets"), &TextEdit::queue_merge_carets);
+	ClassDB::bind_method(D_METHOD("begin_multicaret_edit"), &TextEdit::begin_multicaret_edit);
+	ClassDB::bind_method(D_METHOD("end_multicaret_edit"), &TextEdit::end_multicaret_edit);
+	ClassDB::bind_method(D_METHOD("is_in_mulitcaret_edit"), &TextEdit::is_in_mulitcaret_edit);
+	ClassDB::bind_method(D_METHOD("multicaret_edit_ignore_caret", "caret_index"), &TextEdit::multicaret_edit_ignore_caret);
 
 	ClassDB::bind_method(D_METHOD("is_caret_visible", "caret_index"), &TextEdit::is_caret_visible, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_caret_draw_pos", "caret_index"), &TextEdit::get_caret_draw_pos, DEFVAL(0));
@@ -6547,30 +6550,30 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_drag_and_drop_selection_enabled", "enable"), &TextEdit::set_drag_and_drop_selection_enabled);
 	ClassDB::bind_method(D_METHOD("is_drag_and_drop_selection_enabled"), &TextEdit::is_drag_and_drop_selection_enabled);
 
-	ClassDB::bind_method(D_METHOD("set_selection_mode", "mode"), &TextEdit::set_selection_mode);
+	ClassDB::bind_method(D_METHOD("set_selection_mode", "mode", "line", "column", "caret_index"), &TextEdit::set_selection_mode, DEFVAL(-1), DEFVAL(-1), DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_mode"), &TextEdit::get_selection_mode);
 
 	ClassDB::bind_method(D_METHOD("select_all"), &TextEdit::select_all);
 	ClassDB::bind_method(D_METHOD("select_word_under_caret", "caret_index"), &TextEdit::select_word_under_caret, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("add_selection_for_next_occurrence"), &TextEdit::add_selection_for_next_occurrence);
-	ClassDB::bind_method(D_METHOD("select", "from_line", "from_column", "to_line", "to_column", "caret_index"), &TextEdit::select, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("select", "origin_line", "origin_column", "caret_line", "caret_column", "caret_index"), &TextEdit::select, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("has_selection", "caret_index"), &TextEdit::has_selection, DEFVAL(-1));
 
 	ClassDB::bind_method(D_METHOD("get_selected_text", "caret_index"), &TextEdit::get_selected_text, DEFVAL(-1));
 
-	// todo deprecate?
-	// ClassDB::bind_method(D_METHOD("get_selection_line", "caret_index"), &TextEdit::get_selection_origin_line, DEFVAL(0));
-	// ClassDB::bind_method(D_METHOD("get_selection_column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
+	// todo use get_selection_line/column instead? what was it for?
 	ClassDB::bind_method(D_METHOD("get_selection_origin_line", "caret_index"), &TextEdit::get_selection_origin_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_origin_column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
-	ClassDB::bind_method(D_METHOD("set_selection_origin_line", "line", "caret_index", "can_be_hidden", "wrap_index"), &TextEdit::set_selection_origin_line, DEFVAL(0), DEFVAL(false), DEFVAL(-1));
+	ClassDB::bind_method(D_METHOD("set_selection_origin_line", "line", "caret_index", "can_be_hidden", "wrap_index"), &TextEdit::set_selection_origin_line, DEFVAL(0), DEFVAL(true), DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("set_selection_origin_column", "column", "caret_index"), &TextEdit::set_selection_origin_column, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("get_selection_from_line", "caret_index"), &TextEdit::get_selection_from_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_from_column", "caret_index"), &TextEdit::get_selection_from_column, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_to_line", "caret_index"), &TextEdit::get_selection_to_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_to_column", "caret_index"), &TextEdit::get_selection_to_column, DEFVAL(0));
+
+	ClassDB::bind_method(D_METHOD("is_selection_direction_right", "caret_index"), &TextEdit::is_selection_direction_right, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("deselect", "caret_index"), &TextEdit::deselect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("delete_selection", "caret_index"), &TextEdit::delete_selection, DEFVAL(-1));
@@ -6706,6 +6709,14 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_menu"), &TextEdit::get_menu);
 	ClassDB::bind_method(D_METHOD("is_menu_visible"), &TextEdit::is_menu_visible);
 	ClassDB::bind_method(D_METHOD("menu_option", "option"), &TextEdit::menu_option);
+
+	// --- Deprecated. ---
+#ifndef DISABLE_DEPRECATED
+	ClassDB::bind_method(D_METHOD("adjust_carets_after_edit", "caret", "from_line", "from_col", "to_line", "to_col"), &TextEdit::adjust_carets_after_edit);
+	ClassDB::bind_method(D_METHOD("get_caret_index_edit_order"), &TextEdit::get_caret_index_edit_order);
+	ClassDB::bind_method(D_METHOD("get_selection_line", "caret_index"), &TextEdit::get_selection_line, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("get_selection_column", "caret_index"), &TextEdit::get_selection_column, DEFVAL(0));
+#endif
 
 	// todo these dont need --- stuff
 	// --- Inspector. ---
@@ -7985,6 +7996,26 @@ void TextEdit::_update_gutter_width() {
 Dictionary TextEdit::_get_line_syntax_highlighting(int p_line) {
 	return syntax_highlighter.is_null() && !setting_text ? Dictionary() : syntax_highlighter->get_line_syntax_highlighting(p_line);
 }
+
+// --- Deprecated. ---
+#ifndef DISABLE_DEPRECATED
+Vector<int> TextEdit::get_caret_index_edit_order() {
+	Vector<int> carets_order = get_sorted_carets();
+	carets_order.reverse();
+	return carets_order;
+}
+
+void TextEdit::adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col) {
+}
+
+int TextEdit::get_selection_line(int p_caret) const {
+	return 0;
+}
+
+int TextEdit::get_selection_column(int p_caret) const {
+	return 0;
+}
+#endif
 
 /*** Super internal Core API. Everything builds on it. ***/
 
