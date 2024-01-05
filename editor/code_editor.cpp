@@ -1290,7 +1290,19 @@ Variant CodeTextEditor::get_edit_state() {
 void CodeTextEditor::set_edit_state(const Variant &p_state) {
 	Dictionary state = p_state;
 
-	text_editor->set_carets_state(state["carets"]);
+	if (state.has("carets")) {
+		text_editor->set_carets_state(state);
+	} else {
+		// Old values for compatability.
+		text_editor->remove_secondary_carets();
+		text_editor->set_caret_line(state["row"]);
+		text_editor->set_caret_column(state["column"]);
+		if (state.get("selection", false)) {
+			text_editor->select(state["selection_from_line"], state["selection_from_column"], state["selection_to_line"], state["selection_to_column"]);
+		} else {
+			text_editor->deselect();
+		}
+	}
 	text_editor->set_v_scroll(state["scroll_position"]);
 	text_editor->set_h_scroll(state["h_scroll_position"]);
 
@@ -1319,10 +1331,9 @@ void CodeTextEditor::set_edit_state(const Variant &p_state) {
 Variant CodeTextEditor::get_navigation_state() {
 	Dictionary state;
 
-	// todo changing keys breaks compat?... do it separate? def find a concrete issue with it first...
 	state["scroll_position"] = text_editor->get_v_scroll();
 	state["h_scroll_position"] = text_editor->get_h_scroll();
-	state["carets"] = text_editor->get_carets_state();
+	state.merge(text_editor->get_carets_state());
 
 	return state;
 }

@@ -4489,8 +4489,8 @@ Dictionary TextEdit::get_carets_state() const {
 }
 
 void TextEdit::set_carets_state(Dictionary p_caret_state) {
-	// todo silent?
 	ERR_FAIL_COND_MSG(!p_caret_state.has("carets"), "Invalid carets state.");
+	begin_multicaret_edit();
 	remove_secondary_carets();
 	deselect();
 	Array carets_array = p_caret_state["carets"];
@@ -4506,6 +4506,8 @@ void TextEdit::set_carets_state(Dictionary p_caret_state) {
 			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
 		}
 	}
+	queue_merge_carets();
+	end_multicaret_edit();
 }
 
 int TextEdit::add_caret(int p_line, int p_column) {

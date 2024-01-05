@@ -158,8 +158,7 @@ void TextEditor::reload_text() {
 	ERR_FAIL_COND(edited_res.is_null());
 
 	CodeEdit *te = code_editor->get_text_editor();
-	int column = te->get_caret_column();
-	int row = te->get_caret_line();
+	Dictionary carets_state = te->get_carets_state();
 	int h = te->get_h_scroll();
 	int v = te->get_v_scroll();
 
@@ -173,8 +172,7 @@ void TextEditor::reload_text() {
 		te->set_text(json_file->get_parsed_text());
 	}
 
-	te->set_caret_line(row);
-	te->set_caret_column(column);
+	te->set_carets_state(carets_state);
 	te->set_h_scroll(h);
 	te->set_v_scroll(v);
 
