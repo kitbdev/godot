@@ -2874,24 +2874,22 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 		int drop_at_column = pos.x;
 		int selection_index = get_selection_at(drop_at_line, drop_at_column, !Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL));
 
+		// Remove drag caret before the complex operation starts so it won't appear in undo.
+		remove_caret(drag_caret_index);
+
+		if (selection_drag_attempt && selection_index >= 0 && selection_index == drag_and_drop_origin_caret_index) {
+			// Dropped onto original selection, do nothing.
+			selection_drag_attempt = false;
+			return;
+		}
+
+		begin_complex_operation();
+		begin_multicaret_edit();
 		if (selection_drag_attempt) {
 			// Drop from self.
 			selection_drag_attempt = false;
-
-			if (selection_index >= 0 && selection_index == drag_and_drop_origin_caret_index) {
-				// Dropped onto original selection, do nothing.
-				return;
-			}
-
-			// Remove drag caret before the complex operation starts so it won't appear in undo.
-			remove_caret(drag_caret_index);
-
-			begin_complex_operation();
-			if (Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
-				// Deselect all.
-				deselect();
-			} else {
-				// Delete all.
+			if (!Input::get_singleton()->is_key_pressed(Key::CMD_OR_CTRL)) {
+				// Delete all selections.
 				int temp_caret = add_caret(drop_at_line, drop_at_column);
 
 				delete_selection();
@@ -2900,18 +2898,19 @@ void TextEdit::drop_data(const Point2 &p_point, const Variant &p_data) {
 				drop_at_line = get_caret_line(temp_caret);
 				drop_at_column = get_caret_column(temp_caret);
 			}
-		} else {
-			// Drop from elsewhere.
-			begin_complex_operation();
-			deselect();
 		}
 		remove_secondary_carets();
+		deselect();
+
+		// Insert the dragged text.
 		set_caret_line(drop_at_line, true, false, -1);
 		set_caret_column(drop_at_column);
 		insert_text_at_caret(p_data);
+
 		select(drop_at_line, drop_at_column, get_caret_line(), get_caret_column());
 		grab_focus();
 		adjust_viewport_to_caret();
+		end_multicaret_edit();
 		end_complex_operation();
 	}
 }
@@ -3470,6 +3469,7 @@ void TextEdit::remove_line_at(int p_line, bool p_move_carets_down) {
 		queue_merge_carets();
 	}
 	_offset_carets_after(next_line, next_column, from_line, from_column);
+	_unhide_carets(); // todo needed here and for removetext?
 	end_multicaret_edit();
 	end_complex_operation();
 }
@@ -5135,6 +5135,7 @@ bool TextEdit::is_drag_and_drop_selection_enabled() const {
 }
 
 void TextEdit::set_selection_mode(SelectionMode p_mode, int p_line, int p_column, int p_caret) {
+	// Parameters kept for compatability.
 	selecting_mode = p_mode;
 }
 
@@ -6512,7 +6513,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_caret_count"), &TextEdit::get_caret_count);
 	ClassDB::bind_method(D_METHOD("add_caret_at_carets", "below"), &TextEdit::add_caret_at_carets);
 
-	ClassDB::bind_method(D_METHOD("get_sorted_carets"), &TextEdit::get_sorted_carets);
+	ClassDB::bind_method(D_METHOD("get_sorted_carets", "include_ignored_carets"), &TextEdit::get_sorted_carets, DEFVAL(false));
 
 	ClassDB::bind_method(D_METHOD("merge_overlapping_carets"), &TextEdit::merge_overlapping_carets);
 	ClassDB::bind_method(D_METHOD("queue_merge_carets"), &TextEdit::queue_merge_carets);
@@ -6779,7 +6780,6 @@ void TextEdit::_bind_methods() {
 
 	// --- Caret. ---
 	ADD_SIGNAL(MethodInfo("caret_changed"));
-	ADD_SIGNAL(MethodInfo("selection_changed"));
 
 	// --- Gutters. ---
 	ADD_SIGNAL(MethodInfo("gutter_clicked", PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "gutter")));

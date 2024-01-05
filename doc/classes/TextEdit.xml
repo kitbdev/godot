@@ -58,7 +58,7 @@
 		<method name="add_caret">
 			<return type="int" />
 			<param index="0" name="line" type="int" />
-			<param index="1" name="col" type="int" />
+			<param index="1" name="column" type="int" />
 			<description>
 				Adds a new caret at the given location. Returns the index of the new caret, or [code]-1[/code] if the location is invalid.
 			</description>
@@ -67,7 +67,7 @@
 			<return type="void" />
 			<param index="0" name="below" type="bool" />
 			<description>
-				Adds an additional caret above or below every caret. If [param below] is true the new caret will be added below and above otherwise.
+				Adds an additional caret above or below every caret. If [param below] is [code]true[/code] the new caret will be added below and above otherwise.
 			</description>
 		</method>
 		<method name="add_gutter">
@@ -83,7 +83,7 @@
 				Adds a selection and a caret for the next occurrence of the current selection. If there is no active selection, selects word under caret.
 			</description>
 		</method>
-		<method name="adjust_carets_after_edit">
+		<method name="adjust_carets_after_edit" is_deprecated="true">
 			<return type="void" />
 			<param index="0" name="caret" type="int" />
 			<param index="1" name="from_line" type="int" />
@@ -91,7 +91,7 @@
 			<param index="3" name="to_line" type="int" />
 			<param index="4" name="to_col" type="int" />
 			<description>
-				Reposition the carets affected by the edit. This assumes edits are applied in edit order, see [method get_caret_index_edit_order].
+				[i]Obsoleted.[/i] No longer necessary since methods now adjust carets themselves.
 			</description>
 		</method>
 		<method name="adjust_viewport_to_caret">
@@ -112,6 +112,12 @@
 			<return type="void" />
 			<description>
 				Starts a multipart edit. All edits will be treated as one action until [method end_complex_operation] is called.
+			</description>
+		</method>
+		<method name="begin_multicaret_edit">
+			<return type="void" />
+			<description>
+				Starts an edit for multiple carets. The edit must be ended with [method end_multicaret_edit]. All [method queue_merge_carets] will merge carets at the end. [method begin_multicaret_edit] and [method end_multicaret_edit] can be nested, the merge will happen at the last [method end_multicaret_edit].
 			</description>
 		</method>
 		<method name="center_viewport_to_caret">
@@ -173,6 +179,12 @@
 				Ends a multipart edit, started with [method begin_complex_operation]. If called outside a complex operation, the current operation is pushed onto the undo/redo stack.
 			</description>
 		</method>
+		<method name="end_multicaret_edit">
+			<return type="void" />
+			<description>
+				Ends an edit for multiple carets, that was started with [method begin_multicaret_edit]. If this was the last [method end_multicaret_edit] and [method queue_merge_carets] was called, carets will be merged with [method merge_overlapping_carets].
+			</description>
+		</method>
 		<method name="get_caret_column" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
@@ -193,10 +205,10 @@
 				Returns the caret pixel draw position.
 			</description>
 		</method>
-		<method name="get_caret_index_edit_order">
+		<method name="get_caret_index_edit_order" is_deprecated="true">
 			<return type="PackedInt32Array" />
 			<description>
-				Returns a list of caret indexes in their edit order, this done from bottom to top. Edit order refers to the way actions such as [method insert_text_at_caret] are applied.
+				[i]Deprecated.[/i] Carets no longer need to be edited in any specific order. If the carets do need to be sorted, use [method get_sorted_carets] instead.
 			</description>
 		</method>
 		<method name="get_caret_line" qualifiers="const">
@@ -502,32 +514,32 @@
 				Returns the text inside the selection of a caret, or all the carets if [param caret_index] is its default value [code]-1[/code].
 			</description>
 		</method>
-		<method name="get_selection_column" qualifiers="const">
+		<method name="get_selection_column" qualifiers="const" is_deprecated="true">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the original start column of the selection.
+				[i]Obsoleted.[/i] Use [method get_selection_origin_column] instead.
 			</description>
 		</method>
 		<method name="get_selection_from_column" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the selection begin column.
+				Returns the selection begin column. Returns the caret column if there is no selection.
 			</description>
 		</method>
 		<method name="get_selection_from_line" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the selection begin line.
+				Returns the selection begin line. Returns the caret line if there is no selection.
 			</description>
 		</method>
-		<method name="get_selection_line" qualifiers="const">
+		<method name="get_selection_line" qualifiers="const" is_deprecated="true">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the original start line of the selection.
+				[i]Obsoleted.[/i] Use [method get_selection_origin_line] instead.
 			</description>
 		</method>
 		<method name="get_selection_mode" qualifiers="const">
@@ -536,18 +548,40 @@
 				Returns the current selection mode.
 			</description>
 		</method>
+		<method name="get_selection_origin_column" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="caret_index" type="int" default="0" />
+			<description>
+				Returns the origin column of the selection. This is the opposite end from the caret.
+			</description>
+		</method>
+		<method name="get_selection_origin_line" qualifiers="const">
+			<return type="int" />
+			<param index="0" name="caret_index" type="int" default="0" />
+			<description>
+				Returns the origin line of the selection. This is the opposite end from the caret.
+			</description>
+		</method>
 		<method name="get_selection_to_column" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the selection end column.
+				Returns the selection end column. Returns the caret column if there is no selection.
 			</description>
 		</method>
 		<method name="get_selection_to_line" qualifiers="const">
 			<return type="int" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns the selection end line.
+				Returns the selection end line. Returns the caret line if there is no selection.
+			</description>
+		</method>
+		<method name="get_sorted_carets" qualifiers="const">
+			<return type="PackedInt32Array" />
+			<param index="0" name="include_ignored_carets" type="bool" default="false" />
+			<description>
+				Returns the carets sorted by selection beginning from lowest line and column to highest (from top to bottom of text).
+				If [param include_ignored_carets] is [code]false[/code], carets from [method multicaret_edit_ignore_caret] will be ignored.
 			</description>
 		</method>
 		<method name="get_tab_size" qualifiers="const">
@@ -641,6 +675,19 @@
 				Inserts a new line with [param text] at [param line].
 			</description>
 		</method>
+		<method name="insert_text">
+			<return type="void" />
+			<param index="0" name="text" type="String" />
+			<param index="1" name="line" type="int" />
+			<param index="2" name="column" type="int" />
+			<param index="3" name="before_selection_begin" type="bool" default="true" />
+			<param index="4" name="before_selection_end" type="bool" default="false" />
+			<description>
+				Inserts the [param text] at [param line] and [param column].
+				If [param before_selection_begin] is [code]true[/code], carets and selections that begin at [param line] and [param column] will moved to the end of the inserted text, along with all carets after it.
+				If [param before_selection_end] is [code]true[/code], selections that end at [param line] and [param column] will be extended to the end of the inserted text. These parameters can be used to insert text inside of or outside of selections.
+			</description>
+		</method>
 		<method name="insert_text_at_caret">
 			<return type="void" />
 			<param index="0" name="text" type="String" />
@@ -683,6 +730,12 @@
 				Returns whether the gutter is overwritable.
 			</description>
 		</method>
+		<method name="is_in_mulitcaret_edit" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if a [method begin_multicaret_edit] has been called and [method end_multicaret_edit] has not yet been called.
+			</description>
+		</method>
 		<method name="is_line_gutter_clickable" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="line" type="int" />
@@ -718,6 +771,13 @@
 				Returns whether the user is in overtype mode.
 			</description>
 		</method>
+		<method name="is_selection_direction_right" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="caret_index" type="int" default="0" />
+			<description>
+				Returns [code]true[/code] if the selection is left-to-right and top-to-bottom. Selections go from the selection origin to the caret.
+			</description>
+		</method>
 		<method name="menu_option">
 			<return type="void" />
 			<param index="0" name="option" type="int" />
@@ -740,6 +800,14 @@
 				[b]Note:[/b] This is not called when a caret changes position but after certain actions, so it is possible to get into a state where carets overlap.
 			</description>
 		</method>
+		<method name="multicaret_edit_ignore_caret" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="caret_index" type="int" />
+			<description>
+				Returns [code]true[/code] if the given [param caret_index] should be ignored as part of a multicaret edit. See [method begin_multicaret_edit] and [method end_multicaret_edit]. Carets that should be ignored are ones that were part of removed text and will likely be merged at the end of the edit, or carets that were added after the start of the edit.
+				It is recommended to [code]continue[/code] within a loop iterating on multiple carets if a caret should be ignored.
+			</description>
+		</method>
 		<method name="paste">
 			<return type="void" />
 			<param index="0" name="caret_index" type="int" default="-1" />
@@ -752,6 +820,13 @@
 			<param index="0" name="caret_index" type="int" default="-1" />
 			<description>
 				Pastes the primary clipboard.
+			</description>
+		</method>
+		<method name="queue_merge_carets">
+			<return type="void" />
+			<description>
+				Queues [method merge_overlapping_carets] to happen at the end of the multicaret edit, or immediately if there is no edit.
+				See [method begin_multicaret_edit] and [method end_multicaret_edit].
 			</description>
 		</method>
 		<method name="redo">
@@ -775,6 +850,15 @@
 				Removes the gutter from this [TextEdit].
 			</description>
 		</method>
+		<method name="remove_line_at">
+			<return type="void" />
+			<param index="0" name="line" type="int" />
+			<param index="1" name="move_carets_down" type="bool" default="true" />
+			<description>
+				Removes the line of text at [param line]. Carets on this line will attempt to match their previous visual x position.
+				If [param move_carets_down] is [code]true[/code] carets will move to the next line down, otherwise carets will move up.
+			</description>
+		</method>
 		<method name="remove_secondary_carets">
 			<return type="void" />
 			<description>
@@ -789,7 +873,6 @@
 			<param index="3" name="to_column" type="int" />
 			<description>
 				Removes text between the given positions.
-				[b]Note:[/b] This does not adjust the caret or selection, which as a result it can end up in an invalid position.
 			</description>
 		</method>
 		<method name="search" qualifiers="const">
@@ -823,14 +906,15 @@
 		</method>
 		<method name="select">
 			<return type="void" />
-			<param index="0" name="from_line" type="int" />
-			<param index="1" name="from_column" type="int" />
-			<param index="2" name="to_line" type="int" />
-			<param index="3" name="to_column" type="int" />
+			<param index="0" name="origin_line" type="int" />
+			<param index="1" name="origin_column" type="int" />
+			<param index="2" name="caret_line" type="int" />
+			<param index="3" name="caret_column" type="int" />
 			<param index="4" name="caret_index" type="int" default="0" />
 			<description>
-				Perform selection, from line/column to line/column.
+				Selects text from [param origin_line] and [param origin_column] to [param caret_line] and [param caret_column] for the given [param caret_index]. This moves the selection origin and the caret. If the positions are the same, the selection will be deselected.
 				If [member selecting_enabled] is [code]false[/code], no selection will occur.
+				[b]Note:[/b] If supporting multiple carets this will not check for any overlap. See [method merge_overlapping_carets].
 			</description>
 		</method>
 		<method name="select_all">
@@ -869,6 +953,7 @@
 				Moves the caret to the specified [param line] index. The caret column will be moved to the same visual position it was at the last time [method set_caret_column] was called, or clamped to the end of the line.
 				If [param adjust_viewport] is [code]true[/code], the viewport will center at the caret position after the move occurs.
 				If [param can_be_hidden] is [code]true[/code], the specified [param line] can be hidden.
+				If [param wrap_index] is [code]-1[/code], the caret column will be clamped to the [param line]'s length. If [param wrap_index] is greater than [code]-1[/code], the column will be moved to attempt to match the visual x position on the line's [param wrap_index] to the position from the last time [method set_caret_column] was called.
 				[b]Note:[/b] If supporting multiple carets this will not check for any overlap. See [method merge_overlapping_carets].
 			</description>
 		</method>
@@ -932,8 +1017,10 @@
 			<return type="void" />
 			<param index="0" name="line" type="int" />
 			<param index="1" name="new_text" type="String" />
+			<param index="2" name="keep_carets_visually" type="bool" default="true" />
 			<description>
-				Sets the text for a specific line.
+				Sets the text for a specific [param line].
+				If [param keep_carets_visually] is [code]true[/code], carets on the line will attempt to keep their visual x position. Otherwise, the carets will be clamped to the new length.
 			</description>
 		</method>
 		<method name="set_line_as_center_visible">
@@ -1042,6 +1129,27 @@
 			<param index="3" name="caret_index" type="int" default="0" />
 			<description>
 				Sets the current selection mode.
+				The parameters [param line], [param column], and [param caret_index] do nothing and are kept for compatibility.
+			</description>
+		</method>
+		<method name="set_selection_origin_column">
+			<return type="void" />
+			<param index="0" name="column" type="int" />
+			<param index="1" name="caret_index" type="int" default="0" />
+			<description>
+				Sets the selection origin column to the [param column] for the given [param caret_index]. If the selection origin is moved to the caret position, the selection will deselect.
+			</description>
+		</method>
+		<method name="set_selection_origin_line">
+			<return type="void" />
+			<param index="0" name="line" type="int" />
+			<param index="1" name="caret_index" type="int" default="0" />
+			<param index="2" name="can_be_hidden" type="bool" default="true" />
+			<param index="3" name="wrap_index" type="int" default="-1" />
+			<description>
+				Sets the selection origin line to the [param line] for the given [param caret_index]. If the selection origin is moved to the caret position, the selection will deselect. 
+				If [param can_be_hidden] is [code]false[/code], The line will be set to the nearest unhidden line below or above.
+				If [param wrap_index] is [code]-1[/code], the selection origin column will be clamped to the [param line]'s length. If [param wrap_index] is greater than [code]-1[/code], the column will be moved to attempt to match the visual x position on the line's [param wrap_index] to the position from the last time [method set_selection_origin_column] or [method select] was called.
 			</description>
 		</method>
 		<method name="set_tab_size">
@@ -1070,8 +1178,10 @@
 			<return type="void" />
 			<param index="0" name="from_line" type="int" />
 			<param index="1" name="to_line" type="int" />
+			<param index="2" name="swap_carets" type="bool" default="true" />
 			<description>
 				Swaps the two lines.
+				If [param swap_carets] is [code]true[/code], carets will be swapped with the lines. Otherwise, carets will not be swapped and will be clamped. 
 			</description>
 		</method>
 		<method name="tag_saved_version">
@@ -1209,7 +1319,7 @@
 	<signals>
 		<signal name="caret_changed">
 			<description>
-				Emitted when the caret changes position.
+				Emitted when any caret changes position.
 			</description>
 		</signal>
 		<signal name="gutter_added">
