@@ -4512,6 +4512,154 @@ TEST_CASE("[SceneTree][CodeEdit] text manipulation") {
 		CHECK(code_edit->get_caret_column() == 0);
 	}
 
+	SUBCASE("[TextEdit] cut") {
+		DisplayServerMock *DS = (DisplayServerMock *)(DisplayServer::get_singleton());
+		code_edit->set_line_folding_enabled(true);
+
+		// Cut without a selection removes the entire line.
+		code_edit->set_text("this is\nsome\n");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(6);
+
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "this is\n");
+		CHECK(code_edit->get_text() == "some\n");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 3); // In the default font, this is the same position.
+
+		// Undo restores the cut text.
+		code_edit->undo();
+		CHECK(DS->clipboard_get() == "this is\n");
+		CHECK(code_edit->get_text() == "this is\nsome\n");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 6);
+
+		// Redo.
+		code_edit->redo();
+		CHECK(DS->clipboard_get() == "this is\n");
+		CHECK(code_edit->get_text() == "some\n");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 3);
+
+		// Cut unfolds the line.
+		code_edit->set_text("this is\n\tsome\n");
+		code_edit->fold_line(0);
+		CHECK(code_edit->is_line_folded(0));
+
+		code_edit->cut();
+		CHECK_FALSE(code_edit->is_line_folded(0));
+		CHECK(DS->clipboard_get() == "this is\n");
+		CHECK(code_edit->get_text() == "\tsome\n");
+		CHECK(code_edit->get_caret_line() == 0);
+
+		// Cut with a selection removes just the selection.
+		code_edit->set_text("this is\nsome\n");
+		code_edit->select(0, 5, 0, 7);
+
+		SEND_GUI_ACTION("ui_cut");
+		CHECK(code_edit->get_viewport()->is_input_handled());
+		CHECK(DS->clipboard_get() == "is");
+		CHECK(code_edit->get_text() == "this \nsome\n");
+		CHECK_FALSE(code_edit->get_caret_line());
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 5);
+
+		// Cut does not change the text if not editable. Text is still added to clipboard.
+		code_edit->set_text("this is\nsome\n");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(5);
+
+		code_edit->set_editable(false);
+		code_edit->cut();
+		code_edit->set_editable(true);
+		CHECK(DS->clipboard_get() == "this is\n");
+		CHECK(code_edit->get_text() == "this is\nsome\n");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 5);
+
+		// Cut line with multiple carets.
+		code_edit->set_text("this is\nsome\n");
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(3);
+		code_edit->add_caret(0, 2);
+		code_edit->add_caret(0, 4);
+		code_edit->add_caret(2, 0);
+
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "this is\n\n");
+		CHECK(code_edit->get_text() == "some");
+		CHECK(code_edit->get_caret_count() == 3);
+		CHECK_FALSE(code_edit->has_selection(0));
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 2); // In the default font, this is the same position.
+		// The previous caret at index 1 was merged.
+		CHECK_FALSE(code_edit->has_selection(1));
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 3); // In the default font, this is the same position.
+		CHECK_FALSE(code_edit->has_selection(2));
+		CHECK(code_edit->get_caret_line(2) == 0);
+		CHECK(code_edit->get_caret_column(2) == 4);
+		code_edit->remove_secondary_carets();
+
+		// Cut on the only line removes the contents.
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(2);
+
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "some\n");
+		CHECK(code_edit->get_text() == "");
+		CHECK(code_edit->get_line_count() == 1);
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Cut empty line.
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "\n");
+		CHECK(code_edit->get_text() == "");
+		CHECK(code_edit->get_caret_line() == 0);
+		CHECK(code_edit->get_caret_column() == 0);
+
+		// Cut multiple lines, in order.
+		code_edit->set_text("this is\nsome\ntext to\nbe\n\ncut");
+		code_edit->set_caret_line(2);
+		code_edit->set_caret_column(7);
+		code_edit->add_caret(3, 0);
+		code_edit->add_caret(0, 2);
+
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "this is\ntext to\nbe\n");
+		CHECK(code_edit->get_text() == "some\n\ncut");
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->get_caret_line(0) == 1);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 2);
+		code_edit->remove_secondary_carets();
+
+		// Cut multiple selections, in order. Ignores regular carets.
+		code_edit->set_text("this is\nsome\ntext to\nbe\n\ncut");
+		code_edit->add_caret(3, 0);
+		code_edit->add_caret(0, 2);
+		code_edit->add_caret(2, 0);
+		code_edit->select(1, 0, 1, 2, 0);
+		code_edit->select(3, 0, 4, 0, 1);
+		code_edit->select(0, 5, 0, 3, 2);
+
+		code_edit->cut();
+		CHECK(DS->clipboard_get() == "s \nso\nbe\n");
+		CHECK(code_edit->get_text() == "thiis\nme\ntext to\n\ncut");
+		CHECK(code_edit->get_caret_count() == 4);
+		CHECK_FALSE(code_edit->has_selection());
+		CHECK(code_edit->get_caret_line(0) == 1);
+		CHECK(code_edit->get_caret_column(0) == 0);
+		CHECK(code_edit->get_caret_line(1) == 3);
+		CHECK(code_edit->get_caret_column(1) == 0);
+		CHECK(code_edit->get_caret_line(2) == 0);
+		CHECK(code_edit->get_caret_column(2) == 3);
+		CHECK(code_edit->get_caret_line(3) == 2);
+		CHECK(code_edit->get_caret_column(3) == 0);
+	}
+
 	SUBCASE("[SceneTree][CodeEdit] new line") {
 		// Add a new line.
 		code_edit->set_text("test new line");

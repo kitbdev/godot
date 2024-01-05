@@ -774,6 +774,26 @@ void CodeEdit::_backspace_internal(int p_caret) {
 	end_complex_operation();
 }
 
+void CodeEdit::_cut_internal(int p_caret) {
+	// Overriden to unfold lines.
+	_copy_internal(p_caret);
+
+	if (!is_editable()) {
+		return;
+	}
+
+	if (has_selection(p_caret)) {
+		delete_selection(p_caret);
+		return;
+	}
+	if (p_caret == -1) {
+		delete_lines();
+	} else {
+		unfold_line(get_caret_line(p_caret));
+		remove_line_at(get_caret_line(p_caret));
+	}
+}
+
 // --- Indent management. ---
 void CodeEdit::set_indent_size(const int p_size) {
 	ERR_FAIL_COND_MSG(p_size <= 0, "Indend size must be greater than 0.");

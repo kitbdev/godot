@@ -6972,7 +6972,7 @@ void TextEdit::_cut_internal(int p_caret) {
 	begin_multicaret_edit();
 	Vector<Point2i> line_ranges;
 	if (p_caret == -1) {
-		line_ranges = get_line_ranges_from_carets(false, true);
+		line_ranges = get_line_ranges_from_carets();
 	} else {
 		line_ranges.push_back(Point2i(get_caret_line(p_caret), get_caret_line(p_caret)));
 	}
