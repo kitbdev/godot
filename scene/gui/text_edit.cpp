@@ -7517,7 +7517,6 @@ void TextEdit::_click_selection_held() {
 }
 
 void TextEdit::_update_selection_mode_pointer(bool p_initial) {
-	dragging_selection = true;
 	Point2 mp = get_local_mouse_pos();
 
 	Point2i pos = get_line_column_at_pos(mp);
@@ -7533,6 +7532,11 @@ void TextEdit::_update_selection_mode_pointer(bool p_initial) {
 		carets.write[caret_index].selection.word_end_column = column;
 	} else {
 		select(get_selection_origin_line(caret_index), get_selection_origin_column(caret_index), line, column, caret_index);
+	}
+
+	if (has_selection(caret_index)) {
+		// Only set to true if any selection has been made.
+		dragging_selection = true;
 	}
 
 	click_select_held->start();

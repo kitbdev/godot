@@ -1580,6 +1580,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
 			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_dragging_cursor());
 
 			// Releasing finishes.
 			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(1, 5).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -1698,6 +1699,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 13);
 			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_dragging_cursor());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			// Moving to a word before the initial selected word reverses selection direction and keeps the initial word selected.
@@ -1845,6 +1847,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 0);
 			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_dragging_cursor());
 
 			// Selecting to the last line puts the caret at end of the line.
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(2, 10).get_center(), MouseButtonMask::LEFT, Key::NONE);
