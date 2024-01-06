@@ -1328,10 +1328,12 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			code_editor->get_text_editor()->duplicate_lines();
 		} break;
 		case EDIT_TOGGLE_FOLD_LINE: {
-			Vector<Point2i> line_ranges = tx->get_line_ranges_from_carets();
-			for (Point2i line_range : line_ranges) {
-				for (int i = line_range.x; i <= line_range.y; i++) {
-					tx->toggle_foldable_line(i);
+			int previous_line = -1;
+			for (int caret_idx : tx->get_sorted_carets()) {
+				int line_idx = tx->get_caret_line(caret_idx);
+				if (line_idx != previous_line) {
+					tx->toggle_foldable_line(line_idx);
+					previous_line = line_idx;
 				}
 			}
 		} break;

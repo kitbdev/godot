@@ -4591,10 +4591,11 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 		}
 		const int caret_line = get_caret_line(i);
 		const int caret_column = get_caret_column(i);
+		const bool is_selected = has_selection(i) || carets[i].last_fit_x != carets[i].selection.origin_last_fit_x;
 		const int selection_origin_line = get_selection_origin_line(i);
 		const int selection_origin_column = get_selection_origin_column(i);
 		const int caret_wrap_index = get_caret_wrap_index(i);
-		const int selection_origin_wrap_index = get_line_wrap_index_at_column(selection_origin_line, selection_origin_column);
+		const int selection_origin_wrap_index = !is_selected ? -1 : get_line_wrap_index_at_column(selection_origin_line, selection_origin_column);
 
 		if (caret_line == 0 && !p_below && (caret_wrap_index == 0 || selection_origin_wrap_index == 0)) {
 			// Can't add above the first line.
@@ -4604,7 +4605,6 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 			// Can't add below the last line.
 			continue;
 		}
-		bool is_selected = has_selection(i) || carets[i].last_fit_x != carets[i].selection.origin_last_fit_x;
 
 		// Add a new caret.
 		int new_caret_index = add_caret(caret_line, caret_column);
@@ -4798,6 +4798,14 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 }
 
 void TextEdit::merge_overlapping_carets() {
+	// Clear the queue and ignore list.
+	multicaret_edit_merge_queued = false;
+	multicaret_edit_ignore_carets.clear();
+
+	if (get_caret_count() == 1) {
+		return;
+	}
+
 	Vector<int> sorted_carets = get_sorted_carets(true);
 	for (int i = 0; i < sorted_carets.size() - 1; i++) {
 		int first_caret = sorted_carets[i];
@@ -4878,10 +4886,6 @@ void TextEdit::merge_overlapping_carets() {
 		// Process the caret again, since it and the next caret might also overlap.
 		i--;
 	}
-
-	// Clear the queue and ignore list.
-	multicaret_edit_merge_queued = false;
-	multicaret_edit_ignore_carets.clear();
 }
 
 void TextEdit::queue_merge_carets() {
@@ -5281,18 +5285,22 @@ bool TextEdit::has_selection(int p_caret) const {
 String TextEdit::get_selected_text(int p_caret) {
 	ERR_FAIL_COND_V(p_caret >= carets.size() || p_caret < -1, "");
 
+	if (p_caret >= 0) {
+		if (!has_selection(p_caret)) {
+			return "";
+		}
+		return _base_get_text(get_selection_from_line(p_caret), get_selection_from_column(p_caret), get_selection_to_line(p_caret), get_selection_to_column(p_caret));
+	}
+
 	StringBuilder selected_text;
 	Vector<int> sorted_carets = get_sorted_carets();
 	for (int i = 0; i < sorted_carets.size(); i++) {
 		int caret_index = sorted_carets[i];
-		if (p_caret != -1 && p_caret != caret_index) {
-			continue;
-		}
 
 		if (!has_selection(caret_index)) {
 			continue;
 		}
-		if (p_caret == -1 && selected_text.get_string_length() != 0) {
+		if (selected_text.get_string_length() != 0) {
 			selected_text += "\n";
 		}
 		selected_text += _base_get_text(get_selection_from_line(caret_index), get_selection_from_column(caret_index), get_selection_to_line(caret_index), get_selection_to_column(caret_index));
@@ -5331,7 +5339,7 @@ Vector<Point2i> TextEdit::get_line_ranges_from_carets(bool p_only_selections, bo
 			continue;
 		}
 		Point2i range = Point2i(get_selection_from_line(caret_index), get_selection_to_line(caret_index));
-		if (get_selection_to_column(caret_index) == 0 && has_selection(caret_index)) {
+		if (has_selection(caret_index) && get_selection_to_column(caret_index) == 0) {
 			// Dont include selection end line if it ends at column 0.
 			range.y--;
 		}
@@ -6563,7 +6571,6 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_selected_text", "caret_index"), &TextEdit::get_selected_text, DEFVAL(-1));
 
-	// todo use get_selection_line/column instead? what was it for?
 	ClassDB::bind_method(D_METHOD("get_selection_origin_line", "caret_index"), &TextEdit::get_selection_origin_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_origin_column", "caret_index"), &TextEdit::get_selection_origin_column, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("set_selection_origin_line", "line", "caret_index", "can_be_hidden", "wrap_index"), &TextEdit::set_selection_origin_line, DEFVAL(0), DEFVAL(true), DEFVAL(-1));

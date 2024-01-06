@@ -117,7 +117,7 @@
 		<method name="begin_multicaret_edit">
 			<return type="void" />
 			<description>
-				Starts an edit for multiple carets. The edit must be ended with [method end_multicaret_edit]. All [method queue_merge_carets] will merge carets at the end. [method begin_multicaret_edit] and [method end_multicaret_edit] can be nested, the merge will happen at the last [method end_multicaret_edit].
+				Starts an edit for multiple carets. The edit must be ended with [method end_multicaret_edit]. Multicaret edits can be used to edit text at multiple carets and delay merging the carets until the end, so the caret indexes aren't affected immediately. [method begin_multicaret_edit] and [method end_multicaret_edit] can be nested, and the merge will happen at the last [method end_multicaret_edit].
 			</description>
 		</method>
 		<method name="center_viewport_to_caret">
@@ -804,7 +804,7 @@
 			<return type="bool" />
 			<param index="0" name="caret_index" type="int" />
 			<description>
-				Returns [code]true[/code] if the given [param caret_index] should be ignored as part of a multicaret edit. See [method begin_multicaret_edit] and [method end_multicaret_edit]. Carets that should be ignored are ones that were part of removed text and will likely be merged at the end of the edit, or carets that were added after the start of the edit.
+				Returns [code]true[/code] if the given [param caret_index] should be ignored as part of a multicaret edit. See [method begin_multicaret_edit] and [method end_multicaret_edit]. Carets that should be ignored are ones that were part of removed text and will likely be merged at the end of the edit, or carets that were added during the edit.
 				It is recommended to [code]continue[/code] within a loop iterating on multiple carets if a caret should be ignored.
 			</description>
 		</method>
