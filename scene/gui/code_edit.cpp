@@ -927,6 +927,7 @@ void CodeEdit::unindent_lines() {
 			if (line_text.begins_with("\t")) {
 				remove_text(i, 0, i, 1);
 			} else if (line_text.begins_with(" ")) {
+				// Remove only enough spaces to align text to nearest full multiple of indentation_size.
 				int spaces_to_remove = _calculate_spaces_till_next_left_indent(get_first_non_whitespace_column(i));
 				remove_text(i, 0, i, spaces_to_remove);
 			}

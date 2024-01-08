@@ -4746,8 +4746,8 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 	}
 	bool any_collapsed = false;
 
-	// Intentionally includes carets in the multicaret_edit_ignore list.
-	for (int i = 0; i < carets.size(); i++) {
+	// Intentionally includes carets in the multicaret_edit_ignore list so that they are moved together.
+	for (int i = 0; i < get_caret_count(); i++) {
 		bool is_caret_in = is_line_col_in_range(get_caret_line(i), get_caret_column(i), p_from_line, p_from_column, p_to_line, p_to_column, p_inclusive);
 		if (!has_selection(i)) {
 			if (is_caret_in) {
@@ -7397,7 +7397,7 @@ void TextEdit::_offset_carets_after(int p_old_line, int p_old_column, int p_new_
 	}
 
 	// Intentionally includes carets in the multicaret_edit_ignore list so that they are moved together.
-	for (int i = 0; i < carets.size(); i++) {
+	for (int i = 0; i < get_caret_count(); i++) {
 		bool selected = has_selection(i);
 		bool selection_dir_right = selected && is_selection_direction_right(i);
 		bool include_caret_at = selection_dir_right ? p_include_selection_end : p_include_selection_begin;
