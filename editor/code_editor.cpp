@@ -1293,7 +1293,7 @@ void CodeTextEditor::set_edit_state(const Variant &p_state) {
 	if (state.has("carets")) {
 		text_editor->set_carets_state(state);
 	} else {
-		// Old values for compatability.
+		// Old values for compatibility.
 		text_editor->remove_secondary_carets();
 		text_editor->set_caret_line(state["row"]);
 		text_editor->set_caret_column(state["column"]);

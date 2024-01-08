@@ -449,7 +449,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK_FALSE("caret_changed");
 			SIGNAL_CHECK_FALSE("text_set");
 
-			// Remove mulitple lines.
+			// Remove multiple lines.
 			text_edit->set_caret_line(2);
 			text_edit->set_caret_column(10);
 			MessageQueue::get_singleton()->flush();
@@ -3934,7 +3934,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_DISCARD("text_changed");
 			SIGNAL_DISCARD("lines_edited_from");
 
-			// Acts as a normal backspace with selecions.
+			// Acts as a normal backspace with selections.
 			text_edit->select(1, 8, 1, 15);
 			text_edit->add_caret(3, 6);
 			text_edit->select(3, 10, 3, 6, 1);

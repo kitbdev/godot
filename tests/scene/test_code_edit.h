@@ -3430,7 +3430,7 @@ TEST_CASE("[SceneTree][CodeEdit] region folding") {
 		code_edit->create_code_region();
 		CHECK(code_edit->get_text() == "line1\nline2\nline3");
 
-		// Region creation with multiple selections. Secondary carets are removed and the firt region name is selected.
+		// Region creation with multiple selections. Secondary carets are removed and the first region name is selected.
 		code_edit->set_text("line1\nline2\nline3");
 		code_edit->clear_comment_delimiters();
 		code_edit->add_comment_delimiter("#", "");

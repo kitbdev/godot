@@ -775,7 +775,7 @@ void CodeEdit::_backspace_internal(int p_caret) {
 }
 
 void CodeEdit::_cut_internal(int p_caret) {
-	// Overriden to unfold lines.
+	// Overridden to unfold lines.
 	_copy_internal(p_caret);
 
 	if (!is_editable()) {

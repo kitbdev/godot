@@ -1365,7 +1365,7 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			tx->begin_multicaret_edit();
 			int begin = tx->get_line_count() - 1, end = 0;
 			if (tx->has_selection()) {
-				// Auto indent all lines that have a caret or selecion on it.
+				// Auto indent all lines that have a caret or selection on it.
 				Vector<Point2i> line_ranges = tx->get_line_ranges_from_carets();
 				for (Point2i line_range : line_ranges) {
 					scr->get_language()->auto_indent_code(text, line_range.x, line_range.y);

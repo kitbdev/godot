@@ -5106,7 +5106,7 @@ bool TextEdit::is_drag_and_drop_selection_enabled() const {
 }
 
 void TextEdit::set_selection_mode(SelectionMode p_mode, int p_line, int p_column, int p_caret) {
-	// Parameters kept for compatability.
+	// Parameters kept for compatibility.
 	selecting_mode = p_mode;
 }
 
