@@ -3465,11 +3465,10 @@ void TextEdit::remove_line_at(int p_line, bool p_move_carets_down) {
 				select(get_selection_origin_line(i), get_selection_origin_column(i), get_caret_line(i), get_caret_column(i), i);
 			}
 		}
-		// todo add to ignore list?
+
 		queue_merge_carets();
 	}
 	_offset_carets_after(next_line, next_column, from_line, from_column);
-	_unhide_carets(); // todo needed here and for removetext?
 	end_multicaret_edit();
 	end_complex_operation();
 }
@@ -4897,37 +4896,6 @@ void TextEdit::queue_merge_carets() {
 	multicaret_edit_merge_queued = true;
 }
 
-void TextEdit::check_overlapping_carets() { // todo use?
-	if (!is_in_mulitcaret_edit()) {
-		merge_overlapping_carets();
-		return;
-	}
-	multicaret_edit_ignore_carets.clear();
-	Vector<int> sorted_carets = get_sorted_carets(true);
-	for (int i = 0; i < sorted_carets.size() - 1; i++) {
-		int first_caret = sorted_carets[i];
-		int second_caret = sorted_carets[i + 1];
-
-		bool merge_carets;
-		if (!has_selection(first_caret) || !has_selection(second_caret)) {
-			// Merge if touching.
-			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) <= get_selection_to_column(first_caret));
-		} else {
-			// Merge two selections if overlapping.
-			merge_carets = get_selection_from_line(second_caret) < get_selection_to_line(first_caret) || (get_selection_from_line(second_caret) == get_selection_to_line(first_caret) && get_selection_from_column(second_caret) < get_selection_to_column(first_caret));
-		}
-		if (merge_carets) {
-			// todo check
-			// Ignore lower one that will be removed.
-			// todo wont work in sequence then... matters?
-			// multicaret_edit_ignore_carets.insert(first_caret < second_caret ? first_caret : second_caret);
-			// ignore higher one since we assume we're in a loop?
-			multicaret_edit_ignore_carets.insert(second_caret);
-			queue_merge_carets();
-		}
-	}
-}
-
 // Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
 void TextEdit::begin_multicaret_edit() {
 	multicaret_edit_count++;
@@ -5445,7 +5413,7 @@ int TextEdit::get_selection_origin_column(int p_caret) const {
 	return carets[p_caret].selection.origin_column;
 }
 
-int TextEdit::get_selection_from_line(int p_caret) const { // todo update references
+int TextEdit::get_selection_from_line(int p_caret) const {
 	ERR_FAIL_INDEX_V(p_caret, carets.size(), -1);
 	if (!has_selection(p_caret)) {
 		return carets[p_caret].line;
@@ -7533,6 +7501,7 @@ void TextEdit::_update_selection_mode_pointer(bool p_initial) {
 	} else {
 		select(get_selection_origin_line(caret_index), get_selection_origin_column(caret_index), line, column, caret_index);
 	}
+	adjust_viewport_to_caret(caret_index);
 
 	if (has_selection(caret_index)) {
 		// Only set to true if any selection has been made.

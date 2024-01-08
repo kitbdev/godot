@@ -857,7 +857,6 @@ public:
 	void collapse_carets(int p_from_line, int p_from_column, int p_to_line, int p_to_column, bool p_inclusive = false);
 
 	void merge_overlapping_carets();
-	void check_overlapping_carets(); // todo
 	void queue_merge_carets();
 	void begin_multicaret_edit();
 	void end_multicaret_edit();

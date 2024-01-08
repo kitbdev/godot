@@ -2364,8 +2364,8 @@ void CodeEdit::delete_lines() {
 	int line_offset = 0;
 	for (Point2i line_range : line_ranges) {
 		// Remove last line of range separately to preserve carets.
-		remove_line_at(line_range.y + line_offset);
 		unfold_line(line_range.y + line_offset);
+		remove_line_at(line_range.y + line_offset);
 		if (line_range.x != line_range.y) {
 			remove_text(line_range.x + line_offset, 0, line_range.y + line_offset, 0);
 		}
@@ -2396,7 +2396,7 @@ void CodeEdit::duplicate_selection() {
 		}
 
 		String text_to_insert = get_line(get_caret_line(i)) + "\n";
-		// Insert new text before the line.
+		// Insert new text before the line, so the caret is on the second one.
 		insert_text(text_to_insert, get_caret_line(i), 0);
 	}
 
@@ -2409,7 +2409,7 @@ void CodeEdit::duplicate_selection() {
 			continue;
 		}
 
-		// Insert new text before the selection.
+		// Insert new text before the selection, so the caret is on the second one.
 		insert_text(get_selected_text(i), get_selection_from_line(i), get_selection_from_column(i));
 	}
 
