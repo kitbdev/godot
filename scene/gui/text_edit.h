@@ -362,7 +362,7 @@ private:
 
 	int _get_column_pos_of_word(const String &p_key, const String &p_search, uint32_t p_search_flags, int p_from_column) const;
 
-	/* Tooltip */
+	/* Tooltip. */
 	Callable tooltip_callback;
 
 	/* Mouse */
@@ -376,7 +376,7 @@ private:
 
 	int _get_char_pos_for_line(int p_px, int p_line, int p_wrap_index = 0) const;
 
-	/* Caret */
+	/* Caret. */
 	struct Selection {
 		bool active = false;
 
@@ -436,7 +436,7 @@ private:
 
 	void _cancel_drag_and_drop_text();
 
-	/* Selection */
+	/* Selection. */
 	SelectionMode selecting_mode = SelectionMode::SELECTION_MODE_NONE;
 
 	bool selecting_enabled = true;
@@ -463,7 +463,7 @@ private:
 
 	void _pre_shift_selection(int p_caret);
 
-	/* Line wrapping */
+	/* Line wrapping. */
 	LineWrappingMode line_wrapping_mode = LineWrappingMode::LINE_WRAPPING_NONE;
 	TextServer::AutowrapMode autowrap_mode = TextServer::AUTOWRAP_WORD_SMART;
 
@@ -472,7 +472,7 @@ private:
 
 	void _update_wrap_at_column(bool p_force = false);
 
-	/* Viewport */
+	/* Viewport. */
 	HScrollBar *h_scroll = nullptr;
 	VScrollBar *v_scroll = nullptr;
 
@@ -528,7 +528,7 @@ private:
 	void _update_minimap_click();
 	void _update_minimap_drag();
 
-	/* Gutters */
+	/* Gutters. */
 	Vector<GutterInfo> gutters;
 	int gutters_width = 0;
 	int gutter_padding = 0;
@@ -536,12 +536,12 @@ private:
 
 	void _update_gutter_width();
 
-	/* Syntax highlighting */
+	/* Syntax highlighting. */
 	Ref<SyntaxHighlighter> syntax_highlighter;
 
 	Dictionary _get_line_syntax_highlighting(int p_line);
 
-	/* Visual */
+	/* Visual. */
 	struct ThemeCache {
 		float base_scale = 1.0;
 
@@ -603,7 +603,7 @@ private:
 	String _base_get_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column) const;
 	void _base_remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 
-	/* Input actions */
+	/* Input actions. */
 	void _swap_current_input_direction();
 	void _new_line(bool p_split_current = true, bool p_above = false);
 	void _move_caret_left(bool p_select, bool p_move_by_word = false);
@@ -664,7 +664,7 @@ protected:
 
 	/* Text manipulation */
 
-	// Overridable action.
+	// Overridable actions.
 	virtual void _handle_unicode_input_internal(const uint32_t p_unicode, int p_caret);
 	virtual void _backspace_internal(int p_caret);
 
@@ -681,7 +681,7 @@ protected:
 	GDVIRTUAL1(_paste_primary_clipboard, int)
 
 public:
-	/* General overrides */
+	/* General overrides. */
 	virtual void unhandled_key_input(const Ref<InputEvent> &p_event) override;
 	virtual void gui_input(const Ref<InputEvent> &p_gui_input) override;
 	bool alt_input(const Ref<InputEvent> &p_gui_input);
@@ -717,7 +717,7 @@ public:
 	void set_tab_size(const int p_size);
 	int get_tab_size() const;
 
-	// User control.
+	// User controls.
 	void set_overtype_mode_enabled(const bool p_enabled);
 	bool is_overtype_mode_enabled() const;
 
@@ -766,7 +766,7 @@ public:
 	int get_next_visible_line_offset_from(int p_line_from, int p_visible_amount) const;
 	Point2i get_next_visible_line_index_offset_from(int p_line_from, int p_wrap_index_from, int p_visible_amount) const;
 
-	// Overridable action.
+	// Overridable actions.
 	void handle_unicode_input(const uint32_t p_unicode, int p_caret = -1);
 	void backspace(int p_caret = -1);
 
@@ -876,7 +876,7 @@ public:
 
 	String get_word_under_caret(int p_caret = -1) const;
 
-	/* Selection */
+	/* Selection. */
 	void set_selecting_enabled(const bool p_enabled);
 	bool is_selecting_enabled() const;
 
@@ -916,7 +916,7 @@ public:
 	void deselect(int p_caret = -1);
 	void delete_selection(int p_caret = -1);
 
-	/* Line wrapping */
+	/* Line wrapping. */
 	void set_line_wrapping_mode(LineWrappingMode p_wrapping_mode);
 	LineWrappingMode get_line_wrapping_mode() const;
 
@@ -929,7 +929,7 @@ public:
 
 	Vector<String> get_line_wrapped_text(int p_line) const;
 
-	/* Viewport */
+	/* Viewport. */
 	// Scrolling.
 	void set_smooth_scroll_enabled(const bool p_enabled);
 	bool is_smooth_scroll_enabled() const;
@@ -981,7 +981,7 @@ public:
 
 	int get_minimap_visible_lines() const;
 
-	/* Gutters */
+	/* Gutters. */
 	void add_gutter(int p_at = -1);
 	void remove_gutter(int p_gutter);
 	int get_gutter_count() const;
@@ -1029,11 +1029,11 @@ public:
 	void set_line_background_color(int p_line, const Color &p_color);
 	Color get_line_background_color(int p_line) const;
 
-	/* Syntax highlighting */
+	/* Syntax Highlighting. */
 	void set_syntax_highlighter(Ref<SyntaxHighlighter> p_syntax_highlighter);
 	Ref<SyntaxHighlighter> get_syntax_highlighter() const;
 
-	/* Visual */
+	/* Visual. */
 	void set_highlight_current_line(bool p_enabled);
 	bool is_highlight_current_line_enabled() const;
 
@@ -1051,7 +1051,7 @@ public:
 
 	Color get_font_color() const;
 
-	/* Deprecated */
+	/* Deprecated. */
 #ifndef DISABLE_DEPRECATED
 	Vector<int> get_caret_index_edit_order();
 	void adjust_carets_after_edit(int p_caret, int p_from_line, int p_from_col, int p_to_line, int p_to_col);

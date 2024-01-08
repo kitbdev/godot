@@ -2254,7 +2254,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	}
 }
 
-/* Input actions */
+/* Input actions. */
 void TextEdit::_swap_current_input_direction() {
 	if (input_direction == TEXT_DIRECTION_LTR) {
 		input_direction = TEXT_DIRECTION_RTL;
@@ -2826,7 +2826,7 @@ void TextEdit::_update_ime_text() {
 	queue_redraw();
 }
 
-/* General overrides */
+/* General overrides. */
 Size2 TextEdit::get_minimum_size() const {
 	Size2 size = theme_cache.style_normal->get_minimum_size();
 	if (fit_content_height) {
@@ -5065,7 +5065,7 @@ String TextEdit::get_word_under_caret(int p_caret) const {
 	return selected_text.as_string();
 }
 
-/* Selection */
+/* Selection. */
 void TextEdit::set_selecting_enabled(const bool p_enabled) {
 	if (selecting_enabled == p_enabled) {
 		return;
@@ -5515,7 +5515,7 @@ void TextEdit::delete_selection(int p_caret) {
 	end_complex_operation();
 }
 
-/* Line wrapping */
+/* Line wrapping. */
 void TextEdit::set_line_wrapping_mode(LineWrappingMode p_wrapping_mode) {
 	if (line_wrapping_mode != p_wrapping_mode) {
 		line_wrapping_mode = p_wrapping_mode;
@@ -5940,7 +5940,7 @@ int TextEdit::get_minimap_visible_lines() const {
 	return _get_control_height() / (minimap_char_size.y + minimap_line_spacing);
 }
 
-/* Gutters */
+/* Gutters. */
 void TextEdit::add_gutter(int p_at) {
 	if (p_at < 0 || p_at > gutters.size()) {
 		gutters.push_back(GutterInfo());
@@ -6197,7 +6197,7 @@ Color TextEdit::get_line_background_color(int p_line) const {
 	return text.get_line_background_color(p_line);
 }
 
-/* Syntax highlighting */
+/* Syntax Highlighting. */
 void TextEdit::set_syntax_highlighter(Ref<SyntaxHighlighter> p_syntax_highlighter) {
 	if (syntax_highlighter == p_syntax_highlighter && syntax_highlighter.is_valid() == p_syntax_highlighter.is_valid()) {
 		return;
@@ -6214,7 +6214,7 @@ Ref<SyntaxHighlighter> TextEdit::get_syntax_highlighter() const {
 	return syntax_highlighter;
 }
 
-/* Visual */
+/* Visual. */
 void TextEdit::set_highlight_current_line(bool p_enabled) {
 	if (highlight_current_line == p_enabled) {
 		return;
@@ -6457,7 +6457,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_dragging_cursor"), &TextEdit::is_dragging_cursor);
 	ClassDB::bind_method(D_METHOD("is_mouse_over_selection", "edges", "caret_index"), &TextEdit::is_mouse_over_selection, DEFVAL(-1));
 
-	/* Caret */
+	/* Caret. */
 	BIND_ENUM_CONSTANT(CARET_TYPE_LINE);
 	BIND_ENUM_CONSTANT(CARET_TYPE_BLOCK);
 
@@ -6510,7 +6510,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_word_under_caret", "caret_index"), &TextEdit::get_word_under_caret, DEFVAL(-1));
 
-	/* Selection */
+	/* Selection. */
 	BIND_ENUM_CONSTANT(SELECTION_MODE_NONE);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_SHIFT);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_POINTER);
@@ -6553,7 +6553,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("deselect", "caret_index"), &TextEdit::deselect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("delete_selection", "caret_index"), &TextEdit::delete_selection, DEFVAL(-1));
 
-	/* Line wrapping */
+	/* Line wrapping. */
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_NONE);
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_BOUNDARY);
 
@@ -6569,7 +6569,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_line_wrapped_text", "line"), &TextEdit::get_line_wrapped_text);
 
-	/* Viewport */
+	/* Viewport. */
 	// Scrolling.
 	ClassDB::bind_method(D_METHOD("set_smooth_scroll_enabled", "enable"), &TextEdit::set_smooth_scroll_enabled);
 	ClassDB::bind_method(D_METHOD("is_smooth_scroll_enabled"), &TextEdit::is_smooth_scroll_enabled);
@@ -6621,7 +6621,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_minimap_visible_lines"), &TextEdit::get_minimap_visible_lines);
 
-	/* Gutters */
+	/* Gutters. */
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_STRING);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_ICON);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_CUSTOM);
@@ -6661,11 +6661,11 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_line_background_color", "line", "color"), &TextEdit::set_line_background_color);
 	ClassDB::bind_method(D_METHOD("get_line_background_color", "line"), &TextEdit::get_line_background_color);
 
-	/* Syntax highlighting */
+	/* Syntax Highlighting. */
 	ClassDB::bind_method(D_METHOD("set_syntax_highlighter", "syntax_highlighter"), &TextEdit::set_syntax_highlighter);
 	ClassDB::bind_method(D_METHOD("get_syntax_highlighter"), &TextEdit::get_syntax_highlighter);
 
-	/* Visual */
+	/* Visual. */
 	ClassDB::bind_method(D_METHOD("set_highlight_current_line", "enabled"), &TextEdit::set_highlight_current_line);
 	ClassDB::bind_method(D_METHOD("is_highlight_current_line_enabled"), &TextEdit::is_highlight_current_line_enabled);
 
@@ -6746,15 +6746,15 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "structured_text_bidi_override_options"), "set_structured_text_bidi_override_options", "get_structured_text_bidi_override_options");
 
 	// Signals.
-	/* Core */
+	/* Core. */
 	ADD_SIGNAL(MethodInfo("text_set"));
 	ADD_SIGNAL(MethodInfo("text_changed"));
 	ADD_SIGNAL(MethodInfo("lines_edited_from", PropertyInfo(Variant::INT, "from_line"), PropertyInfo(Variant::INT, "to_line")));
 
-	/* Caret */
+	/* Caret. */
 	ADD_SIGNAL(MethodInfo("caret_changed"));
 
-	/* Gutters */
+	/* Gutters. */
 	ADD_SIGNAL(MethodInfo("gutter_clicked", PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "gutter")));
 	ADD_SIGNAL(MethodInfo("gutter_added"));
 	ADD_SIGNAL(MethodInfo("gutter_removed"));
@@ -6801,7 +6801,7 @@ void TextEdit::_bind_methods() {
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), 1024);
 }
 
-/* Internal API for CodeEdit */
+/* Internal API for CodeEdit. */
 // Line hiding.
 void TextEdit::_set_hiding_enabled(bool p_enabled) {
 	if (hiding_enabled == p_enabled) {
@@ -7603,7 +7603,7 @@ void TextEdit::_pre_shift_selection(int p_caret) {
 	carets.write[p_caret].selection.word_end_column = get_caret_column(p_caret);
 }
 
-/* Line wrapping */
+/* Line Wrapping */
 void TextEdit::_update_wrap_at_column(bool p_force) {
 	int new_wrap_at = get_size().width - theme_cache.style_normal->get_minimum_size().width - gutters_width - gutter_padding;
 	if (draw_minimap) {
@@ -7652,7 +7652,7 @@ void TextEdit::_update_wrap_at_column(bool p_force) {
 	set_line_as_first_visible(first_visible_line, first_visible_line_wrap_ofs);
 }
 
-/* Viewport */
+/* Viewport. */
 void TextEdit::_update_scrollbars() {
 	Size2 size = get_size();
 	Size2 hmin = h_scroll->get_combined_minimum_size();
@@ -7956,7 +7956,7 @@ void TextEdit::_update_minimap_drag() {
 	v_scroll->set_as_ratio(minimap_scroll_ratio + diff);
 }
 
-/* Gutters */
+/* Gutters. */
 void TextEdit::_update_gutter_width() {
 	gutters_width = 0;
 	for (int i = 0; i < gutters.size(); i++) {
@@ -7970,12 +7970,12 @@ void TextEdit::_update_gutter_width() {
 	queue_redraw();
 }
 
-/* Syntax highlighting */
+/* Syntax highlighting. */
 Dictionary TextEdit::_get_line_syntax_highlighting(int p_line) {
 	return syntax_highlighter.is_null() && !setting_text ? Dictionary() : syntax_highlighter->get_line_syntax_highlighting(p_line);
 }
 
-/* Deprecated */
+/* Deprecated. */
 #ifndef DISABLE_DEPRECATED
 Vector<int> TextEdit::get_caret_index_edit_order() {
 	Vector<int> carets_order = get_sorted_carets();
