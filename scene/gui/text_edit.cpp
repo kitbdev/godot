@@ -2254,7 +2254,7 @@ void TextEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 	}
 }
 
-// --- Input actions. ---
+/* Input actions */
 void TextEdit::_swap_current_input_direction() {
 	if (input_direction == TEXT_DIRECTION_LTR) {
 		input_direction = TEXT_DIRECTION_RTL;
@@ -2826,7 +2826,7 @@ void TextEdit::_update_ime_text() {
 	queue_redraw();
 }
 
-// --- General overrides. ---
+/* General overrides */
 Size2 TextEdit::get_minimum_size() const {
 	Size2 size = theme_cache.style_normal->get_minimum_size();
 	if (fit_content_height) {
@@ -2974,8 +2974,7 @@ void TextEdit::set_tooltip_request_func(const Callable &p_tooltip_callback) {
 	tooltip_callback = p_tooltip_callback;
 }
 
-// todo block style ok for headers? /**/
-// --- Text. ---
+/* Text */
 // Text properties.
 bool TextEdit::has_ime_text() const {
 	return !ime_text.is_empty();
@@ -3826,7 +3825,7 @@ void TextEdit::menu_option(int p_option) {
 	}
 }
 
-// --- Versioning. ---
+/* Versioning */
 void TextEdit::start_action(EditAction p_action) {
 	if (current_action != p_action) {
 		if (current_action != EditAction::ACTION_NONE) {
@@ -4038,7 +4037,7 @@ uint32_t TextEdit::get_saved_version() const {
 	return saved_version;
 }
 
-// --- Search. ---
+/* Search */
 void TextEdit::set_search_text(const String &p_search_text) {
 	search_text = p_search_text;
 }
@@ -4157,7 +4156,7 @@ Point2i TextEdit::search(const String &p_key, uint32_t p_search_flags, int p_fro
 	return (pos == -1) ? Point2i(-1, -1) : Point2i(pos, line);
 }
 
-// --- Mouse. ---
+/* Mouse */
 Point2 TextEdit::get_local_mouse_pos() const {
 	Point2 mp = get_local_mouse_position();
 	if (is_layout_rtl()) {
@@ -4385,7 +4384,7 @@ bool TextEdit::is_mouse_over_selection(bool p_edges, int p_caret) const {
 	return false;
 }
 
-// --- Caret. ---
+/* Caret */
 void TextEdit::set_caret_type(CaretType p_type) {
 	if (caret_type == p_type) {
 		return;
@@ -5066,7 +5065,7 @@ String TextEdit::get_word_under_caret(int p_caret) const {
 	return selected_text.as_string();
 }
 
-// --- Selection. ---
+/* Selection */
 void TextEdit::set_selecting_enabled(const bool p_enabled) {
 	if (selecting_enabled == p_enabled) {
 		return;
@@ -5516,7 +5515,7 @@ void TextEdit::delete_selection(int p_caret) {
 	end_complex_operation();
 }
 
-// --- Line wrapping. ---
+/* Line wrapping */
 void TextEdit::set_line_wrapping_mode(LineWrappingMode p_wrapping_mode) {
 	if (line_wrapping_mode != p_wrapping_mode) {
 		line_wrapping_mode = p_wrapping_mode;
@@ -5604,7 +5603,7 @@ Vector<String> TextEdit::get_line_wrapped_text(int p_line) const {
 	return lines;
 }
 
-// --- Viewport. ---
+/* Viewport */
 // Scrolling.
 void TextEdit::set_smooth_scroll_enabled(const bool p_enabled) {
 	v_scroll->set_smooth_scroll_enabled(p_enabled);
@@ -5908,7 +5907,7 @@ void TextEdit::center_viewport_to_caret(int p_caret) {
 	queue_redraw();
 }
 
-// --- Minimap. ---
+/* Minimap */
 void TextEdit::set_draw_minimap(bool p_enabled) {
 	if (draw_minimap == p_enabled) {
 		return;
@@ -5941,7 +5940,7 @@ int TextEdit::get_minimap_visible_lines() const {
 	return _get_control_height() / (minimap_char_size.y + minimap_line_spacing);
 }
 
-// --- Gutters. ---
+/* Gutters */
 void TextEdit::add_gutter(int p_at) {
 	if (p_at < 0 || p_at > gutters.size()) {
 		gutters.push_back(GutterInfo());
@@ -6198,7 +6197,7 @@ Color TextEdit::get_line_background_color(int p_line) const {
 	return text.get_line_background_color(p_line);
 }
 
-// --- Syntax highlighting. ---
+/* Syntax highlighting */
 void TextEdit::set_syntax_highlighter(Ref<SyntaxHighlighter> p_syntax_highlighter) {
 	if (syntax_highlighter == p_syntax_highlighter && syntax_highlighter.is_valid() == p_syntax_highlighter.is_valid()) {
 		return;
@@ -6215,7 +6214,7 @@ Ref<SyntaxHighlighter> TextEdit::get_syntax_highlighter() const {
 	return syntax_highlighter;
 }
 
-// --- Visual. ---
+/* Visual */
 void TextEdit::set_highlight_current_line(bool p_enabled) {
 	if (highlight_current_line == p_enabled) {
 		return;
@@ -6290,7 +6289,7 @@ Color TextEdit::get_font_color() const {
 }
 
 void TextEdit::_bind_methods() {
-	// --- Text. ---
+	/* Text */
 	// Text properties.
 	ClassDB::bind_method(D_METHOD("has_ime_text"), &TextEdit::has_ime_text);
 
@@ -6408,7 +6407,7 @@ void TextEdit::_bind_methods() {
 	BIND_ENUM_CONSTANT(MENU_INSERT_SHY);
 	BIND_ENUM_CONSTANT(MENU_MAX);
 
-	// --- Versioning. ---
+	/* Versioning */
 	BIND_ENUM_CONSTANT(ACTION_NONE);
 	BIND_ENUM_CONSTANT(ACTION_TYPING);
 	BIND_ENUM_CONSTANT(ACTION_BACKSPACE);
@@ -6431,7 +6430,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_version"), &TextEdit::get_version);
 	ClassDB::bind_method(D_METHOD("get_saved_version"), &TextEdit::get_saved_version);
 
-	// --- Search. ---
+	/* Search */
 	BIND_ENUM_CONSTANT(SEARCH_MATCH_CASE);
 	BIND_ENUM_CONSTANT(SEARCH_WHOLE_WORDS);
 	BIND_ENUM_CONSTANT(SEARCH_BACKWARDS);
@@ -6441,10 +6440,10 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("search", "text", "flags", "from_line", "from_colum"), &TextEdit::search);
 
-	// --- Tooltip. ---
+	/* Tooltip */
 	ClassDB::bind_method(D_METHOD("set_tooltip_request_func", "callback"), &TextEdit::set_tooltip_request_func);
 
-	// --- Mouse. ---
+	/* Mouse */
 	ClassDB::bind_method(D_METHOD("get_local_mouse_pos"), &TextEdit::get_local_mouse_pos);
 
 	ClassDB::bind_method(D_METHOD("get_word_at_pos", "position"), &TextEdit::get_word_at_pos);
@@ -6458,7 +6457,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_dragging_cursor"), &TextEdit::is_dragging_cursor);
 	ClassDB::bind_method(D_METHOD("is_mouse_over_selection", "edges", "caret_index"), &TextEdit::is_mouse_over_selection, DEFVAL(-1));
 
-	// --- Caret. ---
+	/* Caret */
 	BIND_ENUM_CONSTANT(CARET_TYPE_LINE);
 	BIND_ENUM_CONSTANT(CARET_TYPE_BLOCK);
 
@@ -6511,7 +6510,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_word_under_caret", "caret_index"), &TextEdit::get_word_under_caret, DEFVAL(-1));
 
-	// --- Selection. ---
+	/* Selection */
 	BIND_ENUM_CONSTANT(SELECTION_MODE_NONE);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_SHIFT);
 	BIND_ENUM_CONSTANT(SELECTION_MODE_POINTER);
@@ -6554,7 +6553,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("deselect", "caret_index"), &TextEdit::deselect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("delete_selection", "caret_index"), &TextEdit::delete_selection, DEFVAL(-1));
 
-	// --- Line wrapping. ---
+	/* Line wrapping */
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_NONE);
 	BIND_ENUM_CONSTANT(LINE_WRAPPING_BOUNDARY);
 
@@ -6570,7 +6569,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_line_wrapped_text", "line"), &TextEdit::get_line_wrapped_text);
 
-	// --- Viewport. ---
+	/* Viewport */
 	// Scrolling.
 	ClassDB::bind_method(D_METHOD("set_smooth_scroll_enabled", "enable"), &TextEdit::set_smooth_scroll_enabled);
 	ClassDB::bind_method(D_METHOD("is_smooth_scroll_enabled"), &TextEdit::is_smooth_scroll_enabled);
@@ -6622,7 +6621,7 @@ void TextEdit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("get_minimap_visible_lines"), &TextEdit::get_minimap_visible_lines);
 
-	// --- Gutters. ---
+	/* Gutters */
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_STRING);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_ICON);
 	BIND_ENUM_CONSTANT(GUTTER_TYPE_CUSTOM);
@@ -6662,11 +6661,11 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_line_background_color", "line", "color"), &TextEdit::set_line_background_color);
 	ClassDB::bind_method(D_METHOD("get_line_background_color", "line"), &TextEdit::get_line_background_color);
 
-	// --- Syntax highlighting. ---
+	/* Syntax highlighting */
 	ClassDB::bind_method(D_METHOD("set_syntax_highlighter", "syntax_highlighter"), &TextEdit::set_syntax_highlighter);
 	ClassDB::bind_method(D_METHOD("get_syntax_highlighter"), &TextEdit::get_syntax_highlighter);
 
-	// --- Visual. ---
+	/* Visual */
 	ClassDB::bind_method(D_METHOD("set_highlight_current_line", "enabled"), &TextEdit::set_highlight_current_line);
 	ClassDB::bind_method(D_METHOD("is_highlight_current_line_enabled"), &TextEdit::is_highlight_current_line_enabled);
 
@@ -6686,7 +6685,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_menu_visible"), &TextEdit::is_menu_visible);
 	ClassDB::bind_method(D_METHOD("menu_option", "option"), &TextEdit::menu_option);
 
-	// --- Deprecated. ---
+	/* Deprecated */
 #ifndef DISABLE_DEPRECATED
 	ClassDB::bind_method(D_METHOD("adjust_carets_after_edit", "caret", "from_line", "from_col", "to_line", "to_col"), &TextEdit::adjust_carets_after_edit);
 	ClassDB::bind_method(D_METHOD("get_caret_index_edit_order"), &TextEdit::get_caret_index_edit_order);
@@ -6694,8 +6693,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_selection_column", "caret_index"), &TextEdit::get_selection_column, DEFVAL(0));
 #endif
 
-	// todo these dont need --- stuff
-	// --- Inspector. ---
+	/* Inspector */
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "text", PROPERTY_HINT_MULTILINE_TEXT), "set_text", "get_text");
 	ADD_PROPERTY(PropertyInfo(Variant::STRING, "placeholder_text", PROPERTY_HINT_MULTILINE_TEXT), "set_placeholder", "get_placeholder");
 
@@ -6748,34 +6746,34 @@ void TextEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::ARRAY, "structured_text_bidi_override_options"), "set_structured_text_bidi_override_options", "get_structured_text_bidi_override_options");
 
 	// Signals.
-	// --- Core. ---
+	/* Core */
 	ADD_SIGNAL(MethodInfo("text_set"));
 	ADD_SIGNAL(MethodInfo("text_changed"));
 	ADD_SIGNAL(MethodInfo("lines_edited_from", PropertyInfo(Variant::INT, "from_line"), PropertyInfo(Variant::INT, "to_line")));
 
-	// --- Caret. ---
+	/* Caret */
 	ADD_SIGNAL(MethodInfo("caret_changed"));
 
-	// --- Gutters. ---
+	/* Gutters */
 	ADD_SIGNAL(MethodInfo("gutter_clicked", PropertyInfo(Variant::INT, "line"), PropertyInfo(Variant::INT, "gutter")));
 	ADD_SIGNAL(MethodInfo("gutter_added"));
 	ADD_SIGNAL(MethodInfo("gutter_removed"));
 
 	// Theme items.
-	// --- Search. ---
+	/* Search */
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_border_color);
 
-	// --- Caret. ---
+	/* Caret */
 	BIND_THEME_ITEM(Theme::DATA_TYPE_CONSTANT, TextEdit, caret_width);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, caret_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, caret_background_color);
 
-	// --- Selection. ---
+	/* Selection */
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, font_selected_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, selection_color);
 
-	// --- Other visuals. ---
+	/* Other visuals */
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_normal, "normal");
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_focus, "focus");
 	BIND_THEME_ITEM_CUSTOM(Theme::DATA_TYPE_STYLEBOX, TextEdit, style_readonly, "read_only");
@@ -6803,7 +6801,7 @@ void TextEdit::_bind_methods() {
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), 1024);
 }
 
-// --- Internal API for CodeEdit. ---
+/* Internal API for CodeEdit */
 // Line hiding.
 void TextEdit::_set_hiding_enabled(bool p_enabled) {
 	if (hiding_enabled == p_enabled) {
@@ -6861,7 +6859,7 @@ void TextEdit::_set_symbol_lookup_word(const String &p_symbol) {
 	queue_redraw();
 }
 
-// --- Text manipulation. ---
+/* Text manipulation */
 
 // Overridable actions.
 void TextEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) {
@@ -7209,7 +7207,7 @@ void TextEdit::_update_context_menu() {
 #undef MENU_ITEM_CHECKED
 }
 
-// --- Versioning. ---
+/* Versioning */
 void TextEdit::_push_current_op() {
 	if (pending_action_end) {
 		start_action(EditAction::ACTION_NONE);
@@ -7267,7 +7265,7 @@ void TextEdit::_clear_redo() {
 	}
 }
 
-// --- Search. ---
+/* Search */
 int TextEdit::_get_column_pos_of_word(const String &p_key, const String &p_search, uint32_t p_search_flags, int p_from_column) const {
 	int col = -1;
 
@@ -7308,7 +7306,7 @@ int TextEdit::_get_column_pos_of_word(const String &p_key, const String &p_searc
 	return col;
 }
 
-// --- Mouse. ---
+/* Mouse */
 int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) const {
 	ERR_FAIL_INDEX_V(p_line, text.size(), 0);
 	p_wrap_index = MIN(p_wrap_index, text.get_line_data(p_line)->get_line_count() - 1);
@@ -7324,7 +7322,7 @@ int TextEdit::_get_char_pos_for_line(int p_px, int p_line, int p_wrap_index) con
 	return ofs;
 }
 
-// --- Caret. ---
+/* Caret */
 void TextEdit::_caret_changed(int p_caret) {
 	queue_redraw();
 
@@ -7452,7 +7450,7 @@ void TextEdit::_cancel_drag_and_drop_text() {
 	}
 }
 
-// --- Selection. ---
+/* Selection */
 void TextEdit::_selection_changed(int p_caret) {
 	if (!selecting_enabled) {
 		return;
@@ -7605,7 +7603,7 @@ void TextEdit::_pre_shift_selection(int p_caret) {
 	carets.write[p_caret].selection.word_end_column = get_caret_column(p_caret);
 }
 
-// --- Line wrapping. ---
+/* Line wrapping */
 void TextEdit::_update_wrap_at_column(bool p_force) {
 	int new_wrap_at = get_size().width - theme_cache.style_normal->get_minimum_size().width - gutters_width - gutter_padding;
 	if (draw_minimap) {
@@ -7654,7 +7652,7 @@ void TextEdit::_update_wrap_at_column(bool p_force) {
 	set_line_as_first_visible(first_visible_line, first_visible_line_wrap_ofs);
 }
 
-// --- Viewport. ---
+/* Viewport */
 void TextEdit::_update_scrollbars() {
 	Size2 size = get_size();
 	Size2 hmin = h_scroll->get_combined_minimum_size();
@@ -7958,7 +7956,7 @@ void TextEdit::_update_minimap_drag() {
 	v_scroll->set_as_ratio(minimap_scroll_ratio + diff);
 }
 
-// --- Gutters. ---
+/* Gutters */
 void TextEdit::_update_gutter_width() {
 	gutters_width = 0;
 	for (int i = 0; i < gutters.size(); i++) {
@@ -7972,12 +7970,12 @@ void TextEdit::_update_gutter_width() {
 	queue_redraw();
 }
 
-// --- Syntax highlighting. ---
+/* Syntax highlighting */
 Dictionary TextEdit::_get_line_syntax_highlighting(int p_line) {
 	return syntax_highlighter.is_null() && !setting_text ? Dictionary() : syntax_highlighter->get_line_syntax_highlighting(p_line);
 }
 
-// --- Deprecated. ---
+/* Deprecated */
 #ifndef DISABLE_DEPRECATED
 Vector<int> TextEdit::get_caret_index_edit_order() {
 	Vector<int> carets_order = get_sorted_carets();

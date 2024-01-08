@@ -62,7 +62,7 @@ public:
 	};
 
 private:
-	// --- Indent management. ---
+	/* Indent management */
 	int indent_size = 4;
 	String indent_text = "\t";
 
@@ -75,10 +75,10 @@ private:
 
 	void _new_line(bool p_split_current_line = true, bool p_above = false);
 
-	// --- Auto brace completion. ---
+	/* Auto brace completion */
 	bool auto_brace_completion_enabled = false;
 
-	// --- BracePair open_key must be uniquie and ordered by length. ---
+	// BracePair open_key must be unique and ordered by length.
 	struct BracePair {
 		String open_key = "";
 		String close_key = "";
@@ -88,7 +88,7 @@ private:
 	int _get_auto_brace_pair_open_at_pos(int p_line, int p_col);
 	int _get_auto_brace_pair_close_at_pos(int p_line, int p_col);
 
-	// --- Main Gutter. ---
+	/* Main Gutter */
 	enum MainGutterType {
 		MAIN_GUTTER_BREAKPOINT = 0x01,
 		MAIN_GUTTER_BOOKMARK = 0x02,
@@ -109,13 +109,13 @@ private:
 	// Executing lines.
 	bool draw_executing_lines = false;
 
-	// --- Line numbers. ---
+	/* Line numbers */
 	int line_number_gutter = -1;
 	int line_number_digits = 1;
 	String line_number_padding = " ";
 	void _line_number_draw_callback(int p_line, int p_gutter, const Rect2 &p_region);
 
-	// --- Fold Gutter. ---
+	/* Fold Gutter */
 	int fold_gutter = -1;
 	bool draw_fold_gutter = false;
 	void _fold_gutter_draw_callback(int p_line, int p_gutter, Rect2 p_region);
@@ -123,7 +123,7 @@ private:
 	void _gutter_clicked(int p_line, int p_gutter);
 	void _update_gutter_indexes();
 
-	// --- Line Folding. ---
+	/* Line Folding */
 	bool line_folding_enabled = false;
 	String code_region_start_string;
 	String code_region_end_string;
@@ -131,7 +131,7 @@ private:
 	String code_region_end_tag = "endregion";
 	void _update_code_region_tags();
 
-	// --- Delimiters. ---
+	/* Delimiters */
 	enum DelimiterType {
 		TYPE_STRING,
 		TYPE_COMMENT,
@@ -193,13 +193,13 @@ private:
 	void _clear_delimiters(DelimiterType p_type);
 	TypedArray<String> _get_delimiters(DelimiterType p_type) const;
 
-	// --- Code Hint. ---
+	/* Code Hint */
 	String code_hint = "";
 
 	bool code_hint_draw_below = true;
 	int code_hint_xpos = -0xFFFF;
 
-	// --- Code Completion. ---
+	/* Code Completion */
 	bool code_completion_enabled = false;
 	bool code_completion_forced = false;
 
@@ -224,19 +224,19 @@ private:
 	void _filter_code_completion_candidates_impl();
 	bool _should_reset_selected_option_for_new_options(const Vector<ScriptLanguage::CodeCompletionOption> &p_new_options);
 
-	// --- Line length guidelines. ---
+	/* Line length guidelines */
 	TypedArray<int> line_length_guideline_columns;
 
-	// --- Symbol lookup. ---
+	/* Symbol lookup */
 	bool symbol_lookup_on_click_enabled = false;
 
 	String symbol_lookup_new_word = "";
 	String symbol_lookup_word = "";
 	Point2i symbol_lookup_pos;
 
-	// --- Visual. ---
+	/* Visual */
 	struct ThemeCache {
-		// --- Gutters. ---
+		/* Gutters */
 		Color code_folding_color = Color(1, 1, 1);
 		Color folded_code_region_color = Color(1, 1, 1);
 		Ref<Texture2D> can_fold_icon;
@@ -256,7 +256,7 @@ private:
 
 		Color line_number_color = Color(1, 1, 1);
 
-		// --- Code Completion. ---
+		/* Code Completion */
 		Ref<StyleBox> code_completion_style;
 		int code_completion_icon_separation = 0;
 
@@ -269,14 +269,14 @@ private:
 		Color code_completion_selected_color = Color(0, 0, 0, 0);
 		Color code_completion_existing_color = Color(0, 0, 0, 0);
 
-		// --- Code hint. ---
+		/* Code hint */
 		Ref<StyleBox> code_hint_style;
 		Color code_hint_color;
 
-		// --- Line length guideline. ---
+		/* Line length guideline */
 		Color line_length_guideline_color;
 
-		// --- Other visuals. ---
+		/* Other visuals */
 		Ref<StyleBox> style_normal;
 
 		Color brace_mismatch_color;
@@ -290,7 +290,7 @@ private:
 	virtual Color _get_code_folding_color() const override;
 	virtual Ref<Texture2D> _get_folded_eol_icon() const override;
 
-	// --- Callbacks. ---
+	/* Callbacks */
 	int lines_edited_changed = 0;
 	int lines_edited_from = -1;
 	int lines_edited_to = -1;
@@ -310,7 +310,7 @@ protected:
 
 	virtual void _unhide_carets() override;
 
-	// --- Text manipulation. ---
+	/* Text manipulation */
 
 	// Overridable actions.
 	virtual void _handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) override;
@@ -322,11 +322,11 @@ protected:
 	GDVIRTUAL1RC(TypedArray<Dictionary>, _filter_code_completion_candidates, TypedArray<Dictionary>)
 
 public:
-	// --- General overrides. ---
+	/* General overrides */
 	virtual void gui_input(const Ref<InputEvent> &p_gui_input) override;
 	virtual CursorShape get_cursor_shape(const Point2 &p_pos = Point2i()) const override;
 
-	// --- Indent management. ---
+	/* Indent management */
 	void set_indent_size(const int p_size);
 	int get_indent_size() const;
 
@@ -346,7 +346,7 @@ public:
 
 	void convert_indent(int p_from_line = -1, int p_to_line = -1);
 
-	// --- Auto brace completion. ---
+	/* Auto brace completion */
 	void set_auto_brace_completion_enabled(bool p_enabled);
 	bool is_auto_brace_completion_enabled() const;
 
@@ -362,7 +362,7 @@ public:
 
 	String get_auto_brace_completion_close_key(const String &p_open_key) const;
 
-	// --- Main Gutter. ---
+	/* Main Gutter */
 	void set_draw_breakpoints_gutter(bool p_draw);
 	bool is_drawing_breakpoints_gutter() const;
 
@@ -390,17 +390,17 @@ public:
 	void clear_executing_lines();
 	PackedInt32Array get_executing_lines() const;
 
-	// --- Line numbers. ---
+	/* Line numbers */
 	void set_draw_line_numbers(bool p_draw);
 	bool is_draw_line_numbers_enabled() const;
 	void set_line_numbers_zero_padded(bool p_zero_padded);
 	bool is_line_numbers_zero_padded() const;
 
-	// --- Fold gutter. ---
+	/* Fold gutter */
 	void set_draw_fold_gutter(bool p_draw);
 	bool is_drawing_fold_gutter() const;
 
-	// --- Line Folding. ---
+	/* Line Folding */
 	void set_line_folding_enabled(bool p_enabled);
 	bool is_line_folding_enabled() const;
 
@@ -415,7 +415,7 @@ public:
 	bool is_line_folded(int p_line) const;
 	TypedArray<int> get_folded_lines() const;
 
-	// --- Code region. ---
+	/* Code region */
 	void create_code_region();
 	String get_code_region_start_tag() const;
 	String get_code_region_end_tag() const;
@@ -423,7 +423,7 @@ public:
 	bool is_line_code_region_start(int p_line) const;
 	bool is_line_code_region_end(int p_line) const;
 
-	// --- Delimiters. ---
+	/* Delimiters */
 	void add_string_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only = false);
 	void remove_string_delimiter(const String &p_start_key);
 	bool has_string_delimiter(const String &p_start_key) const;
@@ -450,11 +450,11 @@ public:
 	Point2 get_delimiter_start_position(int p_line, int p_column) const;
 	Point2 get_delimiter_end_position(int p_line, int p_column) const;
 
-	// --- Code hint. ---
+	/* Code hint */
 	void set_code_hint(const String &p_hint);
 	void set_code_hint_draw_below(bool p_below);
 
-	// --- Code Completion. ---
+	/* Code Completion */
 	void set_code_completion_enabled(bool p_enable);
 	bool is_code_completion_enabled() const;
 
@@ -477,11 +477,11 @@ public:
 	void confirm_code_completion(bool p_replace = false);
 	void cancel_code_completion();
 
-	// --- Line length guidelines. ---
+	/* Line length guidelines */
 	void set_line_length_guidelines(TypedArray<int> p_guideline_columns);
 	TypedArray<int> get_line_length_guidelines() const;
 
-	// --- Symbol lookup. ---
+	/* Symbol lookup */
 	void set_symbol_lookup_on_click_enabled(bool p_enabled);
 	bool is_symbol_lookup_on_click_enabled() const;
 
@@ -490,7 +490,7 @@ public:
 
 	void set_symbol_lookup_word_as_valid(bool p_valid);
 
-	// --- Text manipulation. ---
+	/* Text manipulation */
 	void move_lines_up();
 	void move_lines_down();
 	void delete_lines();
