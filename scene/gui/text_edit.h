@@ -624,6 +624,12 @@ protected:
 	void _notification(int p_what);
 	static void _bind_methods();
 
+#ifndef DISABLE_DEPRECATED
+	void _set_line_bind_compat_86978(int p_line, const String &p_new_text);
+	void _swap_lines_bind_compat_86978(int p_from_line, int p_to_line);
+	static void _bind_compatibility_methods();
+#endif // DISABLE_DEPRECATED
+
 	virtual void _update_theme_item_cache() override;
 
 	/* Internal API for CodeEdit, pending public API. */

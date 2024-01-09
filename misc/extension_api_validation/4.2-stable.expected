@@ -66,3 +66,11 @@ GH-86158
 Validate extension JSON: Error: Field 'classes/GraphEdit/methods/get_connection_line': is_const changed value in new API, from false to true.
 
 get_connection_line was made const.
+
+
+GH-86978
+--------
+Validate extension JSON: Error: Field 'classes/TextEdit/methods/set_line/arguments': size changed value in new API, from 2 to 3.
+Validate extension JSON: Error: Field 'classes/TextEdit/methods/swap_lines/arguments': size changed value in new API, from 2 to 3.
+
+Added optional arguments to set_line and swap_lines to specify how carets should be affected. Compatibility methods registered.

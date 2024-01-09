@@ -29,6 +29,7 @@
 /**************************************************************************/
 
 #include "text_edit.h"
+#include "text_edit.compat.inc"
 
 #include "core/config/project_settings.h"
 #include "core/input/input.h"
