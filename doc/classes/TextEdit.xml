@@ -1181,7 +1181,7 @@
 			<param index="2" name="swap_carets" type="bool" default="true" />
 			<description>
 				Swaps the two lines.
-				If [param swap_carets] is [code]true[/code], carets will be swapped with the lines. Otherwise, carets will not be swapped and will be clamped. 
+				If [param swap_carets] is [code]true[/code], carets will be swapped with the lines. Otherwise, carets will not be swapped and will be clamped.
 			</description>
 		</method>
 		<method name="tag_saved_version">
