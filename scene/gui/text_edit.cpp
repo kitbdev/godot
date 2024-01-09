@@ -4583,10 +4583,8 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 	begin_multicaret_edit();
 	int view_target_caret = -1;
 	int view_line = p_below ? -1 : INT_MAX;
-	for (int i = 0; i < get_caret_count(); i++) {
-		if (multicaret_edit_ignore_caret(i)) {
-			continue;
-		}
+	int num_carets = get_caret_count();
+	for (int i = 0; i < num_carets; i++) {
 		const int caret_line = get_caret_line(i);
 		const int caret_column = get_caret_column(i);
 		const bool is_selected = has_selection(i) || carets[i].last_fit_x != carets[i].selection.origin_last_fit_x;
@@ -4672,11 +4670,14 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 			carets.write[new_caret_index].selection.origin_last_fit_x = carets[i].selection.origin_last_fit_x;
 		}
 
-		if (get_caret_line(new_caret_index) == get_caret_line(0) && get_caret_column(new_caret_index) == get_caret_column(0) && (carets[0].last_fit_x == carets[0].selection.origin_last_fit_x || get_selection_origin_line(new_caret_index) == get_selection_origin_line(0) && get_selection_origin_column(new_caret_index) == get_selection_origin_column(0))) {
-			// Override the main caret and remove, because merging prioritizes the last caret.
-			carets.write[0].last_fit_x = carets[new_caret_index].last_fit_x;
-			carets.write[0].selection.origin_last_fit_x = carets[new_caret_index].selection.origin_last_fit_x;
-			remove_caret(new_caret_index);
+		bool check_edges = !has_selection(0) || !has_selection(new_caret_index);
+		bool will_merge_with_main_caret = selection_contains(0, get_caret_line(new_caret_index), get_caret_column(new_caret_index), check_edges, false) || selection_contains(new_caret_index, get_caret_line(0), get_caret_column(0), check_edges, false);
+		if (will_merge_with_main_caret) {
+			// Move next to the main caret so it stays the main caret after merging.
+			Caret new_caret = carets[new_caret_index];
+			carets.remove_at(new_caret_index);
+			carets.insert(0, new_caret);
+			i++;
 		}
 	}
 
@@ -4784,7 +4785,7 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 			}
 		}
 		if (!p_inclusive && !any_collapsed) {
-			if (get_caret_line(i) == collapse_line && get_caret_column(i) == collapse_column || (get_selection_origin_line(i) == collapse_line && get_selection_origin_column(i) == collapse_column)) {
+			if ((get_caret_line(i) == collapse_line && get_caret_column(i) == collapse_column) || (get_selection_origin_line(i) == collapse_line && get_selection_origin_column(i) == collapse_column)) {
 				// Make sure to queue a merge, even if we didn't include it.
 				any_collapsed = true;
 			}
