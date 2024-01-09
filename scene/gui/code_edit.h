@@ -39,7 +39,7 @@ class CodeEdit : public TextEdit {
 
 public:
 	// Keep enums in sync with:
-	// core/object/script_language.h - ScriptLanguage::CodeCompletionKind.
+	// core/object/script_language.h - ScriptLanguage::CodeCompletionKind
 	enum CodeCompletionKind {
 		KIND_CLASS,
 		KIND_FUNCTION,
@@ -53,7 +53,7 @@ public:
 		KIND_PLAIN_TEXT,
 	};
 
-	// core/object/script_language.h - ScriptLanguage::CodeCompletionLocation.
+	// core/object/script_language.h - ScriptLanguage::CodeCompletionLocation
 	enum CodeCompletionLocation {
 		LOCATION_LOCAL = 0,
 		LOCATION_PARENT_MASK = 1 << 8,
@@ -78,7 +78,7 @@ private:
 	/* Auto brace completion */
 	bool auto_brace_completion_enabled = false;
 
-	// BracePair open_key must be unique and ordered by length.
+	/* BracePair open_key must be uniquie and ordered by length. */
 	struct BracePair {
 		String open_key = "";
 		String close_key = "";
@@ -99,14 +99,14 @@ private:
 	void _update_draw_main_gutter();
 	void _main_gutter_draw_callback(int p_line, int p_gutter, const Rect2 &p_region);
 
-	// Breakpoints.
+	// breakpoints
 	HashMap<int, bool> breakpointed_lines;
 	bool draw_breakpoints = false;
 
-	// Bookmarks.
+	// bookmarks
 	bool draw_bookmarks = false;
 
-	// Executing lines.
+	// executing lines
 	bool draw_executing_lines = false;
 
 	/* Line numbers */
@@ -312,7 +312,7 @@ protected:
 
 	/* Text manipulation */
 
-	// Overridable actions.
+	// Overridable actions
 	virtual void _handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) override;
 	virtual void _backspace_internal(int p_caret) override;
 	virtual void _cut_internal(int p_caret) override;
@@ -372,19 +372,19 @@ public:
 	void set_draw_executing_lines_gutter(bool p_draw);
 	bool is_drawing_executing_lines_gutter() const;
 
-	// Breakpoints.
+	// breakpoints
 	void set_line_as_breakpoint(int p_line, bool p_breakpointed);
 	bool is_line_breakpointed(int p_line) const;
 	void clear_breakpointed_lines();
 	PackedInt32Array get_breakpointed_lines() const;
 
-	// Bookmarks.
+	// bookmarks
 	void set_line_as_bookmarked(int p_line, bool p_bookmarked);
 	bool is_line_bookmarked(int p_line) const;
 	void clear_bookmarked_lines();
 	PackedInt32Array get_bookmarked_lines() const;
 
-	// Executing lines.
+	// executing lines
 	void set_line_as_executing(int p_line, bool p_executing);
 	bool is_line_executing(int p_line) const;
 	void clear_executing_lines();

@@ -1468,7 +1468,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->is_in_string(2) != -1);
 			CHECK(code_edit->is_in_string(3) == -1);
 
-			// Next check updating the delimiter cache while typing.
+			/* Next check updating the delimiter cache while typing. */
 			code_edit->set_text("\n\n");
 			code_edit->set_caret_line(0);
 			code_edit->set_caret_column(0);
@@ -1670,7 +1670,7 @@ TEST_CASE("[SceneTree][CodeEdit] delimiters") {
 			CHECK(code_edit->is_in_comment(2) != -1);
 			CHECK(code_edit->is_in_comment(3) == -1);
 
-			// Next check updating the delimiter cache while typing.
+			/* Next check updating the delimiter cache while typing. */
 			code_edit->set_text("\n\n");
 			code_edit->set_caret_line(0);
 			code_edit->set_caret_column(0);
@@ -3732,7 +3732,7 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 		SEND_GUI_KEY_EVENT(Key::KEY_1);
 		CHECK(code_edit->get_text() == "1");
 
-		// If potential multichar and single brace completion is matched, it should wrap the single.
+		// If potential multichar and single brace completion is matched, it should wrap the single. .
 		code_edit->clear();
 		code_edit->insert_text_at_caret("\'\'abc");
 		code_edit->select(0, 2, 0, 5);
@@ -3920,8 +3920,8 @@ TEST_CASE("[SceneTree][CodeEdit] completion") {
 			CHECK(code_edit->get_code_completion_option(0).size() == 0);
 			CHECK(code_edit->get_code_completion_options().size() == 0);
 
-			// After update, pending add should not be counted,
-			// also does not work on col 0.
+			// After update, pending add should not be counted,.
+			// Also does not work on col 0                     .
 			int before_text_caret_column = code_edit->get_caret_column();
 			code_edit->insert_text_at_caret("i");
 

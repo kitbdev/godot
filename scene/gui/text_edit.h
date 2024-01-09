@@ -42,6 +42,7 @@ class TextEdit : public Control {
 	GDCLASS(TextEdit, Control);
 
 public:
+	/* Edit Actions. */
 	enum EditAction {
 		ACTION_NONE,
 		ACTION_TYPING,
@@ -49,11 +50,13 @@ public:
 		ACTION_DELETE,
 	};
 
+	/* Caret. */
 	enum CaretType {
 		CARET_TYPE_LINE,
 		CARET_TYPE_BLOCK
 	};
 
+	/* Selection */
 	enum SelectionMode {
 		SELECTION_MODE_NONE,
 		SELECTION_MODE_SHIFT,
@@ -62,18 +65,20 @@ public:
 		SELECTION_MODE_LINE
 	};
 
+	/* Line Wrapping.*/
 	enum LineWrappingMode {
 		LINE_WRAPPING_NONE,
 		LINE_WRAPPING_BOUNDARY
 	};
 
+	/* Gutters. */
 	enum GutterType {
 		GUTTER_TYPE_STRING,
 		GUTTER_TYPE_ICON,
 		GUTTER_TYPE_CUSTOM
 	};
 
-	// Context Menu.
+	/* Context Menu. */
 	enum MenuItems {
 		MENU_CUT,
 		MENU_COPY,
@@ -109,6 +114,7 @@ public:
 
 	};
 
+	/* Search. */
 	enum SearchFlags {
 		SEARCH_MATCH_CASE = 1,
 		SEARCH_WHOLE_WORDS = 2,
@@ -225,7 +231,7 @@ private:
 
 		_FORCE_INLINE_ const String &operator[](int p_line) const;
 
-		// Gutters.
+		/* Gutters. */
 		void add_gutter(int p_at);
 		void remove_gutter(int p_gutter);
 		void move_gutters(int p_from_line, int p_to_line);
@@ -245,7 +251,7 @@ private:
 		void set_line_gutter_clickable(int p_line, int p_gutter, bool p_clickable) { text.write[p_line].gutters.write[p_gutter].clickable = p_clickable; }
 		bool is_line_gutter_clickable(int p_line, int p_gutter) const { return text[p_line].gutters[p_gutter].clickable; }
 
-		// Line style.
+		/* Line style. */
 		void set_line_background_color(int p_line, const Color &p_color) { text.write[p_line].background_color = p_color; }
 		const Color get_line_background_color(int p_line) const { return text[p_line].background_color; }
 	};
@@ -262,7 +268,7 @@ private:
 	String ime_text = "";
 	Point2 ime_selection;
 
-	// Placeholder.
+	// Placeholder
 	String placeholder_text = "";
 	Array placeholder_bidi_override;
 	Ref<TextParagraph> placeholder_data_buf;
@@ -545,20 +551,20 @@ private:
 	struct ThemeCache {
 		float base_scale = 1.0;
 
-		// Search.
+		/* Search */
 		Color search_result_color = Color(1, 1, 1);
 		Color search_result_border_color = Color(1, 1, 1);
 
-		// Caret.
+		/* Caret */
 		int caret_width = 1;
 		Color caret_color = Color(1, 1, 1);
 		Color caret_background_color = Color(0, 0, 0);
 
-		// Selection.
+		/* Selection */
 		Color font_selected_color = Color(0, 0, 0, 0);
 		Color selection_color = Color(1, 1, 1);
 
-		// Other visuals.
+		/* Other visuals */
 		Ref<StyleBox> style_normal;
 		Ref<StyleBox> style_focus;
 		Ref<StyleBox> style_readonly;
@@ -670,7 +676,7 @@ protected:
 
 	/* Text manipulation */
 
-	// Overridable actions.
+	// Overridable actions
 	virtual void _handle_unicode_input_internal(const uint32_t p_unicode, int p_caret);
 	virtual void _backspace_internal(int p_caret);
 
@@ -723,7 +729,7 @@ public:
 	void set_tab_size(const int p_size);
 	int get_tab_size() const;
 
-	// User controls.
+	// User controls
 	void set_overtype_mode_enabled(const bool p_enabled);
 	bool is_overtype_mode_enabled() const;
 
@@ -739,7 +745,7 @@ public:
 	void set_middle_mouse_paste_enabled(bool p_enabled);
 	bool is_middle_mouse_paste_enabled() const;
 
-	// Text manipulation.
+	// Text manipulation
 	void clear();
 
 	void set_text(const String &p_text);
@@ -772,7 +778,7 @@ public:
 	int get_next_visible_line_offset_from(int p_line_from, int p_visible_amount) const;
 	Point2i get_next_visible_line_index_offset_from(int p_line_from, int p_wrap_index_from, int p_visible_amount) const;
 
-	// Overridable actions.
+	// Overridable actions
 	void handle_unicode_input(const uint32_t p_unicode, int p_caret = -1);
 	void backspace(int p_caret = -1);
 
@@ -974,11 +980,11 @@ public:
 	int get_visible_line_count_in_range(int p_from, int p_to) const;
 	int get_total_visible_line_count() const;
 
-	// Auto Adjust.
+	// Auto Adjust
 	void adjust_viewport_to_caret(int p_caret = 0);
 	void center_viewport_to_caret(int p_caret = 0);
 
-	// Minimap.
+	// Minimap
 	void set_draw_minimap(bool p_enabled);
 	bool is_drawing_minimap() const;
 
@@ -1031,7 +1037,7 @@ public:
 	void set_line_gutter_clickable(int p_line, int p_gutter, bool p_clickable);
 	bool is_line_gutter_clickable(int p_line, int p_gutter) const;
 
-	// Line style.
+	// Line style
 	void set_line_background_color(int p_line, const Color &p_color);
 	Color get_line_background_color(int p_line) const;
 

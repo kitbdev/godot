@@ -73,7 +73,7 @@ void CodeEdit::_notification(int p_what) {
 				const bool draw_code_completion = code_completion_active && !code_completion_options.is_empty();
 				const bool draw_code_hint = !code_hint.is_empty();
 
-				// Code hint.
+				/* Code hint */
 				Size2 code_hint_minsize;
 				if (draw_code_hint) {
 					const int font_height = theme_cache.font->get_height(theme_cache.font_size);
@@ -129,7 +129,7 @@ void CodeEdit::_notification(int p_what) {
 					}
 				}
 
-				// Code completion.
+				/* Code completion */
 				if (draw_code_completion) {
 					const int code_completion_options_count = code_completion_options.size();
 					const int lines = MIN(code_completion_options_count, theme_cache.code_completion_max_lines);
@@ -194,7 +194,7 @@ void CodeEdit::_notification(int p_what) {
 						int yofs = (row_height - tl->get_size().y) / 2;
 						Point2 title_pos(code_completion_rect.position.x, code_completion_rect.position.y + i * row_height + yofs);
 
-						// Draw completion icon if it is valid.
+						/* Draw completion icon if it is valid. */
 						const Ref<Texture2D> &icon = code_completion_options[l].icon;
 						Rect2 icon_area(code_completion_rect.position.x, code_completion_rect.position.y + i * row_height, icon_area_size.width, icon_area_size.height);
 						if (icon.is_valid()) {
@@ -228,7 +228,7 @@ void CodeEdit::_notification(int p_what) {
 						tl->draw(ci, title_pos, code_completion_options[l].font_color);
 					}
 
-					// Draw a small scroll rectangle to show a position in the options.
+					/* Draw a small scroll rectangle to show a position in the options. */
 					if (scroll_width) {
 						Color scroll_color = is_code_completion_scroll_hovered || is_code_completion_scroll_pressed ? theme_cache.code_completion_scroll_hovered_color : theme_cache.code_completion_scroll_color;
 
@@ -432,7 +432,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		return;
 	}
 
-	// Ctrl + Hover symbols.
+	/* Ctrl + Hover symbols */
 	bool mac_keys = OS::get_singleton()->has_feature("macos") || OS::get_singleton()->has_feature("web_macos") || OS::get_singleton()->has_feature("web_ios");
 	if ((mac_keys && k->get_keycode() == Key::META) || (!mac_keys && k->get_keycode() == Key::CTRL)) {
 		if (symbol_lookup_on_click_enabled) {
@@ -448,15 +448,16 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		return;
 	}
 
-	// If a modifier has been pressed, and nothing else, return.
+	/* If a modifier has been pressed, and nothing else, return. */
 	if (!k->is_pressed() || k->get_keycode() == Key::CTRL || k->get_keycode() == Key::ALT || k->get_keycode() == Key::SHIFT || k->get_keycode() == Key::META || k->get_keycode() == Key::CAPSLOCK) {
 		return;
 	}
 
-	// Allow unicode handling if no modifiers are pressed (except Shift and CapsLock).
+	// Allow unicode handling if:
+	// No modifiers are pressed (except Shift and CapsLock)
 	bool allow_unicode_handling = !(k->is_ctrl_pressed() || k->is_alt_pressed() || k->is_meta_pressed());
 
-	// Auto-complete.
+	/* AUTO-COMPLETE */
 	if (code_completion_enabled && k->is_action("ui_text_completion_query", true)) {
 		request_code_completion(true);
 		accept_event();
@@ -531,7 +532,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		}
 	}
 
-	// Misc.
+	/* MISC */
 	if (!code_hint.is_empty() && k->is_action("ui_cancel", true)) {
 		set_code_hint("");
 		accept_event();
@@ -541,7 +542,7 @@ void CodeEdit::gui_input(const Ref<InputEvent> &p_gui_input) {
 		set_code_hint("");
 	}
 
-	// Indentation.
+	/* Indentation */
 	if (k->is_action("ui_text_indent", true)) {
 		do_indent();
 		accept_event();
@@ -637,7 +638,7 @@ void CodeEdit::_unhide_carets() {
 
 /* Text manipulation */
 
-// Overridable actions.
+// Overridable actions
 void CodeEdit::_handle_unicode_input_internal(const uint32_t p_unicode, int p_caret) {
 	start_action(EditAction::ACTION_TYPING);
 	begin_multicaret_edit();
@@ -1302,7 +1303,7 @@ void CodeEdit::_main_gutter_draw_callback(int p_line, int p_gutter, const Rect2 
 	}
 }
 
-// Breakpoints.
+// Breakpoints
 void CodeEdit::set_line_as_breakpoint(int p_line, bool p_breakpointed) {
 	ERR_FAIL_INDEX(p_line, get_line_count());
 
@@ -1339,7 +1340,7 @@ PackedInt32Array CodeEdit::get_breakpointed_lines() const {
 	return ret;
 }
 
-// Bookmarks.
+// Bookmarks
 void CodeEdit::set_line_as_bookmarked(int p_line, bool p_bookmarked) {
 	int mask = get_line_gutter_metadata(p_line, main_gutter);
 	set_line_gutter_metadata(p_line, main_gutter, p_bookmarked ? mask | MAIN_GUTTER_BOOKMARK : mask & ~MAIN_GUTTER_BOOKMARK);
@@ -1368,7 +1369,7 @@ PackedInt32Array CodeEdit::get_bookmarked_lines() const {
 	return ret;
 }
 
-// Executing lines.
+// Executing lines
 void CodeEdit::set_line_as_executing(int p_line, bool p_executing) {
 	int mask = get_line_gutter_metadata(p_line, main_gutter);
 	set_line_gutter_metadata(p_line, main_gutter, p_executing ? mask | MAIN_GUTTER_EXECUTING : mask & ~MAIN_GUTTER_EXECUTING);
@@ -1517,7 +1518,7 @@ bool CodeEdit::can_fold_line(int p_line) const {
 		return false;
 	}
 
-	// Check for full multiline line or block strings / comments.
+	/* Check for full multiline line or block strings / comments. */
 	int in_comment = is_in_comment(p_line);
 	int in_string = (in_comment == -1) ? is_in_string(p_line) : -1;
 	if (in_string != -1 || in_comment != -1) {
@@ -1526,25 +1527,25 @@ bool CodeEdit::can_fold_line(int p_line) const {
 		}
 
 		int delimiter_end_line = get_delimiter_end_position(p_line, get_line(p_line).size() - 1).y;
-		// No end line, therefore we have a multiline region over the rest of the file.
+		/* No end line, therefore we have a multiline region over the rest of the file. */
 		if (delimiter_end_line == -1) {
 			return true;
 		}
-		// End line is the same therefore we have a block.
+		/* End line is the same therefore we have a block. */
 		if (delimiter_end_line == p_line) {
-			// Check if we are the start of the block.
+			/* Check we are the start of the block. */
 			if (p_line - 1 >= 0) {
 				if ((in_string != -1 && is_in_string(p_line - 1) != -1) || (in_comment != -1 && is_in_comment(p_line - 1) != -1)) {
 					return false;
 				}
 			}
-			// Check if it continues for at least one line.
+			/* Check it continues for at least one line. */
 			return ((in_string != -1 && is_in_string(p_line + 1) != -1) || (in_comment != -1 && is_in_comment(p_line + 1) != -1));
 		}
 		return ((in_string != -1 && is_in_string(delimiter_end_line) != -1) || (in_comment != -1 && is_in_comment(delimiter_end_line) != -1));
 	}
 
-	// Otherwise check indent levels.
+	/* Otherwise check indent levels. */
 	int start_indent = get_indent_level(p_line);
 	for (int i = p_line + 1; i < get_line_count(); i++) {
 		if (is_in_string(i) != -1 || is_in_comment(i) != -1 || get_line(i).strip_edges().size() == 0) {
@@ -1782,7 +1783,7 @@ int CodeEdit::is_in_string(int p_line, int p_column) const {
 	return _is_in_delimiter(p_line, p_column, TYPE_STRING);
 }
 
-// Comments.
+// Comments
 void CodeEdit::add_comment_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
 	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_COMMENT);
 }
@@ -1834,7 +1835,7 @@ Point2 CodeEdit::get_delimiter_start_position(int p_line, int p_column) const {
 
 	bool in_region = ((p_line <= 0 || delimiter_cache[p_line - 1].size() < 1) ? -1 : delimiter_cache[p_line - 1].back()->get()) != -1;
 
-	// Check the keys for this line.
+	/* Check the keys for this line. */
 	for (const KeyValue<int, int> &E : delimiter_cache[p_line]) {
 		if (E.key > p_column) {
 			break;
@@ -1843,19 +1844,19 @@ Point2 CodeEdit::get_delimiter_start_position(int p_line, int p_column) const {
 		start_position.x = in_region ? E.key : -1;
 	}
 
-	// Region was found on this line and is not a multiline continuation.
+	/* Region was found on this line and is not a multiline continuation. */
 	int line_length = get_line(p_line).length();
 	if (start_position.x != -1 && line_length > 0 && start_position.x != line_length + 1) {
 		start_position.y = p_line;
 		return start_position;
 	}
 
-	// Not in a region.
+	/* Not in a region */
 	if (!in_region) {
 		return start_position;
 	}
 
-	// Region starts on a previous line.
+	/* Region starts on a previous line */
 	for (int i = p_line - 1; i >= 0; i--) {
 		if (delimiter_cache[i].size() < 1) {
 			continue;
@@ -1863,7 +1864,7 @@ Point2 CodeEdit::get_delimiter_start_position(int p_line, int p_column) const {
 		start_position.y = i;
 		start_position.x = delimiter_cache[i].back()->key();
 
-		// Make sure it's not a multiline continuation.
+		/* Make sure it's not a multiline continuation. */
 		line_length = get_line(i).length();
 		if (line_length > 0 && start_position.x != line_length + 1) {
 			break;
@@ -1885,7 +1886,7 @@ Point2 CodeEdit::get_delimiter_end_position(int p_line, int p_column) const {
 
 	int region = (p_line <= 0 || delimiter_cache[p_line - 1].size() < 1) ? -1 : delimiter_cache[p_line - 1].back()->value();
 
-	// Check the keys for this line.
+	/* Check the keys for this line. */
 	for (const KeyValue<int, int> &E : delimiter_cache[p_line]) {
 		end_position.x = (E.value == -1) ? E.key : -1;
 		if (E.key > p_column) {
@@ -1894,26 +1895,26 @@ Point2 CodeEdit::get_delimiter_end_position(int p_line, int p_column) const {
 		region = E.value;
 	}
 
-	// Region was found on this line and is not a multiline continuation.
+	/* Region was found on this line and is not a multiline continuation. */
 	if (region != -1 && end_position.x != -1 && (delimiters[region].line_only || end_position.x != get_line(p_line).length() + 1)) {
 		end_position.y = p_line;
 		return end_position;
 	}
 
-	// Not in a region.
+	/* Not in a region */
 	if (region == -1) {
 		end_position.x = -1;
 		return end_position;
 	}
 
-	// Region ends on a later line.
+	/* Region ends on a later line */
 	for (int i = p_line + 1; i < get_line_count(); i++) {
 		if (delimiter_cache[i].size() < 1 || delimiter_cache[i].front()->value() != -1) {
 			continue;
 		}
 		end_position.x = delimiter_cache[i].front()->key();
 
-		// Make sure it's not a multiline continuation.
+		/* Make sure it's not a multiline continuation. */
 		if (get_line(i).length() > 0 && end_position.x != get_line(i).length() + 1) {
 			end_position.y = i;
 			break;
@@ -1970,7 +1971,7 @@ String CodeEdit::get_text_for_code_completion() const {
 
 		if (i == get_caret_line()) {
 			completion_text += line.substr(0, get_caret_column());
-			// Not unicode, represents the caret.
+			/* Not unicode, represents the caret. */
 			completion_text += String::chr(0xFFFF);
 			completion_text += line.substr(get_caret_column(), line.size());
 		} else {
@@ -1989,7 +1990,7 @@ void CodeEdit::request_code_completion(bool p_force) {
 		return;
 	}
 
-	// Don't re-query if all existing options are quoted types, eg path, signal.
+	/* Don't re-query if all existing options are quoted types, eg path, signal. */
 	bool ignored = code_completion_active && !code_completion_options.is_empty();
 	if (ignored) {
 		ScriptLanguage::CodeCompletionKind kind = ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT;
@@ -2268,7 +2269,7 @@ String CodeEdit::get_text_with_cursor_char(int p_line, int p_column) const {
 		String line_text = get_line(i);
 		if (i == p_line && p_column >= 0 && p_column <= line_text.size()) {
 			result += line_text.substr(0, p_column);
-			// Not unicode, represents the cursor.
+			/* Not unicode, represents the cursor. */
 			result += String::chr(0xFFFF);
 			result += line_text.substr(p_column, line_text.size());
 		} else {
@@ -2752,7 +2753,7 @@ void CodeEdit::_bind_methods() {
 int CodeEdit::_get_auto_brace_pair_open_at_pos(int p_line, int p_col) {
 	const String &line = get_line(p_line);
 
-	// Should be fast enough, expecting low amount of pairs...
+	/* Should be fast enough, expecting low amount of pairs... */
 	for (int i = 0; i < auto_brace_completion_pairs.size(); i++) {
 		const String &open_key = auto_brace_completion_pairs[i].open_key;
 		if (p_col - open_key.length() < 0) {
@@ -2777,7 +2778,7 @@ int CodeEdit::_get_auto_brace_pair_open_at_pos(int p_line, int p_col) {
 int CodeEdit::_get_auto_brace_pair_close_at_pos(int p_line, int p_col) {
 	const String &line = get_line(p_line);
 
-	// Should be fast enough, expecting low amount of pairs...
+	/* Should be fast enough, expecting low amount of pairs... */
 	for (int i = 0; i < auto_brace_completion_pairs.size(); i++) {
 		if (p_col + auto_brace_completion_pairs[i].close_key.length() > line.length()) {
 			continue;
@@ -2887,7 +2888,7 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 	int start_line = MIN(p_from_line, p_to_line);
 	int end_line = MAX(p_from_line, p_to_line);
 
-	// Make sure delimiter_cache has all the lines.
+	/* Make sure delimiter_cache has all the lines. */
 	if (start_line != end_line) {
 		if (p_to_line < p_from_line) {
 			for (int i = end_line; i > start_line; i--) {
@@ -2931,11 +2932,11 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 				break;
 			}
 
-			// Check if we are in entering a region
+			/* check if we are in entering a region */
 			bool same_line = false;
 			if (in_region == -1) {
 				for (int d = 0; d < delimiters.size(); d++) {
-					// Check there is enough room
+					/* check there is enough room */
 					int chars_left = line_length - from;
 					int start_key_length = delimiters[d].start_key.length();
 					int end_key_length = delimiters[d].end_key.length();
@@ -2943,7 +2944,7 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 						continue;
 					}
 
-					// Search the line
+					/* search the line */
 					bool match = true;
 					const char32_t *start_key = delimiters[d].start_key.get_data();
 					for (int k = 0; k < start_key_length; k++) {
@@ -2960,7 +2961,7 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 					delimiter_cache.write[i][from + 1] = d;
 					from += start_key_length;
 
-					// Check if it s the whole line
+					/* check if it's the whole line */
 					if (end_key_length == 0 || delimiters[d].line_only || from + end_key_length > line_length) {
 						j = line_length;
 						if (delimiters[d].line_only) {
@@ -2977,8 +2978,8 @@ void CodeEdit::_update_delimiter_cache(int p_from_line, int p_to_line) {
 				}
 			}
 
-			// If we are in a region find the end key.
-			// Search the line.
+			/* if we are in one find the end key */
+			/* search the line */
 			int region_end_index = -1;
 			int end_key_length = delimiters[in_region].end_key.length();
 			const char32_t *end_key = delimiters[in_region].end_key.get_data();
@@ -3033,7 +3034,7 @@ int CodeEdit::_is_in_delimiter(int p_line, int p_column, DelimiterType p_type) c
 	int region = (p_line <= 0 || delimiter_cache[p_line - 1].size() < 1) ? -1 : delimiter_cache[p_line - 1].back()->value();
 	bool in_region = region != -1 && delimiters[region].type == p_type;
 	for (RBMap<int, int>::Element *E = delimiter_cache[p_line].front(); E; E = E->next()) {
-		// If column is specified, loop until the key is larger then the column.
+		/* If column is specified, loop until the key is larger then the column. */
 		if (p_column != -1) {
 			if (E->key() > p_column) {
 				break;
@@ -3043,7 +3044,8 @@ int CodeEdit::_is_in_delimiter(int p_line, int p_column, DelimiterType p_type) c
 			continue;
 		}
 
-		// If no column, calculate if the entire line is a region excluding whitespace.
+		/* If no column, calculate if the entire line is a region       */
+		/* excluding whitespace.                                       */
 		const String line = get_line(p_line);
 		if (!in_region) {
 			if (E->value() == -1 || delimiters[E->value()].type != p_type) {
@@ -3215,7 +3217,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		Vector<ScriptLanguage::CodeCompletionOption> code_completion_options_new;
 		code_completion_base = "";
 
-		// Build options argument.
+		/* Build options argument. */
 		TypedArray<Dictionary> completion_options_sources;
 		completion_options_sources.resize(code_completion_option_sources.size());
 		int i = 0;
@@ -3236,13 +3238,13 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 
 		GDVIRTUAL_CALL(_filter_code_completion_candidates, completion_options_sources, completion_options);
 
-		// No options to complete, cancel.
+		/* No options to complete, cancel. */
 		if (completion_options.size() == 0) {
 			cancel_code_completion();
 			return;
 		}
 
-		// Convert back into options.
+		/* Convert back into options. */
 		int max_width = 0;
 		for (i = 0; i < completion_options.size(); i++) {
 			ScriptLanguage::CodeCompletionOption option;
@@ -3287,7 +3289,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		return;
 	}
 
-	// Get string status, are we in one or at the close.
+	/* Get string status, are we in one or at the close. */
 	int in_string = is_in_string(caret_line, caret_column);
 	int first_quote_col = -1;
 	if (in_string != -1) {
@@ -3303,22 +3305,22 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 	String string_to_complete;
 	bool prev_is_word = false;
 
-	// Cancel if we are at the close of a string.
+	/* Cancel if we are at the close of a string. */
 	if (caret_column > 0 && in_string == -1 && first_quote_col == cofs - 1) {
 		cancel_code_completion();
 		return;
-		// In a string, therefore we are trying to complete the string text.
+		/* In a string, therefore we are trying to complete the string text. */
 	} else if (in_string != -1 && first_quote_col != -1) {
 		int key_length = delimiters[in_string].start_key.length();
 		string_to_complete = line.substr(first_quote_col - key_length, (cofs - first_quote_col) + key_length);
-		// If we have a space, previous word might be a keyword. eg "func |".
+		/* If we have a space, previous word might be a keyword. eg "func |". */
 	} else if (cofs > 0 && line[cofs - 1] == ' ') {
 		int ofs = cofs - 1;
 		while (ofs > 0 && line[ofs] == ' ') {
 			ofs--;
 		}
 		prev_is_word = !is_symbol(line[ofs]);
-		// Otherwise get current word and set cofs to the start.
+		/* Otherwise get current word and set cofs to the start. */
 	} else {
 		int start_cofs = cofs;
 		while (cofs > 0 && line[cofs - 1] > 32 && (line[cofs - 1] == '/' || !is_symbol(line[cofs - 1]))) {
@@ -3327,8 +3329,8 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		string_to_complete = line.substr(cofs, start_cofs - cofs);
 	}
 
-	// If all else fails, check for a prefix.
-	// Single space between caret and prefix is okay.
+	/* If all else fails, check for a prefix.         */
+	/* Single space between caret and prefix is okay. */
 	bool prev_is_prefix = false;
 	if (cofs > 0 && code_completion_prefixes.has(line[cofs - 1])) {
 		prev_is_prefix = true;
@@ -3341,14 +3343,14 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		return;
 	}
 
-	// Filter Options.
-	// For now handle only traditional quoted strings.
+	/* Filter Options. */
+	/* For now handle only traditional quoted strings. */
 	bool single_quote = in_string != -1 && first_quote_col > 0 && delimiters[in_string].start_key == "'";
 
 	Vector<ScriptLanguage::CodeCompletionOption> code_completion_options_new;
 	code_completion_base = string_to_complete;
 
-	// Don't autocomplete setting numerical values.
+	/* Don't autocomplete setting numerical values. */
 	if (code_completion_base.is_numeric()) {
 		cancel_code_completion();
 		return;
@@ -3399,7 +3401,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		string_to_complete_char_lower++;
 
 		for (int i = 1; *string_to_complete_char_lower && (all_possible_subsequence_matches.size() > 0); i++, string_to_complete_char_lower++) {
-			// Find all occurrences of ssq_lower to avoid looking everywhere each time.
+			// find all occurrences of ssq_lower to avoid looking everywhere each time
 			Vector<int> all_ocurence;
 			if (long_option) {
 				all_ocurence.push_back(target_lower.find_char(*string_to_complete_char_lower));
@@ -3414,8 +3416,8 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			for (Vector<Pair<int, int>> &subsequence_match : all_possible_subsequence_matches) {
 				Pair<int, int> match_last_segment = subsequence_match[subsequence_match.size() - 1];
 				int next_index = match_last_segment.first + match_last_segment.second;
-				// Get the last index from current sequence
-				// and look for next char starting from that index.
+				// get the last index from current sequence
+				// and look for next char starting from that index
 				if (target_lower[next_index] == *string_to_complete_char_lower) {
 					Vector<Pair<int, int>> new_match = subsequence_match;
 					new_match.write[new_match.size() - 1].second++;
@@ -3434,7 +3436,7 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 			}
 			all_possible_subsequence_matches = next_subsequence_matches;
 		}
-		// Go through all possible matches to get the best one as defined by CodeCompletionOptionCompare.
+		// go through all possible matches to get the best one as defined by CodeCompletionOptionCompare
 		if (all_possible_subsequence_matches.size() > 0) {
 			option.matches = all_possible_subsequence_matches[0];
 			option.get_option_characteristics(string_to_complete);
@@ -3460,13 +3462,13 @@ void CodeEdit::_filter_code_completion_candidates_impl() {
 		}
 	}
 
-	// No options to complete, cancel.
+	/* No options to complete, cancel. */
 	if (code_completion_options_new.size() == 0) {
 		cancel_code_completion();
 		return;
 	}
 
-	// A perfect match, stop completion.
+	/* A perfect match, stop completion. */
 	if (code_completion_options_new.size() == 1 && string_to_complete == code_completion_options_new[0].display) {
 		cancel_code_completion();
 		return;
@@ -3633,7 +3635,7 @@ bool CodeCompletionOptionCompare::operator()(const ScriptLanguage::CodeCompletio
 		return lcharac < rcharac;
 	}
 
-	// To get here they need to have the same size so we can take the size of whichever we want.
+	// to get here they need to have the same size so we can take the size of whichever we want
 	for (int i = 0; i < l.matches.size(); ++i) {
 		if (l.matches[i].first != r.matches[i].first) {
 			return l.matches[i].first < r.matches[i].first;
