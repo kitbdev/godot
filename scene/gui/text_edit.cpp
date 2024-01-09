@@ -4486,7 +4486,7 @@ Dictionary TextEdit::get_carets_state() const {
 	return carets_state;
 }
 
-void TextEdit::set_carets_state(Dictionary p_caret_state) {
+void TextEdit::set_carets_state(const Dictionary &p_caret_state) {
 	ERR_FAIL_COND_MSG(!p_caret_state.has("carets"), "Invalid carets state.");
 	begin_multicaret_edit();
 	remove_secondary_carets();
