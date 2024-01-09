@@ -1562,7 +1562,7 @@ void CodeEdit::fold_line(int p_line) {
 		return;
 	}
 
-	// Find the last line to be hidden.
+	/* Find the last line to be hidden. */
 	const int line_count = get_line_count() - 1;
 	int end_line = line_count;
 
@@ -1754,7 +1754,7 @@ bool CodeEdit::is_line_code_region_end(int p_line) const {
 }
 
 /* Delimiters */
-// Strings.
+// Strings
 void CodeEdit::add_string_delimiter(const String &p_start_key, const String &p_end_key, bool p_line_only) {
 	_add_delimiter(p_start_key, p_end_key, p_line_only, TYPE_STRING);
 }
@@ -2686,7 +2686,7 @@ void CodeEdit::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "auto_brace_completion_highlight_matching"), "set_highlight_matching_braces_enabled", "is_highlight_matching_braces_enabled");
 	ADD_PROPERTY(PropertyInfo(Variant::DICTIONARY, "auto_brace_completion_pairs"), "set_auto_brace_completion_pairs", "get_auto_brace_completion_pairs");
 
-	// Signals
+	/* Signals */
 	/* Gutters */
 	ADD_SIGNAL(MethodInfo("breakpoint_toggled", PropertyInfo(Variant::INT, "line")));
 
@@ -3526,18 +3526,17 @@ void CodeEdit::_text_changed() {
 		return;
 	}
 
+	int lc = get_line_count();
+	line_number_digits = 1;
+	while (lc /= 10) {
+		line_number_digits++;
+	}
+
 	if (theme_cache.font.is_valid()) {
-		// Update gutter size to fit line numbers.
-		int lc = get_line_count();
-		line_number_digits = 1;
-		while (lc /= 10) {
-			line_number_digits++;
-		}
 		set_gutter_width(line_number_gutter, (line_number_digits + 1) * theme_cache.font->get_char_size('0', theme_cache.font_size).width);
 	}
 
-	// Send breakpoint_toggled signal if the line was removed.
-	int lc = get_line_count();
+	lc = get_line_count();
 	List<int> breakpoints;
 	for (const KeyValue<int, bool> &E : breakpointed_lines) {
 		breakpoints.push_back(E.key);

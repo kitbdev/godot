@@ -503,7 +503,7 @@ void TextEdit::_notification(int p_what) {
 				first_draw = false;
 			}
 
-			// Prevent the resource getting lost between the editor and game.
+			/* Prevent the resource getting lost between the editor and game. */
 			if (Engine::get_singleton()->is_editor_hint()) {
 				if (syntax_highlighter.is_valid() && syntax_highlighter->get_text_edit() != this) {
 					syntax_highlighter->set_text_edit(this);
@@ -5573,7 +5573,7 @@ int TextEdit::get_line_wrap_index_at_column(int p_line, int p_column) const {
 		return 0;
 	}
 
-	// Loop through wraps in the line text until we get to the column.
+	/* Loop through wraps in the line text until we get to the column. */
 	int wrap_index = 0;
 	int col = 0;
 	Vector<String> lines = get_line_wrapped_text(p_line);
@@ -6292,7 +6292,7 @@ Color TextEdit::get_font_color() const {
 
 void TextEdit::_bind_methods() {
 	/* Text */
-	// Text properties.
+	// Text properties
 	ClassDB::bind_method(D_METHOD("has_ime_text"), &TextEdit::has_ime_text);
 
 	ClassDB::bind_method(D_METHOD("set_editable", "enabled"), &TextEdit::set_editable);
@@ -6761,7 +6761,7 @@ void TextEdit::_bind_methods() {
 	ADD_SIGNAL(MethodInfo("gutter_added"));
 	ADD_SIGNAL(MethodInfo("gutter_removed"));
 
-	// Theme items.
+	// Theme items
 	/* Search */
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, search_result_border_color);
@@ -6798,7 +6798,7 @@ void TextEdit::_bind_methods() {
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, current_line_color);
 	BIND_THEME_ITEM(Theme::DATA_TYPE_COLOR, TextEdit, word_highlighted_color);
 
-	// Settings.
+	/* Settings. */
 	GLOBAL_DEF(PropertyInfo(Variant::FLOAT, "gui/timers/text_edit_idle_detect_sec", PROPERTY_HINT_RANGE, "0,10,0.01,or_greater"), 3);
 	GLOBAL_DEF(PropertyInfo(Variant::INT, "gui/common/text_edit_undo_stack_max_size", PROPERTY_HINT_RANGE, "0,10000,1,or_greater"), 1024);
 }
@@ -8073,8 +8073,8 @@ void TextEdit::_insert_text(int p_line, int p_char, const String &p_text, int *r
 		current_op = op;
 		return; // Set as current op, return.
 	}
-
 	// Merge current op.
+
 	current_op.text += p_text;
 	current_op.to_column = retchar;
 	current_op.to_line = retline;
@@ -8144,19 +8144,19 @@ void TextEdit::_base_insert_text(int p_line, int p_char, const String &p_text, i
 	ERR_FAIL_INDEX(p_line, text.size());
 	ERR_FAIL_COND(p_char < 0);
 
-	// STEP 1: Remove \r from source text and separate in substrings.
+	/* STEP 1: Remove \r from source text and separate in substrings. */
 	const String text_to_insert = p_text.replace("\r", "");
 	Vector<String> substrings = text_to_insert.split("\n");
 
 	// Is this just a new empty line?
 	bool shift_first_line = p_char == 0 && substrings.size() == 2 && text_to_insert == "\n";
 
-	// STEP 2: Add spaces if the char is greater than the end of the line.
+	/* STEP 2: Add spaces if the char is greater than the end of the line. */
 	while (p_char > text[p_line].length()) {
 		text.set(p_line, text[p_line] + String::chr(' '), structured_text_parser(st_parser, st_args, text[p_line] + String::chr(' ')));
 	}
 
-	// STEP 3: Separate dest string in pre and post text.
+	/* STEP 3: Separate dest string in pre and post text. */
 	String postinsert_text = text[p_line].substr(p_char, text[p_line].size());
 
 	substrings.write[0] = text[p_line].substr(0, p_char) + substrings[0];

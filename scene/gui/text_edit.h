@@ -279,7 +279,7 @@ private:
 
 	void _update_placeholder();
 
-	// Initialize to opposite first, so we get past the early-out in set_editable.
+	/* Initialize to opposite first, so we get past the early-out in set_editable. */
 	bool editable = false;
 
 	TextDirection text_direction = TEXT_DIRECTION_AUTO;
