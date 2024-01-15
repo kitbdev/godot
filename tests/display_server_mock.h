@@ -47,8 +47,8 @@ private:
 	Callable event_callback;
 	Callable input_event_callback;
 
-	String clipboard_text = "";
-	String primary_clipboard_text = "";
+	String clipboard_text;
+	String primary_clipboard_text;
 
 	static Vector<String> get_rendering_drivers_func() {
 		Vector<String> drivers;

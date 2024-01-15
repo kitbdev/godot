@@ -149,7 +149,7 @@
 		<method name="delete_lines">
 			<return type="void" />
 			<description>
-				Deletes all lines that are selected or have a caret on it.
+				Deletes all lines that are selected or have a caret on them.
 			</description>
 		</method>
 		<method name="do_indent">
@@ -167,7 +167,7 @@
 		<method name="duplicate_selection">
 			<return type="void" />
 			<description>
-				Duplicates all selected text and duplicates all lines with a caret on it.
+				Duplicates all selected text and duplicates all lines with a caret on them.
 			</description>
 		</method>
 		<method name="fold_all_lines">
@@ -396,13 +396,13 @@
 		<method name="move_lines_down">
 			<return type="void" />
 			<description>
-				Moves all lines down that are selected or have a caret on it.
+				Moves all lines down that are selected or have a caret on them.
 			</description>
 		</method>
 		<method name="move_lines_up">
 			<return type="void" />
 			<description>
-				Moves all lines up that are selected or have a caret on it.
+				Moves all lines up that are selected or have a caret on them.
 			</description>
 		</method>
 		<method name="remove_comment_delimiter">
@@ -423,7 +423,7 @@
 			<return type="void" />
 			<param index="0" name="force" type="bool" default="false" />
 			<description>
-				Emits [signal code_completion_requested], if [param force] is [code]true[/code] will bypass all checks. Otherwise will check that the caret is in a word or in front of a prefix. Will ignore the request if all current options are of type file path, node path or signal.
+				Emits [signal code_completion_requested], if [param force] is [code]true[/code] will bypass all checks. Otherwise will check that the caret is in a word or in front of a prefix. Will ignore the request if all current options are of type file path, node path, or signal.
 			</description>
 		</method>
 		<method name="set_code_completion_selected_index">

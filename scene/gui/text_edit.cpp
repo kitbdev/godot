@@ -4954,7 +4954,7 @@ void TextEdit::set_caret_line(int p_line, bool p_adjust_viewport, bool p_can_be_
 				if (p_line - move_up > 0 && !_is_line_hidden(p_line - move_up)) {
 					p_line -= move_up;
 				} else {
-					WARN_PRINT(("Caret set to hidden line " + itos(p_line) + " and there are no nonhidden lines."));
+					WARN_PRINT("Caret set to hidden line " + itos(p_line) + " and there are no nonhidden lines.");
 				}
 			}
 		}
@@ -5340,7 +5340,7 @@ void TextEdit::set_selection_origin_line(int p_line, int p_caret, bool p_can_be_
 				if (p_line - move_up > 0 && !_is_line_hidden(p_line - move_up)) {
 					p_line -= move_up;
 				} else {
-					WARN_PRINT(("Caret set to hidden line " + itos(p_line) + " and there are no nonhidden lines."));
+					WARN_PRINT("Selection origin set to hidden line " + itos(p_line) + " and there are no nonhidden lines.");
 				}
 			}
 		}
@@ -7447,7 +7447,7 @@ void TextEdit::_offset_carets_after(int p_old_line, int p_old_column, int p_new_
 
 void TextEdit::_cancel_drag_and_drop_text() {
 	// Cancel the drag operation if drag originated from here.
-	if (get_viewport() && selection_drag_attempt) {
+	if (selection_drag_attempt && get_viewport()) {
 		get_viewport()->gui_cancel_drag();
 	}
 }
