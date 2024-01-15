@@ -431,7 +431,7 @@ void TextEdit::_notification(int p_what) {
 				callable_mp(this, &TextEdit::_emit_caret_changed).call_deferred();
 			}
 			if (text_changed_dirty) {
-				callable_mp(this, &TextEdit::_text_changed_emit).call_deferred();
+				callable_mp(this, &TextEdit::_emit_text_changed).call_deferred();
 			}
 			_update_wrap_at_column(true);
 		} break;
@@ -8008,12 +8008,12 @@ void TextEdit::_text_changed() {
 	}
 
 	if (is_inside_tree()) {
-		callable_mp(this, &TextEdit::_text_changed_emit).call_deferred();
+		callable_mp(this, &TextEdit::_emit_text_changed).call_deferred();
 	}
 	text_changed_dirty = true;
 }
 
-void TextEdit::_text_changed_emit() {
+void TextEdit::_emit_text_changed() {
 	emit_signal(SNAME("text_changed"));
 	text_changed_dirty = false;
 }

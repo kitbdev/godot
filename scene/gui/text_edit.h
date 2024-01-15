@@ -600,7 +600,7 @@ private:
 	/*** Super internal Core API. Everything builds on it. ***/
 	bool text_changed_dirty = false;
 	void _text_changed();
-	void _text_changed_emit();
+	void _emit_text_changed();
 
 	void _insert_text(int p_line, int p_char, const String &p_text, int *r_end_line = nullptr, int *r_end_char = nullptr);
 	void _remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
