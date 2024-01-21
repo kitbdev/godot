@@ -6482,24 +6482,44 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		MessageQueue::get_singleton()->flush();
 
 		// Don't merge carets that are not overlapping.
-		text_edit->remove_secondary_carets();
-		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(0, 6);
 		text_edit->add_caret(1, 6);
 		text_edit->merge_overlapping_carets();
 		CHECK(text_edit->get_caret_count() == 3);
+		CHECK_FALSE(text_edit->has_selection());
 		CHECK(text_edit->get_caret_line(0) == 0);
 		CHECK(text_edit->get_caret_column(0) == 4);
 		CHECK(text_edit->get_caret_line(1) == 0);
 		CHECK(text_edit->get_caret_column(1) == 6);
 		CHECK(text_edit->get_caret_line(2) == 1);
 		CHECK(text_edit->get_caret_column(2) == 6);
+		text_edit->remove_secondary_carets();
+
+		// Don't merge when in a multicaret edit.
+		text_edit->begin_multicaret_edit();
+		text_edit->set_caret_line(0);
+		text_edit->set_caret_column(4);
+		text_edit->add_caret(0, 4);
+		text_edit->merge_overlapping_carets();
+		CHECK(text_edit->is_in_mulitcaret_edit());
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 2);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
+		CHECK(text_edit->get_caret_line(1) == 0);
+		CHECK(text_edit->get_caret_column(1) == 4);
+
+		// Merge overlapping carets. Merge at the end of the multicaret edit.
+		text_edit->end_multicaret_edit();
+		CHECK_FALSE(text_edit->is_in_mulitcaret_edit());
+		CHECK_FALSE(text_edit->has_selection());
+		CHECK(text_edit->get_caret_count() == 1);
+		CHECK(text_edit->get_caret_line(0) == 0);
+		CHECK(text_edit->get_caret_column(0) == 4);
 
 		// Don't merge selections that are not overlapping.
-		text_edit->remove_secondary_carets();
-		text_edit->deselect();
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(0, 2);
@@ -6512,10 +6532,10 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->has_selection(0));
 		CHECK(text_edit->has_selection(1));
 		CHECK(text_edit->has_selection(2));
-
-		// Don't merge selections that are only touching.
 		text_edit->remove_secondary_carets();
 		text_edit->deselect();
+
+		// Don't merge selections that are only touching.
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(4);
 		text_edit->add_caret(1, 2);
@@ -6525,10 +6545,10 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_caret_count() == 2);
 		CHECK(text_edit->has_selection(0));
 		CHECK(text_edit->has_selection(1));
-
-		// Merge carets into selection.
 		text_edit->remove_secondary_carets();
 		text_edit->deselect();
+
+		// Merge carets into selection.
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(3);
 		text_edit->add_caret(0, 2);
@@ -6547,10 +6567,10 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK_FALSE(text_edit->has_selection(1));
 		CHECK(text_edit->get_caret_line(1) == 1);
 		CHECK(text_edit->get_caret_column(1) == 10);
-
-		// Merge partially overlapping selections.
 		text_edit->remove_secondary_carets();
 		text_edit->deselect();
+
+		// Merge partially overlapping selections.
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);
@@ -6566,10 +6586,10 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 5);
 		CHECK(text_edit->is_caret_after_selection_origin(0));
-
-		// Merge smaller overlapping selection into a bigger one.
 		text_edit->remove_secondary_carets();
 		text_edit->deselect();
+
+		// Merge smaller overlapping selection into a bigger one.
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);
@@ -6585,10 +6605,10 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 5);
 		CHECK(text_edit->is_caret_after_selection_origin(0));
-
-		// Merge equal overlapping selections.
 		text_edit->remove_secondary_carets();
 		text_edit->deselect();
+
+		// Merge equal overlapping selections.
 		text_edit->set_caret_line(0);
 		text_edit->set_caret_column(1);
 		text_edit->add_caret(0, 2);

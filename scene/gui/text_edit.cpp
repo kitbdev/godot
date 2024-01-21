@@ -3288,7 +3288,7 @@ void TextEdit::set_line(int p_line, const String &p_new_text, bool p_keep_carets
 				set_selection_origin_line(get_selection_origin_line(i), i, true, 0);
 			}
 		}
-		queue_merge_carets();
+		merge_overlapping_carets();
 	} else {
 		// Clamp the carets if the line is shorter.
 		int line_new_column = new_column;
@@ -3383,7 +3383,7 @@ void TextEdit::swap_lines(int p_from_line, int p_to_line, bool p_swap_carets) {
 			}
 		}
 		// If only part of a selection was changed, it may now overlap.
-		queue_merge_carets();
+		merge_overlapping_carets();
 	} else {
 		// Clamp carets.
 		if (from_line_text.length() < to_line_text.length()) {
@@ -3465,7 +3465,7 @@ void TextEdit::remove_line_at(int p_line, bool p_move_carets_down) {
 			}
 		}
 
-		queue_merge_carets();
+		merge_overlapping_carets();
 	}
 	_offset_carets_after(next_line, next_column, from_line, from_column);
 	end_multicaret_edit();
@@ -4504,7 +4504,7 @@ void TextEdit::set_carets_state(const Dictionary &p_caret_state) {
 			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
 		}
 	}
-	queue_merge_carets();
+	merge_overlapping_carets();
 	end_multicaret_edit();
 }
 
@@ -4535,7 +4535,7 @@ int TextEdit::add_caret(int p_line, int p_column) {
 
 	if (is_in_mulitcaret_edit()) {
 		multicaret_edit_ignore_carets.insert(new_index);
-		queue_merge_carets();
+		merge_overlapping_carets();
 	}
 	return new_index;
 }
@@ -4686,7 +4686,7 @@ void TextEdit::add_caret_at_carets(bool p_below) {
 		adjust_viewport_to_caret(view_target_caret);
 	}
 
-	queue_merge_carets();
+	merge_overlapping_carets();
 	end_multicaret_edit();
 }
 
@@ -4792,12 +4792,17 @@ void TextEdit::collapse_carets(int p_from_line, int p_from_column, int p_to_line
 		}
 	}
 	if (any_collapsed) {
-		queue_merge_carets();
+		merge_overlapping_carets();
 	}
 }
 
 void TextEdit::merge_overlapping_carets() {
-	// Clear the queue and ignore list.
+	if (is_in_mulitcaret_edit()) {
+		// Queue merge to be performed the end of the multicaret edit.
+		multicaret_edit_merge_queued = true;
+		return;
+	}
+
 	multicaret_edit_merge_queued = false;
 	multicaret_edit_ignore_carets.clear();
 
@@ -4885,15 +4890,6 @@ void TextEdit::merge_overlapping_carets() {
 		// Process the caret again, since it and the next caret might also overlap.
 		i--;
 	}
-}
-
-void TextEdit::queue_merge_carets() {
-	if (!is_in_mulitcaret_edit()) {
-		merge_overlapping_carets();
-		return;
-	}
-
-	multicaret_edit_merge_queued = true;
 }
 
 // Starts a multicaret edit operation. Call this before iterating over the carets and call [end_multicaret_edit] afterwards.
@@ -5507,7 +5503,7 @@ void TextEdit::delete_selection(int p_caret) {
 
 		_remove_text(selection_from_line, selection_from_column, selection_to_line, selection_to_column);
 		_offset_carets_after(selection_to_line, selection_to_column, selection_from_line, selection_from_column);
-		queue_merge_carets();
+		merge_overlapping_carets();
 
 		deselect(i);
 		set_caret_line(selection_from_line, false, false, -1, i);
@@ -6493,7 +6489,6 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_sorted_carets", "include_ignored_carets"), &TextEdit::get_sorted_carets, DEFVAL(false));
 
 	ClassDB::bind_method(D_METHOD("merge_overlapping_carets"), &TextEdit::merge_overlapping_carets);
-	ClassDB::bind_method(D_METHOD("queue_merge_carets"), &TextEdit::queue_merge_carets);
 	ClassDB::bind_method(D_METHOD("begin_multicaret_edit"), &TextEdit::begin_multicaret_edit);
 	ClassDB::bind_method(D_METHOD("end_multicaret_edit"), &TextEdit::end_multicaret_edit);
 	ClassDB::bind_method(D_METHOD("is_in_mulitcaret_edit"), &TextEdit::is_in_mulitcaret_edit);
@@ -7441,7 +7436,7 @@ void TextEdit::_offset_carets_after(int p_old_line, int p_old_column, int p_new_
 	}
 	if (!p_include_selection_begin && p_include_selection_end && has_selection()) {
 		// It is possible that two adjacent selections now overlap.
-		queue_merge_carets();
+		merge_overlapping_carets();
 	}
 }
 

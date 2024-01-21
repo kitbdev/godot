@@ -1120,7 +1120,6 @@ void CodeTextEditor::trim_trailing_whitespace() {
 	if (trimmed_whitespace) {
 		text_editor->merge_overlapping_carets();
 		text_editor->end_complex_operation();
-		text_editor->queue_redraw();
 	}
 }
 

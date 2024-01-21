@@ -1004,7 +1004,7 @@ void CodeEdit::convert_indent(int p_from_line, int p_to_line) {
 		return;
 	}
 
-	queue_merge_carets();
+	merge_overlapping_carets();
 	end_multicaret_edit();
 	end_complex_operation();
 }

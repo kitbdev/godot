@@ -182,7 +182,7 @@
 		<method name="end_multicaret_edit">
 			<return type="void" />
 			<description>
-				Ends an edit for multiple carets, that was started with [method begin_multicaret_edit]. If this was the last [method end_multicaret_edit] and [method queue_merge_carets] was called, carets will be merged with [method merge_overlapping_carets].
+				Ends an edit for multiple carets, that was started with [method begin_multicaret_edit]. If this was the last [method end_multicaret_edit] and [method merge_overlapping_carets] was called, carets will be merged.
 			</description>
 		</method>
 		<method name="get_caret_column" qualifiers="const">
@@ -797,6 +797,7 @@
 			<return type="void" />
 			<description>
 				Merges any overlapping carets. Will favor the newest caret, or the caret with a selection.
+				If [method is_in_mulitcaret_edit] is [code]true[/code], the merge will be queued to happen at the end of the multicaret edit. See [method begin_multicaret_edit] and [method end_multicaret_edit].
 				[b]Note:[/b] This is not called when a caret changes position but after certain actions, so it is possible to get into a state where carets overlap.
 			</description>
 		</method>
@@ -820,13 +821,6 @@
 			<param index="0" name="caret_index" type="int" default="-1" />
 			<description>
 				Pastes the primary clipboard.
-			</description>
-		</method>
-		<method name="queue_merge_carets">
-			<return type="void" />
-			<description>
-				Queues [method merge_overlapping_carets] to happen at the end of the multicaret edit, or immediately if there is no edit.
-				See [method begin_multicaret_edit] and [method end_multicaret_edit].
 			</description>
 		</method>
 		<method name="redo">
