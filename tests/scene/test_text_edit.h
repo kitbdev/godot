@@ -1284,7 +1284,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_line() == 1);
 			CHECK(text_edit->get_selection_to_column() == 9);
 			CHECK(text_edit->get_selection_mode() == TextEdit::SelectionMode::SELECTION_MODE_SHIFT);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 9);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
@@ -1511,7 +1511,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "t");
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::RIGHT | KeyModifierMask::SHIFT | KeyModifierMask::ALT)
@@ -1520,12 +1520,12 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 #endif
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "test");
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "tes");
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 #ifdef MACOS_ENABLED
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT | KeyModifierMask::ALT)
@@ -1546,7 +1546,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SEND_GUI_KEY_EVENT(Key::LEFT | KeyModifierMask::SHIFT)
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "t");
-			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin());
 
 			SEND_GUI_KEY_EVENT(Key::LEFT)
 			CHECK_FALSE(text_edit->has_selection());
@@ -1579,7 +1579,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column() == 0);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 			CHECK(text_edit->is_dragging_cursor());
 
 			// Releasing finishes.
@@ -1593,7 +1593,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column() == 0);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 			// Clicking clears selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -1639,7 +1639,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column(2) == 5);
 			CHECK(text_edit->get_caret_line(2) == 1);
 			CHECK(text_edit->get_caret_column(2) == 0);
-			CHECK_FALSE(text_edit->is_selection_direction_right(2));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(2));
 
 			// Overlapping carets and selections merges them.
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 3).get_center() + Point2i(2, 0), MouseButtonMask::LEFT, Key::NONE);
@@ -1651,7 +1651,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column() == 5);
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 3);
-			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin());
 
 			// Entering text stops selecting.
 			text_edit->insert_text_at_caret("a");
@@ -1684,7 +1684,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 3);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 3);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			// Moving mouse selects entire words at a time.
@@ -1698,7 +1698,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 13);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 13);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 			CHECK(text_edit->is_dragging_cursor());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
@@ -1713,7 +1713,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 3);
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 8);
-			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin());
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 
 			// Releasing finishes.
@@ -1833,7 +1833,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 0);
 			CHECK(text_edit->get_caret_line() == 2);
 			CHECK(text_edit->get_caret_column() == 0);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 			// Moving mouse selects entire lines at a time. Selecting above reverses the selection direction.
 			SEND_GUI_MOUSE_MOTION_EVENT(text_edit->get_rect_at_line_column(0, 10).get_center(), MouseButtonMask::LEFT, Key::NONE);
@@ -1846,7 +1846,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 13);
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 0);
-			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin());
 			CHECK(text_edit->is_dragging_cursor());
 
 			// Selecting to the last line puts the caret at end of the line.
@@ -1860,7 +1860,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_to_column() == 12);
 			CHECK(text_edit->get_caret_line() == 2);
 			CHECK(text_edit->get_caret_column() == 12);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 			// Releasing finishes.
 			SEND_GUI_MOUSE_BUTTON_RELEASED_EVENT(text_edit->get_rect_at_line_column(2, 10).get_center(), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -1981,7 +1981,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column() == 1);
 			CHECK(text_edit->get_caret_line() == 1);
 			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(text_edit->is_selection_direction_right());
+			CHECK(text_edit->is_caret_after_selection_origin());
 
 			// Shift click above to switch selection direction. Uses original selection position.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(0, 6).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE | KeyModifierMask::SHIFT);
@@ -1992,7 +1992,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_selection_origin_column() == 1);
 			CHECK(text_edit->get_caret_line() == 0);
 			CHECK(text_edit->get_caret_column() == 6);
-			CHECK_FALSE(text_edit->is_selection_direction_right());
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin());
 
 			// Clicking clears selection.
 			SEND_GUI_MOUSE_BUTTON_EVENT(text_edit->get_rect_at_line_column(1, 7).get_center() + Point2i(2, 0), MouseButton::LEFT, MouseButtonMask::LEFT, Key::NONE);
@@ -2022,7 +2022,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 0);
 			CHECK(text_edit->get_caret_line(0) == 1);
@@ -2043,7 +2043,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == "this is some text\nfor selection");
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 13);
 			CHECK(text_edit->get_caret_line(0) == 0);
@@ -2064,7 +2064,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 4);
 			CHECK(text_edit->get_caret_line(0) == 0);
@@ -2085,7 +2085,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			CHECK(text_edit->has_selection());
 			CHECK(text_edit->get_selected_text() == " is ");
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 8);
 			CHECK(text_edit->get_caret_line(0) == 0);
@@ -5006,7 +5006,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 13);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 10);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "some te");
@@ -5014,7 +5014,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 8);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 15);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5041,7 +5041,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 5);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 7);
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "tes");
@@ -5049,7 +5049,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 13);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 16);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5114,7 +5114,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 6);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 3);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "is is");
@@ -5122,7 +5122,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 2);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 7);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5166,7 +5166,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 1);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 2);
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "t");
@@ -5174,7 +5174,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 0);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 1);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5218,7 +5218,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 0);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 1);
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -5242,7 +5242,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 3);
 			CHECK(text_edit->get_selection_origin_line(0) == 1);
 			CHECK(text_edit->get_selection_origin_column(0) == 8);
-			CHECK_FALSE(text_edit->is_selection_direction_right(0));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -5276,7 +5276,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 17);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 10);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == " te");
@@ -5284,7 +5284,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 12);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 15);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5309,7 +5309,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 17);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 13);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "st");
@@ -5317,7 +5317,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 17);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 15);
-			CHECK(text_edit->is_selection_direction_right(1));
+			CHECK(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5376,7 +5376,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 20);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 15);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "t t");
@@ -5384,7 +5384,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 16);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 19);
-			CHECK_FALSE(text_edit->is_selection_direction_right(1));
+			CHECK_FALSE(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5428,7 +5428,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 22);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 21);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 
 			CHECK(text_edit->has_selection(1));
 			CHECK(text_edit->get_selected_text(1) == "x");
@@ -5436,7 +5436,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(1) == 21);
 			CHECK(text_edit->get_selection_origin_line(1) == 2);
 			CHECK(text_edit->get_selection_origin_column(1) == 20);
-			CHECK(text_edit->is_selection_direction_right(1));
+			CHECK(text_edit->is_caret_after_selection_origin(1));
 
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
@@ -5480,7 +5480,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 0);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 21);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -5504,7 +5504,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			CHECK(text_edit->get_caret_column(0) == 9);
 			CHECK(text_edit->get_selection_origin_line(0) == 0);
 			CHECK(text_edit->get_selection_origin_column(0) == 4);
-			CHECK(text_edit->is_selection_direction_right(0));
+			CHECK(text_edit->is_caret_after_selection_origin(0));
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
 			SIGNAL_CHECK_FALSE("lines_edited_from");
@@ -6543,7 +6543,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 8);
-		CHECK(text_edit->is_selection_direction_right(0));
+		CHECK(text_edit->is_caret_after_selection_origin(0));
 		CHECK_FALSE(text_edit->has_selection(1));
 		CHECK(text_edit->get_caret_line(1) == 1);
 		CHECK(text_edit->get_caret_column(1) == 10);
@@ -6565,7 +6565,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 5);
-		CHECK(text_edit->is_selection_direction_right(0));
+		CHECK(text_edit->is_caret_after_selection_origin(0));
 
 		// Merge smaller overlapping selection into a bigger one.
 		text_edit->remove_secondary_carets();
@@ -6584,7 +6584,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 5);
-		CHECK(text_edit->is_selection_direction_right(0));
+		CHECK(text_edit->is_caret_after_selection_origin(0));
 
 		// Merge equal overlapping selections.
 		text_edit->remove_secondary_carets();
@@ -6600,7 +6600,7 @@ TEST_CASE("[SceneTree][TextEdit] multicaret") {
 		CHECK(text_edit->get_selection_from_column(0) == 2);
 		CHECK(text_edit->get_selection_to_line(0) == 1);
 		CHECK(text_edit->get_selection_to_column(0) == 6);
-		CHECK(text_edit->is_selection_direction_right(0));
+		CHECK(text_edit->is_caret_after_selection_origin(0));
 	}
 
 	SUBCASE("[TextEdit] add caret at carets") {

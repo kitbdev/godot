@@ -923,7 +923,7 @@ public:
 	int get_selection_to_line(int p_caret = 0) const;
 	int get_selection_to_column(int p_caret = 0) const;
 
-	bool is_selection_direction_right(int p_caret = 0) const;
+	bool is_caret_after_selection_origin(int p_caret = 0) const;
 
 	void deselect(int p_caret = -1);
 	void delete_selection(int p_caret = -1);

@@ -2313,7 +2313,7 @@ void CodeEdit::move_lines_up() {
 	// Fix selection if it ended at column 0, since it wasn't moved.
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (has_selection(i) && get_selection_to_column(i) == 0 && get_selection_to_line(i) != 0) {
-			if (is_selection_direction_right(i)) {
+			if (is_caret_after_selection_origin(i)) {
 				set_caret_line(get_caret_line(i) - 1, false, true, -1, i);
 			} else {
 				set_selection_origin_line(get_selection_origin_line(i) - 1, i);
@@ -2334,7 +2334,7 @@ void CodeEdit::move_lines_down() {
 	// Fix selection if it ended at column 0, since it won't be moved.
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (has_selection(i) && get_selection_to_column(i) == 0 && get_selection_to_line(i) != get_line_count() - 1) {
-			if (is_selection_direction_right(i)) {
+			if (is_caret_after_selection_origin(i)) {
 				set_caret_line(get_caret_line(i) + 1, false, true, -1, i);
 			} else {
 				set_selection_origin_line(get_selection_origin_line(i) + 1, i);

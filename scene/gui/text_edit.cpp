@@ -4860,7 +4860,7 @@ void TextEdit::merge_overlapping_carets() {
 				caret_dir_to_copy = !has_selection(caret_to_remove) ? caret_to_save : caret_to_remove;
 			}
 
-			if (is_selection_direction_right(caret_dir_to_copy)) {
+			if (is_caret_after_selection_origin(caret_dir_to_copy)) {
 				select(new_from_line, new_from_col, new_to_line, new_to_col, caret_to_save);
 			} else {
 				select(new_to_line, new_to_col, new_from_line, new_from_col, caret_to_save);
@@ -5458,8 +5458,8 @@ int TextEdit::get_selection_to_column(int p_caret) const {
 	}
 }
 
-bool TextEdit::is_selection_direction_right(int p_caret) const {
-	ERR_FAIL_INDEX_V(p_caret, carets.size(), -1);
+bool TextEdit::is_caret_after_selection_origin(int p_caret) const {
+	ERR_FAIL_INDEX_V(p_caret, carets.size(), false);
 	if (!has_selection(p_caret)) {
 		return true;
 	}
@@ -6550,7 +6550,7 @@ void TextEdit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_selection_to_line", "caret_index"), &TextEdit::get_selection_to_line, DEFVAL(0));
 	ClassDB::bind_method(D_METHOD("get_selection_to_column", "caret_index"), &TextEdit::get_selection_to_column, DEFVAL(0));
 
-	ClassDB::bind_method(D_METHOD("is_selection_direction_right", "caret_index"), &TextEdit::is_selection_direction_right, DEFVAL(0));
+	ClassDB::bind_method(D_METHOD("is_caret_after_selection_origin", "caret_index"), &TextEdit::is_caret_after_selection_origin, DEFVAL(0));
 
 	ClassDB::bind_method(D_METHOD("deselect", "caret_index"), &TextEdit::deselect, DEFVAL(-1));
 	ClassDB::bind_method(D_METHOD("delete_selection", "caret_index"), &TextEdit::delete_selection, DEFVAL(-1));
@@ -7401,8 +7401,8 @@ void TextEdit::_offset_carets_after(int p_old_line, int p_old_column, int p_new_
 	// Intentionally includes carets in the multicaret_edit_ignore list so that they are moved together.
 	for (int i = 0; i < get_caret_count(); i++) {
 		bool selected = has_selection(i);
-		bool selection_dir_right = selected && is_selection_direction_right(i);
-		bool include_caret_at = selection_dir_right ? p_include_selection_end : p_include_selection_begin;
+		bool caret_at_end = selected && is_caret_after_selection_origin(i);
+		bool include_caret_at = caret_at_end ? p_include_selection_end : p_include_selection_begin;
 
 		// Move caret.
 		int caret_line = get_caret_line(i);
@@ -7425,7 +7425,7 @@ void TextEdit::_offset_carets_after(int p_old_line, int p_old_column, int p_new_
 		if (!selected) {
 			continue;
 		}
-		bool include_selection_origin_at = !selection_dir_right ? p_include_selection_end : p_include_selection_begin;
+		bool include_selection_origin_at = !caret_at_end ? p_include_selection_end : p_include_selection_begin;
 
 		int selection_origin_line = get_selection_origin_line(i);
 		int selection_origin_column = get_selection_origin_column(i);

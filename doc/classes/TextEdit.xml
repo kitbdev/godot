@@ -771,11 +771,11 @@
 				Returns whether the user is in overtype mode.
 			</description>
 		</method>
-		<method name="is_selection_direction_right" qualifiers="const">
+		<method name="is_caret_after_selection_origin" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="caret_index" type="int" default="0" />
 			<description>
-				Returns [code]true[/code] if the selection is left-to-right and top-to-bottom. Selections go from the selection origin to the caret.
+				Returns [code]true[/code] if the caret of the selection is after the selection origin. This can be used to determine the direction of the selection.
 			</description>
 		</method>
 		<method name="menu_option">
