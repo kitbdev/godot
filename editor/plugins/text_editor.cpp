@@ -394,14 +394,7 @@ void TextEditor::_edit_option(int p_op) {
 			code_editor->get_text_editor()->duplicate_lines();
 		} break;
 		case EDIT_TOGGLE_FOLD_LINE: {
-			int previous_line = -1;
-			for (int caret_idx : tx->get_sorted_carets()) {
-				int line_idx = tx->get_caret_line(caret_idx);
-				if (line_idx != previous_line) {
-					tx->toggle_foldable_line(line_idx);
-					previous_line = line_idx;
-				}
-			}
+			tx->toggle_foldable_line_for_all_carets();
 		} break;
 		case EDIT_FOLD_ALL_LINES: {
 			tx->fold_all_lines();

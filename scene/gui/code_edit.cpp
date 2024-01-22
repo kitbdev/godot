@@ -1669,6 +1669,23 @@ void CodeEdit::toggle_foldable_line(int p_line) {
 	fold_line(p_line);
 }
 
+void CodeEdit::toggle_foldable_line_for_all_carets() {
+	begin_multicaret_edit();
+	int previous_line = -1;
+	Vector<int> sorted = get_sorted_carets();
+	for (int caret_idx : sorted) {
+		if (multicaret_edit_ignore_caret(caret_idx)) {
+			continue;
+		}
+		int line_idx = get_caret_line(caret_idx);
+		if (line_idx != previous_line) {
+			toggle_foldable_line(line_idx);
+			previous_line = line_idx;
+		}
+	}
+	end_multicaret_edit();
+}
+
 bool CodeEdit::is_line_folded(int p_line) const {
 	ERR_FAIL_INDEX_V(p_line, get_line_count(), false);
 	return p_line + 1 < get_line_count() && !_is_line_hidden(p_line) && _is_line_hidden(p_line + 1);

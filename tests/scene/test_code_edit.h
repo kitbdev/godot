@@ -2898,6 +2898,7 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 	CodeEdit *code_edit = memnew(CodeEdit);
 	SceneTree::get_singleton()->get_root()->add_child(code_edit);
 	code_edit->grab_focus();
+	code_edit->set_line_folding_enabled(true);
 
 	SUBCASE("[CodeEdit] folding settings") {
 		code_edit->set_line_folding_enabled(true);
@@ -2908,8 +2909,6 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 	}
 
 	SUBCASE("[CodeEdit] folding") {
-		code_edit->set_line_folding_enabled(true);
-
 		// No indent.
 		code_edit->set_text("line1\nline2\nline3");
 		for (int i = 0; i < 2; i++) {
@@ -3277,8 +3276,6 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 	}
 
 	SUBCASE("[CodeEdit] folding carets") {
-		code_edit->set_line_folding_enabled(true);
-
 		// Folding a line moves all carets that would be hidden.
 		code_edit->set_text("test\n\tline1\n\t\tline 2\n");
 		code_edit->set_caret_line(1);
@@ -3332,6 +3329,44 @@ TEST_CASE("[SceneTree][CodeEdit] folding") {
 		CHECK(code_edit->get_selection_origin_column() == 2);
 		CHECK_FALSE(code_edit->is_line_folded(0));
 		CHECK_FALSE(code_edit->is_line_folded(1));
+	}
+
+	SUBCASE("[CodeEdit] toggle folding carets") {
+		code_edit->set_text("test\n\tline1\ntest2\n\tline2");
+
+		// Fold lines with carets on them.
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(1);
+		code_edit->toggle_foldable_line_for_all_carets();
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(2));
+
+		// Toggle fold on lines with carets.
+		code_edit->add_caret(2, 0);
+		code_edit->toggle_foldable_line_for_all_carets();
+		CHECK_FALSE(code_edit->is_line_folded(0));
+		CHECK(code_edit->is_line_folded(2));
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 1);
+		CHECK(code_edit->get_caret_line(1) == 2);
+		CHECK(code_edit->get_caret_column(1) == 0);
+
+		// Multiple carets as part of one fold.
+		code_edit->unfold_all_lines();
+		code_edit->remove_secondary_carets();
+		code_edit->set_caret_line(0);
+		code_edit->set_caret_column(1);
+		code_edit->add_caret(0, 4);
+		code_edit->add_caret(1, 2);
+		code_edit->toggle_foldable_line_for_all_carets();
+		CHECK(code_edit->is_line_folded(0));
+		CHECK_FALSE(code_edit->is_line_folded(2));
+		CHECK(code_edit->get_caret_count() == 2);
+		CHECK(code_edit->get_caret_line(0) == 0);
+		CHECK(code_edit->get_caret_column(0) == 1);
+		CHECK(code_edit->get_caret_line(1) == 0);
+		CHECK(code_edit->get_caret_column(1) == 4);
 	}
 
 	memdelete(code_edit);

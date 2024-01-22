@@ -411,6 +411,7 @@ public:
 	void fold_all_lines();
 	void unfold_all_lines();
 	void toggle_foldable_line(int p_line);
+	void toggle_foldable_line_for_all_carets();
 
 	bool is_line_folded(int p_line) const;
 	TypedArray<int> get_folded_lines() const;
