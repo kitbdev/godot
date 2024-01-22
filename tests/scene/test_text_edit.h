@@ -3797,7 +3797,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(5);
 			text_edit->add_caret(1, 2);
 			text_edit->add_caret(1, 8);
-			lines_edited_args = build_array(build_array(1, 1), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1));
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
@@ -3848,7 +3848,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(3, 7, 3, 4, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(1, 1), build_array(3, 3));
+			lines_edited_args = build_array(build_array(3, 3), build_array(1, 1));
 
 			SEND_GUI_ACTION("ui_text_backspace_all_to_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -3869,7 +3869,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(0, false, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(1, 0), build_array(2, 1));
+			lines_edited_args = build_array(build_array(3, 2), build_array(1, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace_all_to_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -3908,7 +3908,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_editable(true);
 
 			// Remove entire line content when at the end of the line.
-			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace_all_to_left");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -3923,6 +3923,37 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+			text_edit->remove_secondary_carets();
+
+			// Removing newline effectively happens after removing text.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(0);
+			text_edit->add_caret(1, 4);
+
+			SEND_GUI_ACTION("ui_text_backspace_all_to_left");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "tests");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			text_edit->remove_secondary_carets();
+
+			// Removing newline effectively happens after removing text, reverse caret order.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(4);
+			text_edit->add_caret(1, 0);
+
+			SEND_GUI_ACTION("ui_text_backspace_all_to_left");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "tests");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			text_edit->remove_secondary_carets();
 
 			InputMap::get_singleton()->action_erase_event("ui_text_backspace_all_to_left", tmpevent);
 		}
@@ -3940,7 +3971,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(3, 10, 3, 6, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(1, 1), build_array(3, 3));
+			lines_edited_args = build_array(build_array(3, 3), build_array(1, 1));
 
 			SEND_GUI_ACTION("ui_text_backspace_word");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -3957,7 +3988,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			text_edit->end_complex_operation();
 
-			lines_edited_args = build_array(build_array(1, 0), build_array(2, 1));
+			lines_edited_args = build_array(build_array(3, 2), build_array(1, 0));
 
 			// Start of line should also be a normal backspace.
 			text_edit->set_caret_column(0);
@@ -4004,7 +4035,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(12, false, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace_word");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4049,6 +4080,36 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Removing newline effectively happens after removing text.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(0);
+			text_edit->add_caret(1, 4);
+
+			SEND_GUI_ACTION("ui_text_backspace_word");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "tests");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			text_edit->remove_secondary_carets();
+
+			// Removing newline effectively happens after removing text, reverse caret order.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(1);
+			text_edit->set_caret_column(4);
+			text_edit->add_caret(1, 0);
+
+			SEND_GUI_ACTION("ui_text_backspace_word");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "tests");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 4);
+			text_edit->remove_secondary_carets();
 		}
 
 		SUBCASE("[TextEdit] ui_text_backspace_word same line") {
@@ -4068,7 +4129,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
-			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace_word");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4132,7 +4193,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(3, 5, 3, 2, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(1, 1), build_array(3, 3));
+			lines_edited_args = build_array(build_array(3, 3), build_array(1, 1));
 
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4187,7 +4248,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(0, false, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(1, 0), build_array(2, 1));
+			lines_edited_args = build_array(build_array(3, 2), build_array(1, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4259,7 +4320,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->start_action(TextEdit::ACTION_NONE);
 
 			// Backspace removes character to the left.
-			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4291,7 +4352,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 
 			// Undo both backspaces.
-			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1), build_array(0, 0), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0), build_array(1, 1), build_array(0, 0));
 
 			text_edit->undo();
 			MessageQueue::get_singleton()->flush();
@@ -4349,7 +4410,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->select(1, text_edit->get_line(1).length(), 1, 0, 1);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(0, 0), build_array(1, 1));
+			lines_edited_args = build_array(build_array(1, 1), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_backspace");
 			CHECK(text_edit->get_text() == "\n");
@@ -4401,7 +4462,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->add_caret(0, 20);
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
-			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_delete_all_to_right");
 			CHECK(text_edit->get_viewport()->is_input_handled());
@@ -4661,7 +4722,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			text_edit->set_caret_column(6);
 			text_edit->add_caret(0, 9);
 			text_edit->add_caret(0, 3);
-			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0));
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("text_set");
 			SIGNAL_DISCARD("text_changed");
@@ -4678,6 +4739,36 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK("text_changed", empty_signal_args);
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
+
+			// Removing newline effectively happens after removing text.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(2);
+			text_edit->add_caret(0, 4);
+
+			SEND_GUI_ACTION("ui_text_delete_word");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "telines");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			text_edit->remove_secondary_carets();
+
+			// Removing newline effectively happens after removing text, reverse caret order.
+			text_edit->set_text("test\nlines");
+			text_edit->set_caret_line(0);
+			text_edit->set_caret_column(4);
+			text_edit->add_caret(0, 2);
+
+			SEND_GUI_ACTION("ui_text_delete_word");
+			CHECK(text_edit->get_viewport()->is_input_handled());
+			CHECK_FALSE(text_edit->has_selection());
+			CHECK(text_edit->get_text() == "telines");
+			CHECK(text_edit->get_caret_count() == 1);
+			CHECK(text_edit->get_caret_line(0) == 0);
+			CHECK(text_edit->get_caret_column(0) == 2);
+			text_edit->remove_secondary_carets();
 		}
 
 		SUBCASE("[TextEdit] ui_text_delete_word same line") {
@@ -4697,7 +4788,7 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			MessageQueue::get_singleton()->flush();
 			SIGNAL_DISCARD("caret_changed");
 
-			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0), build_array(0, 0));
+			lines_edited_args = build_array(build_array(0, 0), build_array(0, 0));
 
 			SEND_GUI_ACTION("ui_text_delete_word");
 			CHECK(text_edit->get_viewport()->is_input_handled());
