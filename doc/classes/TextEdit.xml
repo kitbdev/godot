@@ -696,6 +696,13 @@
 				Insert the specified text at the caret position.
 			</description>
 		</method>
+		<method name="is_caret_after_selection_origin" qualifiers="const">
+			<return type="bool" />
+			<param index="0" name="caret_index" type="int" default="0" />
+			<description>
+				Returns [code]true[/code] if the caret of the selection is after the selection origin. This can be used to determine the direction of the selection.
+			</description>
+		</method>
 		<method name="is_caret_visible" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="caret_index" type="int" default="0" />
@@ -769,13 +776,6 @@
 			<return type="bool" />
 			<description>
 				Returns whether the user is in overtype mode.
-			</description>
-		</method>
-		<method name="is_caret_after_selection_origin" qualifiers="const">
-			<return type="bool" />
-			<param index="0" name="caret_index" type="int" default="0" />
-			<description>
-				Returns [code]true[/code] if the caret of the selection is after the selection origin. This can be used to determine the direction of the selection.
 			</description>
 		</method>
 		<method name="menu_option">
