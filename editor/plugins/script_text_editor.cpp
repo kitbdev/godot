@@ -1963,8 +1963,6 @@ void ScriptTextEditor::_text_edit_gui_input(const Ref<InputEvent> &ev) {
 	}
 
 	if (create_menu) {
-		tx->apply_ime();
-
 		Point2i pos = tx->get_line_column_at_pos(local_pos);
 		int mouse_line = pos.y;
 		int mouse_column = pos.x;
