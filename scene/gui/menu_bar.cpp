@@ -881,6 +881,7 @@ String MenuBar::get_tooltip(const Point2 &p_pos) const {
 
 MenuBar::MenuBar() {
 	set_process_shortcut_input(true);
+	set_capture_on_left_mouse_press(false);
 }
 
 MenuBar::~MenuBar() {

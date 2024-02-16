@@ -356,7 +356,7 @@ private:
 		bool key_event_accepted = false;
 		HashMap<int, ObjectID> touch_focus;
 		Control *mouse_focus = nullptr;
-		Control *last_mouse_focus = nullptr;
+		Control *mouse_pressed_left = nullptr;
 		Control *mouse_click_grabber = nullptr;
 		BitField<MouseButtonMask> mouse_focus_mask;
 		Control *key_focus = nullptr;
@@ -444,6 +444,9 @@ private:
 	void _gui_grab_click_focus(Control *p_control);
 	void _post_gui_grab_click_focus();
 	void _gui_accept_event();
+	void _gui_capture_mouse_focus(Control *p_control);
+	void _gui_release_mouse_focus(Control *p_control);
+	bool _gui_has_mouse_focus(const Control *p_control) const;
 
 	bool _gui_drop(Control *p_at_control, Point2 p_at_pos, bool p_just_check);
 

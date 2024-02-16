@@ -218,6 +218,8 @@ private:
 
 		CursorShape default_cursor = CURSOR_ARROW;
 
+		bool capture_on_left_mouse_press = true;
+
 		// Focus.
 
 		NodePath focus_neighbor[4];
@@ -511,6 +513,12 @@ public:
 	bool is_focus_owner_in_shortcut_context() const;
 	void set_shortcut_context(const Node *p_node);
 	Node *get_shortcut_context() const;
+
+	void capture_mouse_focus();
+	void release_mouse_focus();
+	bool has_mouse_focus() const;
+	void set_capture_on_left_mouse_press(bool p_enabled);
+	bool get_capture_on_left_mouse_press() const;
 
 	// Drag and drop handling.
 

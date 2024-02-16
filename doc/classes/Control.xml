@@ -325,6 +325,12 @@
 				Prevents [code]*_theme_*_override[/code] methods from emitting [constant NOTIFICATION_THEME_CHANGED] until [method end_bulk_theme_override] is called.
 			</description>
 		</method>
+		<method name="capture_mouse_focus">
+			<return type="void" />
+			<description>
+				Capture the mouse focus so this control will receive all subsequent mouse events until a mouse unpressed event or [method release_mouse_focus] is called.
+			</description>
+		</method>
 		<method name="end_bulk_theme_override">
 			<return type="void" />
 			<description>
@@ -587,6 +593,12 @@
 				Returns [code]true[/code] if this is the current focused control. See [member focus_mode].
 			</description>
 		</method>
+		<method name="has_mouse_focus" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if this control has captured the mouse focus and will receive mouse events. See [method capture_mouse_focus] and [method release_mouse_focus].
+			</description>
+		</method>
 		<method name="has_theme_color" qualifiers="const">
 			<return type="bool" />
 			<param index="0" name="name" type="StringName" />
@@ -706,6 +718,12 @@
 			<return type="void" />
 			<description>
 				Give up the focus. No other control will be able to receive input.
+			</description>
+		</method>
+		<method name="release_mouse_focus">
+			<return type="void" />
+			<description>
+				Release the captured mouse focus so other controls can receive mouse events.
 			</description>
 		</method>
 		<method name="remove_theme_color_override">
@@ -985,6 +1003,11 @@
 		<member name="localize_numeral_system" type="bool" setter="set_localize_numeral_system" getter="is_localizing_numeral_system" default="true">
 			If [code]true[/code], automatically converts code line numbers, list indices, [SpinBox] and [ProgressBar] values from the Western Arabic (0..9) to the numeral systems used in current locale.
 			[b]Note:[/b] Numbers within the text are not automatically converted, it can be done manually, using [method TextServer.format_number].
+		</member>
+		<member name="mouse_capture_on_left_mouse_press" type="bool" setter="set_capture_on_left_mouse_press" getter="get_capture_on_left_mouse_press" default="true">
+			If [code]true[/code], automatically capture the left mouse button press, so that this control will receive the mouse unpressed event.
+			Mouse unpressed events that were not captured will be ignored.
+			See [method capture_mouse_focus].
 		</member>
 		<member name="mouse_default_cursor_shape" type="int" setter="set_default_cursor_shape" getter="get_default_cursor_shape" enum="Control.CursorShape" default="0">
 			The default cursor shape for this control. Useful for Godot plugins and applications or games that use the system's mouse cursors.

@@ -103,6 +103,7 @@
 		<member name="language" type="String" setter="set_language" getter="get_language" default="&quot;&quot;">
 			Language code used for line-breaking and text shaping algorithms, if left empty current locale is used instead.
 		</member>
+		<member name="mouse_capture_on_left_mouse_press" type="bool" setter="set_capture_on_left_mouse_press" getter="get_capture_on_left_mouse_press" overrides="Control" default="false" />
 		<member name="prefer_global_menu" type="bool" setter="set_prefer_global_menu" getter="is_prefer_global_menu" default="true">
 			If [code]true[/code], [MenuBar] will use system global menu when supported.
 		</member>

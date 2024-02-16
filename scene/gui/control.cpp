@@ -1885,6 +1885,32 @@ bool Control::is_focus_owner_in_shortcut_context() const {
 	return ctx_node && vp_focus && (ctx_node == vp_focus || ctx_node->is_ancestor_of(vp_focus));
 }
 
+void Control::capture_mouse_focus() {
+	ERR_MAIN_THREAD_GUARD;
+	ERR_FAIL_COND(!is_inside_tree());
+	get_viewport()->_gui_capture_mouse_focus(this);
+}
+
+void Control::release_mouse_focus() {
+	ERR_MAIN_THREAD_GUARD;
+	ERR_FAIL_COND(!is_inside_tree());
+	get_viewport()->_gui_release_mouse_focus(this);
+}
+
+bool Control::has_mouse_focus() const {
+	ERR_MAIN_THREAD_GUARD_V(false);
+	ERR_FAIL_COND_V(!is_inside_tree(), false);
+	return get_viewport()->_gui_has_mouse_focus(this);
+}
+
+void Control::set_capture_on_left_mouse_press(bool p_enabled) {
+	data.capture_on_left_mouse_press = p_enabled;
+}
+
+bool Control::get_capture_on_left_mouse_press() const {
+	return data.capture_on_left_mouse_press;
+}
+
 // Drag and drop handling.
 
 void Control::set_drag_forwarding(const Callable &p_drag, const Callable &p_can_drop, const Callable &p_drop) {
@@ -3490,6 +3516,11 @@ void Control::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_clipping_contents"), &Control::is_clipping_contents);
 
 	ClassDB::bind_method(D_METHOD("grab_click_focus"), &Control::grab_click_focus);
+	ClassDB::bind_method(D_METHOD("capture_mouse_focus"), &Control::capture_mouse_focus);
+	ClassDB::bind_method(D_METHOD("release_mouse_focus"), &Control::release_mouse_focus);
+	ClassDB::bind_method(D_METHOD("has_mouse_focus"), &Control::has_mouse_focus);
+	ClassDB::bind_method(D_METHOD("set_capture_on_left_mouse_press", "enabled"), &Control::set_capture_on_left_mouse_press);
+	ClassDB::bind_method(D_METHOD("get_capture_on_left_mouse_press"), &Control::get_capture_on_left_mouse_press);
 
 	ClassDB::bind_method(D_METHOD("set_drag_forwarding", "drag_func", "can_drop_func", "drop_func"), &Control::set_drag_forwarding);
 	ClassDB::bind_method(D_METHOD("set_drag_preview", "control"), &Control::set_drag_preview);
@@ -3577,6 +3608,7 @@ void Control::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_filter", PROPERTY_HINT_ENUM, "Stop,Pass,Ignore"), "set_mouse_filter", "get_mouse_filter");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "mouse_force_pass_scroll_events"), "set_force_pass_scroll_events", "is_force_pass_scroll_events");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "mouse_default_cursor_shape", PROPERTY_HINT_ENUM, "Arrow,I-Beam,Pointing Hand,Cross,Wait,Busy,Drag,Can Drop,Forbidden,Vertical Resize,Horizontal Resize,Secondary Diagonal Resize,Main Diagonal Resize,Move,Vertical Split,Horizontal Split,Help"), "set_default_cursor_shape", "get_default_cursor_shape");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "mouse_capture_on_left_mouse_press"), "set_capture_on_left_mouse_press", "get_capture_on_left_mouse_press");
 
 	ADD_GROUP("Input", "");
 	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "shortcut_context", PROPERTY_HINT_NODE_TYPE, "Node"), "set_shortcut_context", "get_shortcut_context");
