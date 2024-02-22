@@ -1299,9 +1299,19 @@ void CodeTextEditor::store_previous_state() {
 void CodeTextEditor::set_edit_state(const Variant &p_state) {
 	Dictionary state = p_state;
 
-	/* update the row first as it sets the column to 0 */
-	text_editor->set_caret_line(state["row"]);
-	text_editor->set_caret_column(state["column"]);
+	if (state.has("carets")) {
+		text_editor->set_carets_state(state);
+	} else {
+		// Old values for compatibility.
+		text_editor->remove_secondary_carets();
+		text_editor->set_caret_line(state["row"]);
+		text_editor->set_caret_column(state["column"]);
+		if (state.get("selection", false)) {
+			text_editor->select(state["selection_from_line"], state["selection_from_column"], state["selection_to_line"], state["selection_to_column"]);
+		} else {
+			text_editor->deselect();
+		}
+	}
 	if (int(state["scroll_position"]) == -1) {
 		// Special case for previous state.
 		text_editor->center_viewport_to_caret();
@@ -1309,12 +1319,6 @@ void CodeTextEditor::set_edit_state(const Variant &p_state) {
 		text_editor->set_v_scroll(state["scroll_position"]);
 	}
 	text_editor->set_h_scroll(state["h_scroll_position"]);
-
-	if (state.get("selection", false)) {
-		text_editor->select(state["selection_from_line"], state["selection_from_column"], state["selection_to_line"], state["selection_to_column"]);
-	} else {
-		text_editor->deselect();
-	}
 
 	if (state.has("folded_lines")) {
 		Vector<int> folded_lines = state["folded_lines"];
@@ -1347,16 +1351,7 @@ Variant CodeTextEditor::get_navigation_state() {
 
 	state["scroll_position"] = text_editor->get_v_scroll();
 	state["h_scroll_position"] = text_editor->get_h_scroll();
-	state["column"] = text_editor->get_caret_column();
-	state["row"] = text_editor->get_caret_line();
-
-	state["selection"] = get_text_editor()->has_selection();
-	if (get_text_editor()->has_selection()) {
-		state["selection_from_line"] = text_editor->get_selection_from_line();
-		state["selection_from_column"] = text_editor->get_selection_from_column();
-		state["selection_to_line"] = text_editor->get_selection_to_line();
-		state["selection_to_column"] = text_editor->get_selection_to_column();
-	}
+	state.merge(text_editor->get_carets_state());
 
 	return state;
 }

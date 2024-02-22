@@ -4501,6 +4501,47 @@ bool TextEdit::is_multiple_carets_enabled() const {
 	return multi_carets_enabled;
 }
 
+Dictionary TextEdit::get_carets_state() const {
+	Dictionary carets_state;
+	Array carets_array;
+	for (int i = 0; i < get_caret_count(); i++) {
+		Dictionary state;
+		state["caret_column"] = get_caret_column(i);
+		state["caret_line"] = get_caret_line(i);
+		state["selection"] = has_selection(i);
+		if (has_selection(i)) {
+			state["selection_origin_line"] = get_selection_origin_line(i);
+			state["selection_origin_column"] = get_selection_origin_column(i);
+		}
+		carets_array.push_back(state);
+	}
+
+	carets_state["carets"] = carets_array;
+	return carets_state;
+}
+
+void TextEdit::set_carets_state(const Dictionary &p_caret_state) {
+	ERR_FAIL_COND_MSG(!p_caret_state.has("carets"), "Invalid carets state.");
+	begin_multicaret_edit();
+	remove_secondary_carets();
+	deselect();
+	Array carets_array = p_caret_state["carets"];
+	for (int i = 0; i < carets_array.size(); i++) {
+		Dictionary state = (Dictionary)carets_array[i];
+		if (i > 0) {
+			add_caret(state["caret_line"], state["caret_column"]);
+		} else {
+			set_caret_line(state["caret_line"], false, true, -1, i);
+			set_caret_column(state["caret_column"], false, i);
+		}
+		if (state.get("selection", false)) {
+			select(state["selection_origin_line"], state["selection_origin_column"], state["caret_line"], state["caret_column"], i);
+		}
+	}
+	merge_overlapping_carets();
+	end_multicaret_edit();
+}
+
 int TextEdit::add_caret(int p_line, int p_column) {
 	if (!multi_carets_enabled) {
 		return -1;
