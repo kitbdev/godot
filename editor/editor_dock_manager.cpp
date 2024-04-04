@@ -173,8 +173,14 @@ void EditorDockManager::_update_docks_menu() {
 		docks_menu->set_item_icon(id, icon);
 		if (!dock.value.open) {
 			docks_menu->set_item_icon_modulate(id, closed_icon_color_mod);
+			docks_menu->set_item_tooltip(id, TTR("Open dock."));
+		} else {
+			docks_menu->set_item_tooltip(id, TTR("Focus dock."));
 		}
 		docks_menu->set_item_disabled(id, !dock.value.enabled);
+		if (!dock.value.enabled) {
+			docks_menu->set_item_tooltip(id, TTR("Disabled in Editor Features."));
+		}
 		docks_menu_docks.push_back(dock.key);
 		id++;
 	}
