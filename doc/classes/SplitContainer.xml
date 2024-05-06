@@ -62,13 +62,13 @@
 			The space between sides of the container.
 		</theme_item>
 		<theme_item name="grabber" data_type="icon" type="Texture2D">
-			The icon used for the grabber drawn in the middle area.
+			The icon used for the grabber drawn in the middle area if using [HSplitContainer] or [VSplitContainer]. See [theme_item h_grabber] and [theme_item v_grabber] if using [SplitContainer].
 		</theme_item>
 		<theme_item name="h_grabber" data_type="icon" type="Texture2D">
-			The icon used for the grabber drawn in the middle area when [member vertical] is [code]false[/code].
+			The icon used for the grabber drawn in the middle area when [member vertical] is [code]false[/code]. If using [HSplitContainer] or [VSplitContainer], see [theme_item grabber] instead.
 		</theme_item>
 		<theme_item name="v_grabber" data_type="icon" type="Texture2D">
-			The icon used for the grabber drawn in the middle area when [member vertical] is [code]true[/code].
+			The icon used for the grabber drawn in the middle area when [member vertical] is [code]true[/code]. If using [HSplitContainer] or [VSplitContainer], see [theme_item grabber] instead.
 		</theme_item>
 	</theme_items>
 </class>
