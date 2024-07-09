@@ -2148,15 +2148,13 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 			// Find end of current section.
 			const String line = get_line(caret_line);
 			int caret_col = get_caret_column(i);
-			int caret_remove_line = caret_line;
 
 			bool merge_text = true;
 			int in_string = is_in_string(caret_line, caret_col);
 			if (in_string != -1) {
 				Point2 string_end = get_delimiter_end_position(caret_line, caret_col);
-				if (string_end.x != -1) {
+				if (string_end.x != -1 && string_end.y == caret_line) {
 					merge_text = false;
-					caret_remove_line = string_end.y;
 					caret_col = string_end.x - 1;
 				}
 			}
@@ -2170,7 +2168,7 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 			}
 
 			// Replace.
-			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_remove_line, caret_col);
+			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_line, caret_col);
 			insert_text_at_caret(insert_text, i);
 		} else {
 			// Get first non-matching char.
