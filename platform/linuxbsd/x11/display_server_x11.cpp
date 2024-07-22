@@ -509,25 +509,25 @@ BitField<MouseButtonMask> DisplayServerX11::mouse_get_button_state() const {
 		int root_x, root_y, win_x, win_y;
 		unsigned int mask;
 		if (XQueryPointer(x11_display, XRootWindow(x11_display, i), &root, &child, &root_x, &root_y, &win_x, &win_y, &mask)) {
-			BitField<MouseButtonMask> last_button_state = 0;
+			BitField<MouseButtonMask> mouse_button_state = 0;
 
 			if (mask & Button1Mask) {
-				last_button_state.set_flag(MouseButtonMask::LEFT);
+				mouse_button_state.set_flag(MouseButtonMask::LEFT);
 			}
 			if (mask & Button2Mask) {
-				last_button_state.set_flag(MouseButtonMask::MIDDLE);
+				mouse_button_state.set_flag(MouseButtonMask::MIDDLE);
 			}
 			if (mask & Button3Mask) {
-				last_button_state.set_flag(MouseButtonMask::RIGHT);
+				mouse_button_state.set_flag(MouseButtonMask::RIGHT);
 			}
 			if (mask & Button4Mask) {
-				last_button_state.set_flag(MouseButtonMask::MB_XBUTTON1);
+				mouse_button_state.set_flag(MouseButtonMask::MB_XBUTTON1);
 			}
 			if (mask & Button5Mask) {
-				last_button_state.set_flag(MouseButtonMask::MB_XBUTTON2);
+				mouse_button_state.set_flag(MouseButtonMask::MB_XBUTTON2);
 			}
 
-			return last_button_state;
+			return mouse_button_state;
 		}
 	}
 	return 0;
@@ -4791,13 +4791,14 @@ void DisplayServerX11::process_events() {
 
 				mb->set_pressed((event.type == ButtonPress));
 
+				last_button_state = mouse_get_button_state();
 				if (mb->is_pressed() && mb->get_button_index() >= MouseButton::WHEEL_UP && mb->get_button_index() <= MouseButton::WHEEL_RIGHT) {
 					MouseButtonMask mask = mouse_button_to_mask(mb->get_button_index());
-					BitField<MouseButtonMask> scroll_mask = mouse_get_button_state();
+					BitField<MouseButtonMask> scroll_mask = last_button_state;
 					scroll_mask.set_flag(mask);
 					mb->set_button_mask(scroll_mask);
 				} else {
-					mb->set_button_mask(mouse_get_button_state());
+					mb->set_button_mask(last_button_state);
 				}
 
 				const WindowData &wd = windows[window_id];
@@ -4972,13 +4973,13 @@ void DisplayServerX11::process_events() {
 				if (xi.pressure_supported) {
 					mm->set_pressure(xi.pressure);
 				} else {
-					mm->set_pressure(bool(mouse_get_button_state().has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
+					mm->set_pressure(bool(last_button_state.has_flag(MouseButtonMask::LEFT)) ? 1.0f : 0.0f);
 				}
 				mm->set_tilt(xi.tilt);
 				mm->set_pen_inverted(xi.pen_inverted);
 
 				_get_key_modifier_state(event.xmotion.state, mm);
-				mm->set_button_mask(mouse_get_button_state());
+				mm->set_button_mask(last_button_state);
 				mm->set_position(pos);
 				mm->set_global_position(pos);
 				mm->set_velocity(Input::get_singleton()->get_last_mouse_velocity());
