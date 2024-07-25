@@ -576,13 +576,7 @@ void TextEdit::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_DRAW: {
-			if (first_draw) {
-				// Size may not be the final one, so attempts to ensure caret was visible may have failed.
-				adjust_viewport_to_caret();
-				first_draw = false;
-			}
-
-			/* Prevent the resource getting lost between the editor and game. */
+			// Prevent the resource getting lost between the editor and game.
 			if (Engine::get_singleton()->is_editor_hint()) {
 				if (syntax_highlighter.is_valid() && syntax_highlighter->get_text_edit() != this) {
 					syntax_highlighter->set_text_edit(this);
@@ -5730,6 +5724,10 @@ HScrollBar *TextEdit::get_h_scroll_bar() const {
 
 void TextEdit::set_v_scroll(double p_scroll) {
 	v_scroll->set_value(p_scroll);
+	if (!is_inside_tree()) {
+		_scroll_moved(v_scroll->get_value());
+		return;
+	}
 	int max_v_scroll = v_scroll->get_max() - v_scroll->get_page();
 	if (p_scroll >= max_v_scroll - 1.0) {
 		_scroll_moved(v_scroll->get_value());
@@ -5745,6 +5743,9 @@ void TextEdit::set_h_scroll(int p_scroll) {
 		p_scroll = 0;
 	}
 	h_scroll->set_value(p_scroll);
+	if (!is_inside_tree()) {
+		_scroll_moved(h_scroll->get_value());
+	}
 }
 
 int TextEdit::get_h_scroll() const {
@@ -5908,7 +5909,7 @@ void TextEdit::adjust_viewport_to_caret(int p_caret) {
 	if (draw_minimap) {
 		visible_width -= minimap_width;
 	}
-	if (v_scroll->is_visible_in_tree()) {
+	if (v_scroll->is_visible()) {
 		visible_width -= v_scroll->get_combined_minimum_size().width;
 	}
 	visible_width -= 20; // Give it a little more space.
@@ -5962,7 +5963,7 @@ void TextEdit::center_viewport_to_caret(int p_caret) {
 	if (draw_minimap) {
 		visible_width -= minimap_width;
 	}
-	if (v_scroll->is_visible_in_tree()) {
+	if (v_scroll->is_visible()) {
 		visible_width -= v_scroll->get_combined_minimum_size().width;
 	}
 	visible_width -= 20; // Give it a little more space.
@@ -7785,7 +7786,7 @@ void TextEdit::_update_wrap_at_column(bool p_force) {
 	if (draw_minimap) {
 		new_wrap_at -= minimap_width;
 	}
-	if (v_scroll->is_visible_in_tree()) {
+	if (v_scroll->is_visible()) {
 		new_wrap_at -= v_scroll->get_combined_minimum_size().width;
 	}
 	/* Give it a little more space. */
@@ -7900,7 +7901,7 @@ void TextEdit::_update_scrollbars() {
 int TextEdit::_get_control_height() const {
 	int control_height = get_size().height;
 	control_height -= theme_cache.style_normal->get_minimum_size().height;
-	if (h_scroll->is_visible_in_tree()) {
+	if (h_scroll->is_visible()) {
 		control_height -= h_scroll->get_size().height;
 	}
 	return control_height;
@@ -7916,10 +7917,10 @@ void TextEdit::_scroll_moved(double p_to_val) {
 		return;
 	}
 
-	if (h_scroll->is_visible_in_tree()) {
+	if (h_scroll->is_visible()) {
 		first_visible_col = h_scroll->get_value();
 	}
-	if (v_scroll->is_visible_in_tree()) {
+	if (v_scroll->is_visible()) {
 		// Set line ofs and wrap ofs.
 		bool draw_placeholder = text.size() == 1 && text[0].length() == 0;
 

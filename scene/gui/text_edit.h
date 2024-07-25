@@ -611,7 +611,6 @@ private:
 	} theme_cache;
 
 	bool window_has_focus = true;
-	bool first_draw = true;
 
 	bool highlight_current_line = false;
 	bool highlight_all_occurrences = false;
