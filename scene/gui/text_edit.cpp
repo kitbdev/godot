@@ -579,6 +579,7 @@ void TextEdit::_notification(int p_what) {
 			if (first_draw) {
 				// Size may not be the final one, so attempts to ensure caret was visible may have failed.
 				adjust_viewport_to_caret();
+				h_scroll->set_value(0);
 				first_draw = false;
 			}
 
