@@ -1108,6 +1108,7 @@ public:
 #endif
 
 	TextEdit(const String &p_placeholder = String());
+	~TextEdit();
 };
 
 VARIANT_ENUM_CAST(TextEdit::EditAction);

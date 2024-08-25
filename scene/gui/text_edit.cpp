@@ -8407,3 +8407,7 @@ TextEdit::TextEdit(const String &p_placeholder) {
 	set_clip_contents(true);
 	set_editable(true);
 }
+
+TextEdit::~TextEdit() {
+	text.clear();
+}
