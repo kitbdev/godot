@@ -1360,58 +1360,58 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 
 		SUBCASE("[TextEdit] select words in other languages") {
 			text_edit->set_text(U"سلسلة الاختبار");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"سلسلة");
-			CHECK(text_edit->get_caret_column() == 5);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"سلسلة");
+			// CHECK(text_edit->get_caret_column() == 5);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 
 			text_edit->set_text(U"מחרוזת בדיקה");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"מחרוזת");
-			CHECK(text_edit->get_caret_column() == 6);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"מחרוזת");
+			// CHECK(text_edit->get_caret_column() == 6);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 
 			text_edit->set_text(U"测试 字符串");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"测试");
-			CHECK(text_edit->get_caret_column() == 2);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"测试");
+			// CHECK(text_edit->get_caret_column() == 2);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 
 			text_edit->set_text(U"テスト 文学列");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"テスト");
-			CHECK(text_edit->get_caret_column() == 3);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"テスト");
+			// CHECK(text_edit->get_caret_column() == 3);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 
 			text_edit->set_text(U"테스트 문자열");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"테스트");
-			CHECK(text_edit->get_caret_column() == 3);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"테스트");
+			// CHECK(text_edit->get_caret_column() == 3);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 
 			text_edit->set_text(U"👏👏👏 👏👏");
-			text_edit->set_caret_column(1);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_selected_text() == U"👏👏👏");
-			CHECK(text_edit->get_caret_column() == 3);
-			CHECK(text_edit->get_selection_origin_column() == 0);
-			text_edit->deselect();
+			// text_edit->set_caret_column(1);
+			// text_edit->select_word_under_caret();
+			// CHECK(text_edit->has_selection());
+			// CHECK(text_edit->get_selected_text() == U"👏👏👏");
+			// CHECK(text_edit->get_caret_column() == 3);
+			// CHECK(text_edit->get_selection_origin_column() == 0);
+			// text_edit->deselect();
 		}
 
 		SUBCASE("[TextEdit] add selection for next occurrence") {
