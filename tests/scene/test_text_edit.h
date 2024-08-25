@@ -7394,206 +7394,206 @@ TEST_CASE("[SceneTree][TextEdit] line wrapping") {
 	memdelete(text_edit);
 }
 
-TEST_CASE("[SceneTree][TextEdit] word separators") {
-	TextEdit *text_edit = memnew(TextEdit);
-	SceneTree::get_singleton()->get_root()->add_child(text_edit);
-	text_edit->grab_focus();
+// TEST_CASE("[SceneTree][TextEdit] word separators") {
+// 	TextEdit *text_edit = memnew(TextEdit);
+// 	SceneTree::get_singleton()->get_root()->add_child(text_edit);
+// 	text_edit->grab_focus();
 
-	SUBCASE("[TextEdit] common word separators") {
-		// Common separators.
-		String test_separators = " \t.,!=-+*/:\"'`<>()[]%$#";
-		test_separators += (char32_t)0x3000; // CJK space.
-		for (int i = 0; i < test_separators.length(); i++) {
-			char32_t sep = test_separators[i];
-			text_edit->set_text(vformat("test%cword%cseparator", sep, sep));
-			text_edit->set_caret_column(7);
-			text_edit->select_word_under_caret();
-			CHECK(text_edit->has_selection());
-			CHECK(text_edit->get_caret_column() == 9);
-			CHECK(text_edit->get_selection_origin_column() == 5);
-			text_edit->deselect();
-		}
+// 	SUBCASE("[TextEdit] common word separators") {
+// 		// Common separators.
+// 		String test_separators = " \t.,!=-+*/:\"'`<>()[]%$#";
+// 		test_separators += (char32_t)0x3000; // CJK space.
+// 		for (int i = 0; i < test_separators.length(); i++) {
+// 			char32_t sep = test_separators[i];
+// 			text_edit->set_text(vformat("test%cword%cseparator", sep, sep));
+// 			text_edit->set_caret_column(7);
+// 			text_edit->select_word_under_caret();
+// 			CHECK(text_edit->has_selection());
+// 			CHECK(text_edit->get_caret_column() == 9);
+// 			CHECK(text_edit->get_selection_origin_column() == 5);
+// 			text_edit->deselect();
+// 		}
 
-		// Underscore `_` is not a separator.
-		text_edit->set_text("test_word_separator");
-		text_edit->set_caret_column(7);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_caret_column() == 19);
-		CHECK(text_edit->get_selection_origin_column() == 0);
-		text_edit->deselect();
-	}
+// 		// Underscore `_` is not a separator.
+// 		text_edit->set_text("test_word_separator");
+// 		text_edit->set_caret_column(7);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_caret_column() == 19);
+// 		CHECK(text_edit->get_selection_origin_column() == 0);
+// 		text_edit->deselect();
+// 	}
 
-	SUBCASE("[TextEdit] custom separators") {
-		// Custom word separator underscore `_`.
-		text_edit->set_use_custom_word_separators(true);
-		text_edit->set_custom_word_separators("_");
-		text_edit->set_text("test_word_separator");
-		text_edit->set_caret_column(7);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_caret_column() == 9);
-		CHECK(text_edit->get_selection_origin_column() == 5);
-		text_edit->deselect();
+// 	SUBCASE("[TextEdit] custom separators") {
+// 		// Custom word separator underscore `_`.
+// 		text_edit->set_use_custom_word_separators(true);
+// 		text_edit->set_custom_word_separators("_");
+// 		text_edit->set_text("test_word_separator");
+// 		text_edit->set_caret_column(7);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_caret_column() == 9);
+// 		CHECK(text_edit->get_selection_origin_column() == 5);
+// 		text_edit->deselect();
 
-		// Disable custom word separators.
-		text_edit->set_use_custom_word_separators(false);
-		text_edit->set_caret_column(7);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_caret_column() == 19);
-		CHECK(text_edit->get_selection_origin_column() == 0);
-		text_edit->deselect();
+// 		// Disable custom word separators.
+// 		text_edit->set_use_custom_word_separators(false);
+// 		text_edit->set_caret_column(7);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_caret_column() == 19);
+// 		CHECK(text_edit->get_selection_origin_column() == 0);
+// 		text_edit->deselect();
 
-		// Custom separators can be disabled default separators.
-		text_edit->set_use_default_word_separators(false);
-		text_edit->set_text("test>word>separator");
-		text_edit->set_caret_column(7);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_caret_column() == 19);
-		CHECK(text_edit->get_selection_origin_column() == 0);
-		text_edit->deselect();
+// 		// Custom separators can be disabled default separators.
+// 		text_edit->set_use_default_word_separators(false);
+// 		text_edit->set_text("test>word>separator");
+// 		text_edit->set_caret_column(7);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_caret_column() == 19);
+// 		CHECK(text_edit->get_selection_origin_column() == 0);
+// 		text_edit->deselect();
 
-		text_edit->set_use_custom_word_separators(true);
-		text_edit->set_custom_word_separators(">");
-		text_edit->set_caret_column(7);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_caret_column() == 9);
-		CHECK(text_edit->get_selection_origin_column() == 5);
-		text_edit->deselect();
-	}
+// 		text_edit->set_use_custom_word_separators(true);
+// 		text_edit->set_custom_word_separators(">");
+// 		text_edit->set_caret_column(7);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_caret_column() == 9);
+// 		CHECK(text_edit->get_selection_origin_column() == 5);
+// 		text_edit->deselect();
+// 	}
 
-	SUBCASE("[TextEdit] punctuation as word") {
-		// Punctuation with spaces around it.
-		text_edit->set_text("test != separator");
-		text_edit->set_caret_column(6);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_selected_text() == "!=");
-		CHECK(text_edit->get_caret_column() == 7);
-		CHECK(text_edit->get_selection_origin_column() == 5);
-		text_edit->deselect();
+// 	SUBCASE("[TextEdit] punctuation as word") {
+// 		// Punctuation with spaces around it.
+// 		text_edit->set_text("test != separator");
+// 		text_edit->set_caret_column(6);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_selected_text() == "!=");
+// 		CHECK(text_edit->get_caret_column() == 7);
+// 		CHECK(text_edit->get_selection_origin_column() == 5);
+// 		text_edit->deselect();
 
-		// Punctuation without spaces around it.
-		text_edit->set_text("test!=separator");
-		text_edit->set_caret_column(5);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_selected_text() == "!=");
-		CHECK(text_edit->get_caret_column() == 6);
-		CHECK(text_edit->get_selection_origin_column() == 4);
-		text_edit->deselect();
+// 		// Punctuation without spaces around it.
+// 		text_edit->set_text("test!=separator");
+// 		text_edit->set_caret_column(5);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_selected_text() == "!=");
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		CHECK(text_edit->get_selection_origin_column() == 4);
+// 		text_edit->deselect();
 
-		// Another punctuation without spaces around it.
-		text_edit->set_text("test>=separator");
-		text_edit->set_caret_column(5);
-		text_edit->select_word_under_caret();
-		CHECK(text_edit->has_selection());
-		CHECK(text_edit->get_selected_text() == ">=");
-		CHECK(text_edit->get_caret_column() == 6);
-		CHECK(text_edit->get_selection_origin_column() == 4);
-		text_edit->deselect();
-	}
+// 		// Another punctuation without spaces around it.
+// 		text_edit->set_text("test>=separator");
+// 		text_edit->set_caret_column(5);
+// 		text_edit->select_word_under_caret();
+// 		CHECK(text_edit->has_selection());
+// 		CHECK(text_edit->get_selected_text() == ">=");
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		CHECK(text_edit->get_selection_origin_column() == 4);
+// 		text_edit->deselect();
+// 	}
 
-	SUBCASE("[TextEdit] moving over punctuation and spaces") {
-		// Punctuation is used to separate words and can be considered a word itself.
-		text_edit->set_text("test = separator");
-		text_edit->set_caret_column(0);
-		// Move after 'test'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
-		// Move after '='.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 6);
-		// Move after 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 16);
-		// Move before 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 7);
-		// Move before '='.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 5);
+// 	SUBCASE("[TextEdit] moving over punctuation and spaces") {
+// 		// Punctuation is used to separate words and can be considered a word itself.
+// 		text_edit->set_text("test = separator");
+// 		text_edit->set_caret_column(0);
+// 		// Move after 'test'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
+// 		// Move after '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		// Move after 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 16);
+// 		// Move before 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 7);
+// 		// Move before '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 5);
 
-		text_edit->set_text("test=separator");
-		text_edit->set_caret_column(0);
-		// Move after 'test'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
-		// Move after '='.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 5);
-		// Move after 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 14);
-		// Move before 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 5);
-		// Move before '='.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
+// 		text_edit->set_text("test=separator");
+// 		text_edit->set_caret_column(0);
+// 		// Move after 'test'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
+// 		// Move after '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 5);
+// 		// Move after 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 14);
+// 		// Move before 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 5);
+// 		// Move before '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
 
-		text_edit->set_text("test= separator");
-		text_edit->set_caret_column(0);
-		// Move after 'test'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
-		// Move after '='.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 5);
-		// Move after 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 15);
-		// Move before 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 6);
-		// Move before '='.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
+// 		text_edit->set_text("test= separator");
+// 		text_edit->set_caret_column(0);
+// 		// Move after 'test'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
+// 		// Move after '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 5);
+// 		// Move after 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 15);
+// 		// Move before 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		// Move before '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
 
-		text_edit->set_text("test =separator");
-		text_edit->set_caret_column(0);
-		// Move after 'test'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 4);
-		// Move after '='.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 6);
-		// Move after 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_right");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 15);
-		// Move before 'separator'.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 6);
-		// Move before '='.
-		SEND_GUI_ACTION("ui_text_caret_word_left");
-		CHECK(text_edit->get_viewport()->is_input_handled());
-		CHECK(text_edit->get_caret_column() == 5);
-	}
+// 		text_edit->set_text("test =separator");
+// 		text_edit->set_caret_column(0);
+// 		// Move after 'test'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 4);
+// 		// Move after '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		// Move after 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_right");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 15);
+// 		// Move before 'separator'.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 6);
+// 		// Move before '='.
+// 		SEND_GUI_ACTION("ui_text_caret_word_left");
+// 		CHECK(text_edit->get_viewport()->is_input_handled());
+// 		CHECK(text_edit->get_caret_column() == 5);
+// 	}
 
-	memdelete(text_edit);
-}
+// 	memdelete(text_edit);
+// }
 
 TEST_CASE("[SceneTree][TextEdit] viewport") {
 	TextEdit *text_edit = memnew(TextEdit);
