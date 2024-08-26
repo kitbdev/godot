@@ -217,6 +217,8 @@ TEST_CASE("[SceneTree][TextEdit] text entry") {
 			SIGNAL_CHECK("lines_edited_from", lines_edited_args);
 			SIGNAL_CHECK("caret_changed", empty_signal_args);
 			SIGNAL_CHECK_FALSE("text_changed");
+
+			text_edit->set_text(U"👏👏👏 👏👏");
 		}
 
 		SUBCASE("[TextEdit] insert text") {
