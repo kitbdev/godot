@@ -43,7 +43,7 @@ namespace TestSplitContainer {
 		CHECK_MESSAGE(child_rects[i] == rects[i], vformat("Child %s is the wrong size. Child rect: %s, expected: %s.", i, child_rects[i], rects[i])); \
 	}
 
-static inline Vector<Rect2> get_rects(SplitContainer *p_sc, const Vector<int> &p_positions, int p_sep, bool p_horizontal = true) {
+static inline Vector<Rect2> get_rects_multi(SplitContainer *p_sc, const Vector<int> &p_positions, int p_sep, bool p_horizontal = true) {
 	// p_positions is the top/left side of the dragger.
 	Vector<Rect2> rects;
 	int last_pos = 0;
@@ -66,10 +66,10 @@ static inline Vector<Rect2> get_rects(SplitContainer *p_sc, const Vector<int> &p
 }
 
 static inline Vector<Rect2> get_rects(SplitContainer *p_sc, int p_position, int p_sep, bool p_horizontal = true) {
-	return get_rects(p_sc, Vector<int>({ p_position }), p_sep, p_horizontal);
+	return get_rects_multi(p_sc, Vector<int>({ p_position }), p_sep, p_horizontal);
 }
 
-static inline Vector<Rect2> get_rects_rtl(SplitContainer *p_sc, const Vector<int> &p_positions, int p_sep) {
+static inline Vector<Rect2> get_rects_multi_rtl(SplitContainer *p_sc, const Vector<int> &p_positions, int p_sep) {
 	Vector<Rect2> rects;
 	int last_pos = p_sc->get_size().x;
 	for (int i = 0; i < (int)p_positions.size() + 1; i++) {
@@ -85,7 +85,7 @@ static inline Vector<Rect2> get_rects_rtl(SplitContainer *p_sc, const Vector<int
 }
 
 static inline Vector<Rect2> get_rects_rtl(SplitContainer *p_sc, int p_position, int p_sep) {
-	return get_rects_rtl(p_sc, Vector<int>({ p_position }), p_sep);
+	return get_rects_multi_rtl(p_sc, Vector<int>({ p_position }), p_sep);
 }
 
 static inline Vector<Rect2> get_child_rects(SplitContainer *p_sc) {
@@ -1006,7 +1006,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->hide();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->hide();
 			MessageQueue::get_singleton()->flush();
@@ -1015,7 +1015,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->show();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->show();
 			MessageQueue::get_singleton()->flush();
@@ -1032,7 +1032,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->hide();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == -100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->hide();
 			MessageQueue::get_singleton()->flush();
@@ -1041,7 +1041,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->show();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == -100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->show();
 			MessageQueue::get_singleton()->flush();
@@ -1058,7 +1058,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->hide();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->hide();
 			MessageQueue::get_singleton()->flush();
@@ -1067,7 +1067,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->show();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->show();
 			MessageQueue::get_singleton()->flush();
@@ -1085,7 +1085,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->hide();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 20);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->hide();
 			MessageQueue::get_singleton()->flush();
@@ -1094,7 +1094,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			child_a->show();
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 20);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			child_b->show();
 			MessageQueue::get_singleton()->flush();
@@ -1111,7 +1111,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->remove_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->remove_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1120,7 +1120,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->add_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->add_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1137,7 +1137,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->remove_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == -100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->remove_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1146,7 +1146,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->add_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == -100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->add_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1163,7 +1163,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->remove_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->remove_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1172,7 +1172,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->add_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 100);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->add_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1190,7 +1190,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->remove_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 20);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->remove_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1199,7 +1199,7 @@ TEST_CASE("[SceneTree][SplitContainer] Two children") {
 			split_container->add_child(child_a);
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offset() == 20);
-			CHECK_RECTS(get_rects(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, Vector<int>(), sep.x), get_child_rects(split_container));
 
 			split_container->add_child(child_b);
 			MessageQueue::get_singleton()->flush();
@@ -1795,88 +1795,88 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 
 		set_size_flags(split_container, { -1, -1, -1 }); // None expanded.
 		Vector<int> def_pos = { min_size.x, min_size.x * 2 + sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ min_size.x, min_size.x * 2 + sep.x }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { 1, -1, -1 }); // First expanded.
 		def_pos = { (int)split_container->get_size().x - sep.x * 2 - min_size.x * 2, (int)split_container->get_size().x - sep.x - min_size.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ -min_size.x * 2 - sep.x, -min_size.x }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { -1, 1, -1 }); // Second expanded.
 		def_pos = { min_size.x, (int)split_container->get_size().x - min_size.x - sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ min_size.x, -min_size.x }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { -1, -1, 1 }); // Third expanded.
 		def_pos = { min_size.x, min_size.x * 2 + sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ min_size.x, min_size.x * 2 + sep.x }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { 1, 1, -1 }); // First and second expanded.
 		int child_2_expanded_size = ((int)split_container->get_size().x - min_size.x) / 2 - sep.x;
 		def_pos = { child_2_expanded_size, (int)split_container->get_size().x - min_size.x - sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 0, -min_size.x }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { 1, -1, 1 }); // First and third expanded.
 		def_pos = { child_2_expanded_size, child_2_expanded_size + min_size.x + sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 0, 0 }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { -1, 1, 1 }); // Second and third expanded.
 		def_pos = { min_size.x, min_size.x + child_2_expanded_size + sep.x };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ min_size.x, 0 }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { 1, 1, 1 }); // All expanded.
 		int child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 		// Add 1 due to pixel error accumulation.
 		def_pos = { child_3_expanded_size, child_3_expanded_size * 2 + sep.x + 1 };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 0, 0 }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 
 		set_size_flags(split_container, { 1, 2, 3 }); // All expanded, different ratios.
 		int child_6_expanded_size = (split_container->get_size().x - sep.x * 2) / 6;
 		def_pos = { child_6_expanded_size, child_6_expanded_size * 3 + sep.x + 1 };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->clamp_split_offset();
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 0, 0 }));
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		split_container->set_split_offsets({ 0, 0 });
 	}
 
@@ -1890,49 +1890,49 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			split_container->set_split_offsets({ 50, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 0 });
-			CHECK_RECTS(get_rects(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Second is positive.
 			split_container->set_split_offsets({ 0, 50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, 50 });
-			CHECK_RECTS(get_rects(split_container, { min_size.x, 50 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, 50 }, sep.x), get_child_rects(split_container));
 
 			// Both are positive and equal, the first will override since they both start at 0.
 			split_container->set_split_offsets({ 50, 50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 50 });
-			CHECK_RECTS(get_rects(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Both are negative and clamped.
 			split_container->set_split_offsets({ -50, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, -50 });
-			CHECK_RECTS(get_rects(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
 
 			// First positive, second negative. First takes priority.
 			split_container->set_split_offsets({ 50, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, -50 });
-			CHECK_RECTS(get_rects(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 50 + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// First is clamped and pushes second to the end.
 			split_container->set_split_offsets({ 1000, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 1000, 0 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Second is clamped.
 			split_container->set_split_offsets({ 0, 1000 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, 1000 });
-			CHECK_RECTS(get_rects(split_container, { min_size.x, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Both are clamped positively, first one takes priority.
 			split_container->set_split_offsets({ 1000, 1000 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 1000, 1000 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 		}
 
 		SUBCASE("[SplitContainer] First child expanded") {
@@ -1942,55 +1942,55 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			split_container->set_split_offsets({ 50, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 0 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Second is positive and clamped.
 			split_container->set_split_offsets({ 0, 50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, 50 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// First is negative and moves left.
 			split_container->set_split_offsets({ -50, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, 0 });
-			CHECK_RECTS(get_rects(split_container, { (int)split_container->get_size().x - 50 - sep.x, (int)split_container->get_size().x - min_size.x - sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { (int)split_container->get_size().x - 50 - sep.x, (int)split_container->get_size().x - min_size.x - sep.x }, sep.x), get_child_rects(split_container));
 
 			// Second is negative, but first has priority so it doesn't move.
 			split_container->set_split_offsets({ 0, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, -50 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Both are negative and equal, they move left but the second doesn't move as much as wanted.
 			split_container->set_split_offsets({ -50, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, -50 });
-			CHECK_RECTS(get_rects(split_container, { (int)split_container->get_size().x - 50 - sep.x, (int)split_container->get_size().x - 50 + min_size.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { (int)split_container->get_size().x - 50 - sep.x, (int)split_container->get_size().x - 50 + min_size.x }, sep.x), get_child_rects(split_container));
 
 			// Both are negative with space and move left.
 			split_container->set_split_offsets({ -100, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -100, -50 });
-			CHECK_RECTS(get_rects(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
 
 			// First moves all the way left.
 			split_container->set_split_offsets({ -1000, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -1000, 0 });
-			CHECK_RECTS(get_rects(split_container, { min_size.x, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// Second cannot move all the way left since first takes priority.
 			split_container->set_split_offsets({ 0, -1000 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, -1000 });
-			CHECK_RECTS(get_rects(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { expanded_single_size, expanded_single_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 
 			// First and second move all the way left.
 			split_container->set_split_offsets({ -1000, -1000 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -1000, -1000 });
-			CHECK_RECTS(get_rects(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
 		}
 
 		SUBCASE("[SplitContainer] All children expanded") {
@@ -2001,37 +2001,37 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			split_container->set_split_offsets({ 50, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 0 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size + 50, child_3_expanded_size * 2 + sep.x + 1 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size + 50, child_3_expanded_size * 2 + sep.x + 1 }, sep.x), get_child_rects(split_container));
 
 			// First is moved negative, does not affect second.
 			split_container->set_split_offsets({ -50, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, 0 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size - 50, child_3_expanded_size * 2 + sep.x + 1 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size - 50, child_3_expanded_size * 2 + sep.x + 1 }, sep.x), get_child_rects(split_container));
 
 			// Second is moved positive, does not affect first.
 			split_container->set_split_offsets({ 0, 50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, 50 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size, child_3_expanded_size * 2 + 50 + sep.x + 1 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size, child_3_expanded_size * 2 + 50 + sep.x + 1 }, sep.x), get_child_rects(split_container));
 
 			// Second is moved negative, does not affect first.
 			split_container->set_split_offsets({ 0, -50 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, -50 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size, child_3_expanded_size * 2 - 50 + sep.x + 1 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size, child_3_expanded_size * 2 - 50 + sep.x + 1 }, sep.x), get_child_rects(split_container));
 
 			// First is moved positive enough to affect second.
 			split_container->set_split_offsets({ 200, 0 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 200, 0 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size + 200, child_3_expanded_size + 200 + sep.x + min_size.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size + 200, child_3_expanded_size + 200 + sep.x + min_size.x }, sep.x), get_child_rects(split_container));
 
 			// Second is moved enough to pass the first, but the first has priority.
 			split_container->set_split_offsets({ 0, -200 });
 			MessageQueue::get_singleton()->flush();
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 0, -200 });
-			CHECK_RECTS(get_rects(split_container, { child_3_expanded_size, child_3_expanded_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { child_3_expanded_size, child_3_expanded_size + min_size.x + sep.x }, sep.x), get_child_rects(split_container));
 		}
 	}
 
@@ -2041,36 +2041,36 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			// Increase the size.
 			split_container->set_size(Size2(600, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Decrease the size.
 			split_container->set_size(Size2(400, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Change size with a split offset.
 			split_container->set_split_offsets({ 50, 100 });
 			split_container->set_size(Size2(500, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { 50, 100 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 100 }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 100 });
 
 			// Change size so that the second child gets clamped and changes size.
 			split_container->set_size(Size2(100, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { 50, 100 - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 100 - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 100 });
 
 			// Change size so that the first child changes size.
 			split_container->set_size(Size2(60, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { 60 - min_size.x * 2 - sep.x * 2, 60 - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 60 - min_size.x * 2 - sep.x * 2, 60 - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 100 });
 
 			// Increase size again.
 			split_container->set_size(Size2(500, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { 50, 100 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { 50, 100 }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ 50, 100 });
 		}
 
@@ -2081,37 +2081,37 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			split_container->set_size(Size2(600, 500));
 			def_pos = { (int)split_container->get_size().x - sep.x * 2 - min_size.x * 2, (int)split_container->get_size().x - sep.x - min_size.x };
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Decrease the size.
 			split_container->set_size(Size2(400, 500));
 			def_pos = { (int)split_container->get_size().x - sep.x * 2 - min_size.x * 2, (int)split_container->get_size().x - sep.x - min_size.x };
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Change size with a split offset.
 			split_container->set_split_offsets({ -100, -50 });
 			split_container->set_size(Size2(500, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -100, -50 });
 
 			// Change size so that the first child gets clamped and changes size.
 			split_container->set_size(Size2(100, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { min_size.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -100, -50 });
 
 			// Change size so that the second child changes size.
 			split_container->set_size(Size2(50, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, min_size.x * 2 + sep.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -100, -50 });
 
 			// Increase size again.
 			split_container->set_size(Size2(500, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { (int)split_container->get_size().x - 100 - sep.x, (int)split_container->get_size().x - 50 - sep.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -100, -50 });
 		}
 
@@ -2122,14 +2122,14 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			MessageQueue::get_singleton()->flush();
 			int child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 			Vector<int> def_pos = { child_3_expanded_size, child_3_expanded_size * 2 + sep.x };
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Decrease the size.
 			split_container->set_size(Size2(400, 500));
 			MessageQueue::get_singleton()->flush();
 			child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 			def_pos = { child_3_expanded_size, child_3_expanded_size * 2 + sep.x };
-			CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 			// Change size with a split offset.
 			split_container->set_split_offsets({ -50, 50 });
@@ -2137,13 +2137,13 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			MessageQueue::get_singleton()->flush();
 			child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 			def_pos = { child_3_expanded_size, child_3_expanded_size * 2 + sep.x + 1 };
-			CHECK_RECTS(get_rects(split_container, { def_pos[0] - 50, def_pos[1] + 50 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { def_pos[0] - 50, def_pos[1] + 50 }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, 50 });
 
 			// Change size so that the children get clamped and change sizes.
 			split_container->set_size(Size2(100, 500));
 			MessageQueue::get_singleton()->flush();
-			CHECK_RECTS(get_rects(split_container, { min_size.x, (int)split_container->get_size().x - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { min_size.x, (int)split_container->get_size().x - sep.x - min_size.x }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, 50 });
 
 			// Increase size again.
@@ -2151,7 +2151,7 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 			MessageQueue::get_singleton()->flush();
 			child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 			def_pos = { child_3_expanded_size, child_3_expanded_size * 2 + sep.x + 1 };
-			CHECK_RECTS(get_rects(split_container, { def_pos[0] - 50, def_pos[1] + 50 }, sep.x), get_child_rects(split_container));
+			CHECK_RECTS(get_rects_multi(split_container, { def_pos[0] - 50, def_pos[1] + 50 }, sep.x), get_child_rects(split_container));
 			CHECK(split_container->get_split_offsets() == Vector<int>{ -50, 50 });
 		}
 	}
@@ -2161,45 +2161,45 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		split_container->set_split_offsets({ 50, 122 });
 		MessageQueue::get_singleton()->flush();
 		Vector<int> def_pos = { 50, 122 };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		// Hide and show the first child.
 		child_a->set_visible(false);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 60 }));
-		CHECK_RECTS(get_rects(split_container, { 60 }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { 60 }, sep.x), get_child_rects(split_container));
 
 		child_a->set_visible(true);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == def_pos);
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		// Hide and show the second child.
 		child_b->set_visible(false);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 50 }));
-		CHECK_RECTS(get_rects(split_container, { 50 }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { 50 }, sep.x), get_child_rects(split_container));
 		child_b->set_visible(true);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == def_pos);
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		// Hide and show the last child.
 		child_c->set_visible(false);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 50 }));
-		CHECK_RECTS(get_rects(split_container, { 50 }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { 50 }, sep.x), get_child_rects(split_container));
 		child_c->set_visible(true);
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == def_pos);
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		set_size_flags(split_container, { 1, 1, 1 }); // All expanded.
 		split_container->set_split_offsets({ 50, 60 });
 		MessageQueue::get_singleton()->flush();
 		int child_3_expanded_size = (split_container->get_size().x - sep.x * 2) / 3;
 		def_pos = { child_3_expanded_size + 50, child_3_expanded_size * 2 + sep.x + 1 + 60 };
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 
 		// Hide and show the first child.
 		int child_2_expanded_size = (split_container->get_size().x - sep.x) / 2;
@@ -2207,11 +2207,11 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		MessageQueue::get_singleton()->flush();
 		int half_point = (split_container->get_size().x - def_pos[0]) / 2 - sep.x;
 		int so = child_3_expanded_size + 11 - half_point; // 11 is from 60 - 50 + 1 to get the second child's size.
-		CHECK_RECTS(get_rects(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ so }));
 		child_a->set_visible(true);
 		MessageQueue::get_singleton()->flush();
-		CHECK_RECTS(get_rects(split_container, def_pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, def_pos, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 50, 60 }));
 
 		// Hide and show the second child.
@@ -2219,12 +2219,12 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		MessageQueue::get_singleton()->flush();
 		half_point = (split_container->get_size().x - (def_pos[1] - def_pos[0] - sep.x)) / 2 - sep.x + 1;
 		so = def_pos[0] - half_point;
-		CHECK_RECTS(get_rects(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ so }));
 		child_b->set_visible(true);
 		MessageQueue::get_singleton()->flush();
 		// There is lost precision due to SplitContainer using ints, so this is off by one.
-		CHECK_RECTS(get_rects(split_container, { def_pos[0] - 1, def_pos[1] - 1 }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { def_pos[0] - 1, def_pos[1] - 1 }, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 49, 59 }));
 
 		// Hide and show the last child.
@@ -2233,11 +2233,11 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		MessageQueue::get_singleton()->flush();
 		half_point = (def_pos[1] - sep.x) / 2 + 1;
 		so = def_pos[0] - half_point;
-		CHECK_RECTS(get_rects(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { child_2_expanded_size + so }, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ so }));
 		child_c->set_visible(true);
 		MessageQueue::get_singleton()->flush();
-		CHECK_RECTS(get_rects(split_container, { def_pos[0] - 1, def_pos[1] - 1 }, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, { def_pos[0] - 1, def_pos[1] - 1 }, sep.x), get_child_rects(split_container));
 		CHECK(split_container->get_split_offsets() == Vector<int>({ 49, 59 }));
 	}
 
@@ -2247,7 +2247,7 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		Vector<int> pos = { 30 - sep.x, 80 }; // 30 = 80 - 50.
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == pos);
-		CHECK_RECTS(get_rects(split_container, pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, pos, sep.x), get_child_rects(split_container));
 
 		// Move last child to first.
 		split_container->set_split_offsets({ 50, 80 });
@@ -2255,14 +2255,14 @@ TEST_CASE("[SceneTree][SplitContainer] More children") {
 		pos = { (int)split_container->get_size().x - 80 - sep.x, (int)split_container->get_size().x - 30 };
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == pos);
-		CHECK_RECTS(get_rects(split_container, pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, pos, sep.x), get_child_rects(split_container));
 
 		// Move it back.
 		split_container->move_child(child_c, 2);
 		pos = { 50, 80 };
 		MessageQueue::get_singleton()->flush();
 		CHECK(split_container->get_split_offsets() == pos);
-		CHECK_RECTS(get_rects(split_container, pos, sep.x), get_child_rects(split_container));
+		CHECK_RECTS(get_rects_multi(split_container, pos, sep.x), get_child_rects(split_container));
 	}
 
 	memdelete(split_container);
