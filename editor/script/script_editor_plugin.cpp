@@ -1858,7 +1858,6 @@ void ScriptEditor::_notification(int p_what) {
 			EditorNode::get_singleton()->connect("scene_saved", callable_mp(this, &ScriptEditor::_scene_saved_callback));
 			FileSystemDock::get_singleton()->connect("files_moved", callable_mp(this, &ScriptEditor::_files_moved));
 			FileSystemDock::get_singleton()->connect("file_removed", callable_mp(this, &ScriptEditor::_file_removed));
-			script_list->connect(SceneStringName(item_selected), callable_mp(this, &ScriptEditor::_script_selected));
 
 			members_overview->connect(SceneStringName(item_selected), callable_mp(this, &ScriptEditor::_members_overview_selected));
 			help_overview->connect(SceneStringName(item_selected), callable_mp(this, &ScriptEditor::_help_overview_selected));
@@ -2010,10 +2009,7 @@ void ScriptEditor::_help_overview_selected(int p_idx) {
 }
 
 void ScriptEditor::_script_selected(int p_idx) {
-	grab_focus_block = !Input::get_singleton()->is_mouse_button_pressed(MouseButton::LEFT); //amazing hack, simply amazing
-
 	_go_to_tab(script_list->get_item_metadata(p_idx));
-	grab_focus_block = false;
 }
 
 void ScriptEditor::ensure_select_current() {
@@ -2022,7 +2018,7 @@ void ScriptEditor::ensure_select_current() {
 		if (se) {
 			se->enable_editor(this);
 
-			if (!grab_focus_block && is_visible_in_tree()) {
+			if (is_visible_in_tree()) {
 				se->ensure_focus();
 			}
 		}
@@ -3493,6 +3489,14 @@ void ScriptEditor::_script_list_clicked(int p_item, Vector2 p_local_mouse_pos, M
 	if (p_mouse_button_index == MouseButton::RIGHT) {
 		_make_script_list_context_menu();
 	}
+
+	if (p_mouse_button_index == MouseButton::LEFT) {
+		// Ensure focus when clicking on an already selected script.
+		ScriptEditorBase *se = _get_current_editor();
+		if (se) {
+			se->ensure_focus();
+		}
+	}
 }
 
 void ScriptEditor::_make_script_list_context_menu() {
@@ -4254,7 +4258,8 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	script_list->set_theme_type_variation("ItemListSecondary");
 	script_split->set_split_offset(200 * EDSCALE);
 	_sort_list_on_update = true;
-	script_list->connect("item_clicked", callable_mp(this, &ScriptEditor::_script_list_clicked), CONNECT_DEFERRED);
+	script_list->connect("item_clicked", callable_mp(this, &ScriptEditor::_script_list_clicked));
+	script_list->connect(SceneStringName(item_selected), callable_mp(this, &ScriptEditor::_script_selected));
 	script_list->set_allow_rmb_select(true);
 	SET_DRAG_FORWARDING_GCD(script_list, ScriptEditor);
 
@@ -4542,8 +4547,6 @@ ScriptEditor::ScriptEditor(WindowWrapper *p_wrapper) {
 	autosave_timer->connect(SceneStringName(tree_entered), callable_mp(this, &ScriptEditor::_update_autosave_timer));
 	autosave_timer->connect("timeout", callable_mp(this, &ScriptEditor::_autosave_scripts));
 	add_child(autosave_timer);
-
-	grab_focus_block = false;
 
 	help_search_dialog = memnew(EditorHelpSearch);
 	add_child(help_search_dialog);

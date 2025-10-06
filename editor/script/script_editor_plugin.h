@@ -434,8 +434,6 @@ class ScriptEditor : public PanelContainer {
 
 	void _ask_close_current_unsaved_tab(ScriptEditorBase *current);
 
-	bool grab_focus_block;
-
 	bool pending_auto_reload;
 	bool auto_reload_running_scripts;
 	bool reload_all_scripts = false;
