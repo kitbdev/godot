@@ -48,7 +48,6 @@
 #include "editor/settings/editor_command_palette.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
-#include "scene/gui/grid_container.h"
 #include "scene/gui/menu_button.h"
 #include "scene/gui/rich_text_label.h"
 #include "scene/gui/split_container.h"
@@ -419,14 +418,7 @@ void ScriptTextEditor::enable_editor() {
 
 	editor_enabled = true;
 
-	_enable_code_editor();
-
 	_validate_script();
-
-	if (pending_state != Variant()) {
-		code_editor->set_edit_state(pending_state);
-		pending_state = Variant();
-	}
 }
 
 void ScriptTextEditor::_load_theme_settings() {
@@ -602,9 +594,7 @@ void ScriptTextEditor::reload_text() {
 	te->tag_saved_version();
 
 	code_editor->update_line_and_column();
-	if (editor_enabled) {
-		_validate_script();
-	}
+	_validate_script();
 }
 
 void ScriptTextEditor::add_callback(const String &p_function, const PackedStringArray &p_args) {
@@ -759,18 +749,18 @@ Array ScriptTextEditor::_inline_object_parse(const String &p_text) {
 void ScriptTextEditor::_inline_object_draw(const Dictionary &p_info, const Rect2 &p_rect) {
 	if (_is_valid_color_info(p_info)) {
 		Rect2 col_rect = p_rect.grow(-4);
-		if (color_alpha_texture.is_null()) {
-			color_alpha_texture = inline_color_picker->get_theme_icon("sample_bg", "ColorPicker");
-		}
 		RID text_ci = code_editor->get_text_editor()->get_text_canvas_item();
 		RS::get_singleton()->canvas_item_add_rect(text_ci, p_rect.grow(-3), Color(1, 1, 1));
-		color_alpha_texture->draw_rect(text_ci, col_rect);
+		ScriptEditor::get_singleton()->get_color_alpha_texture()->draw_rect(text_ci, col_rect);
 		RS::get_singleton()->canvas_item_add_rect(text_ci, col_rect, Color(p_info["color"]));
 	}
 }
 
 void ScriptTextEditor::_inline_object_handle_click(const Dictionary &p_info, const Rect2 &p_rect) {
 	if (_is_valid_color_info(p_info)) {
+		ColorPicker *inline_color_picker = ScriptEditor::get_singleton()->get_inline_color_picker();
+		PopupPanel *inline_color_popup = ScriptEditor::get_singleton()->get_inline_color_popup();
+
 		inline_color_picker->set_pick_color(p_info["color"]);
 		inline_color_line = p_info["line"];
 		inline_color_start = p_info["column"];
@@ -781,7 +771,7 @@ void ScriptTextEditor::_inline_object_handle_click(const Dictionary &p_info, con
 		code_editor->get_text_editor()->set_symbol_tooltip_on_hover_enabled(true);
 
 		_update_color_constructor_options();
-		inline_color_options->select(p_info["color_mode"]);
+		ScriptEditor::get_singleton()->get_inline_color_options()->select(p_info["color_mode"]);
 		EditorNode::get_singleton()->setup_color_picker(inline_color_picker);
 
 		// Move popup above the line if it's too low.
@@ -854,12 +844,14 @@ String ScriptTextEditor::_picker_color_stringify(const Color &p_color, COLOR_MOD
 	return result;
 }
 
-void ScriptTextEditor::_picker_color_changed(const Color &p_color) {
+void ScriptTextEditor::picker_color_changed() {
 	_update_color_constructor_options();
 	_update_color_text();
 }
 
 void ScriptTextEditor::_update_color_constructor_options() {
+	OptionButton *inline_color_options = ScriptEditor::get_singleton()->get_inline_color_options();
+	ColorPicker *inline_color_picker = ScriptEditor::get_singleton()->get_inline_color_picker();
 	int item_count = inline_color_options->get_item_count();
 	// Update or add each constructor as an option.
 	for (int i = 0; i < MODE_MAX; i++) {
@@ -914,6 +906,7 @@ void ScriptTextEditor::_update_color_text() {
 	if (inline_color_line < 0) {
 		return;
 	}
+	OptionButton *inline_color_options = ScriptEditor::get_singleton()->get_inline_color_options();
 	String result = inline_color_options->get_item_text(inline_color_options->get_selected_id());
 	code_editor->get_text_editor()->begin_complex_operation();
 	code_editor->get_text_editor()->remove_text(inline_color_line, inline_color_start, inline_color_line, inline_color_end + 1);
@@ -943,19 +936,11 @@ bool ScriptTextEditor::is_unsaved() {
 }
 
 Variant ScriptTextEditor::get_edit_state() {
-	if (pending_state != Variant()) {
-		return pending_state;
-	}
 	return code_editor->get_edit_state();
 }
 
 void ScriptTextEditor::set_edit_state(const Variant &p_state) {
-	if (editor_enabled) {
-		code_editor->set_edit_state(p_state);
-	} else {
-		// The editor is not fully initialized, so the state can't be loaded properly.
-		pending_state = p_state;
-	}
+	code_editor->set_edit_state(p_state);
 
 	Dictionary state = p_state;
 	if (state.has("syntax_highlighter")) {
@@ -965,12 +950,6 @@ void ScriptTextEditor::set_edit_state(const Variant &p_state) {
 				break;
 			}
 		}
-	}
-
-	if (editor_enabled) {
-#ifndef ANDROID_ENABLED
-		ensure_focus();
-#endif
 	}
 }
 
@@ -1892,7 +1871,7 @@ void ScriptTextEditor::_gutter_clicked(int p_line, int p_gutter) {
 		}
 
 		Vector<Node *> nodes = _find_all_node_for_script(base, base, script);
-		connection_info_dialog->popup_connections(method, nodes);
+		ScriptEditor::get_singleton()->get_connection_info_dialog()->popup_connections(method, nodes);
 	} else if (type == "inherits") {
 		String base_class_raw = meta["base_class"];
 		PackedStringArray base_class_split = base_class_raw.split(":", true, 1);
@@ -2103,10 +2082,10 @@ void ScriptTextEditor::_edit_option(int p_op) {
 			emit_signal(SNAME("replace_in_files_requested"), selected_text);
 		} break;
 		case SEARCH_LOCATE_FUNCTION: {
-			quick_open->popup_dialog(get_functions());
+			ScriptEditor::get_singleton()->get_quick_open()->popup_dialog(get_functions(), code_editor);
 		} break;
 		case SEARCH_GOTO_LINE: {
-			goto_line_popup->popup_find_line(code_editor);
+			ScriptEditor::get_singleton()->get_goto_line_popup()->popup_find_line(code_editor);
 		} break;
 		case BOOKMARK_TOGGLE: {
 			code_editor->toggle_bookmark();
@@ -2262,9 +2241,6 @@ void ScriptTextEditor::_notification(int p_what) {
 		} break;
 
 		case NOTIFICATION_THEME_CHANGED:
-			if (!editor_enabled) {
-				break;
-			}
 			if (is_visible_in_tree()) {
 				_update_warnings();
 				_update_errors();
@@ -2274,6 +2250,7 @@ void ScriptTextEditor::_notification(int p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			code_editor->get_text_editor()->set_gutter_width(connection_gutter, code_editor->get_text_editor()->get_line_height());
 			Ref<Font> code_font = get_theme_font("font", "CodeEdit");
+			OptionButton *inline_color_options = ScriptEditor::get_singleton()->get_inline_color_options();
 			inline_color_options->add_theme_font_override("font", code_font);
 			inline_color_options->get_popup()->add_theme_font_override("font", code_font);
 		} break;
@@ -2939,6 +2916,11 @@ void ScriptTextEditor::_color_changed(const Color &p_color) {
 }
 
 void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p_foldable, bool p_open_docs, bool p_goto_definition, Vector2 p_pos) {
+	if (context_menu == nullptr) {
+		context_menu = memnew(PopupMenu);
+		context_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
+		add_child(context_menu);
+	}
 	context_menu->clear();
 	if (DisplayServer::get_singleton()->has_feature(DisplayServer::FEATURE_EMOJI_AND_SYMBOL_PICKER)) {
 		context_menu->add_item(TTRC("Emoji & Symbols"), EDIT_EMOJI_AND_SYMBOL);
@@ -2994,19 +2976,34 @@ void ScriptTextEditor::_make_context_menu(bool p_selection, bool p_color, bool p
 	context_menu->popup();
 }
 
-void ScriptTextEditor::_enable_code_editor() {
-	ERR_FAIL_COND(code_editor->get_parent());
-
-	VSplitContainer *editor_box = memnew(VSplitContainer);
-	add_child(editor_box);
+ScriptTextEditor::ScriptTextEditor() {
+	editor_box = memnew(VSplitContainer);
 	editor_box->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
 	editor_box->set_v_size_flags(SIZE_EXPAND_FILL);
 
+	code_editor = memnew(CodeTextEditor);
 	editor_box->add_child(code_editor);
+	code_editor->set_toggle_list_control(ScriptEditor::get_singleton()->get_left_list_split());
+	code_editor->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+	code_editor->set_code_complete_func(_code_complete_scripts, this);
+	code_editor->set_v_size_flags(SIZE_EXPAND_FILL);
+
+	code_editor->get_text_editor()->set_draw_breakpoints_gutter(true);
+	code_editor->get_text_editor()->set_draw_executing_lines_gutter(true);
+
+	code_editor->get_text_editor()->add_gutter(connection_gutter);
+	code_editor->get_text_editor()->set_gutter_name(connection_gutter, "connection_gutter");
+	code_editor->get_text_editor()->set_gutter_draw(connection_gutter, false);
+	code_editor->get_text_editor()->set_gutter_overwritable(connection_gutter, true);
+	code_editor->get_text_editor()->set_gutter_type(connection_gutter, TextEdit::GUTTER_TYPE_ICON);
+
+	code_editor->connect("navigation_preview_ended", callable_mp(this, &ScriptTextEditor::_on_caret_moved));
 	code_editor->connect("show_errors_panel", callable_mp(this, &ScriptTextEditor::_show_errors_panel));
 	code_editor->connect("show_warnings_panel", callable_mp(this, &ScriptTextEditor::_show_warnings_panel));
 	code_editor->connect("validate_script", callable_mp(this, &ScriptTextEditor::_validate_script));
 	code_editor->connect("load_theme_settings", callable_mp(this, &ScriptTextEditor::_load_theme_settings));
+	code_editor->get_text_editor()->connect("breakpoint_toggled", callable_mp(this, &ScriptTextEditor::_breakpoint_toggled));
+	code_editor->get_text_editor()->connect("caret_changed", callable_mp(this, &ScriptTextEditor::_on_caret_moved));
 	code_editor->get_text_editor()->connect("symbol_lookup", callable_mp(this, &ScriptTextEditor::_lookup_symbol));
 	code_editor->get_text_editor()->connect("symbol_hovered", callable_mp(this, &ScriptTextEditor::_show_symbol_tooltip));
 	code_editor->get_text_editor()->connect("symbol_validate", callable_mp(this, &ScriptTextEditor::_validate_symbol));
@@ -3018,57 +3015,6 @@ void ScriptTextEditor::_enable_code_editor() {
 	code_editor->show_toggle_files_button();
 	_update_gutter_indexes();
 
-	editor_box->add_child(warnings_panel);
-	warnings_panel->connect("meta_clicked", callable_mp(this, &ScriptTextEditor::_warning_clicked));
-
-	editor_box->add_child(errors_panel);
-	errors_panel->connect("meta_clicked", callable_mp(this, &ScriptTextEditor::_error_clicked));
-
-	add_child(context_menu);
-	context_menu->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptTextEditor::_edit_option));
-
-	add_child(color_panel);
-
-	color_picker = memnew(ColorPicker);
-	color_picker->set_deferred_mode(true);
-	color_picker->connect("color_changed", callable_mp(this, &ScriptTextEditor::_color_changed));
-	color_panel->connect("about_to_popup", callable_mp(EditorNode::get_singleton(), &EditorNode::setup_color_picker).bind(color_picker));
-
-	color_panel->add_child(color_picker);
-
-	quick_open = memnew(ScriptEditorQuickOpen);
-	quick_open->set_title(TTRC("Go to Function"));
-	quick_open->connect("goto_line", callable_mp(this, &ScriptTextEditor::_goto_line));
-	add_child(quick_open);
-
-	goto_line_popup = memnew(GotoLinePopup);
-	add_child(goto_line_popup);
-
-	add_child(connection_info_dialog);
-
-	_load_theme_settings();
-}
-
-ScriptTextEditor::ScriptTextEditor() {
-	code_editor = memnew(CodeTextEditor);
-	code_editor->set_toggle_list_control(ScriptEditor::get_singleton()->get_left_list_split());
-	code_editor->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
-	code_editor->set_code_complete_func(_code_complete_scripts, this);
-	code_editor->set_v_size_flags(SIZE_EXPAND_FILL);
-
-	code_editor->get_text_editor()->set_draw_breakpoints_gutter(true);
-	code_editor->get_text_editor()->set_draw_executing_lines_gutter(true);
-	code_editor->get_text_editor()->connect("breakpoint_toggled", callable_mp(this, &ScriptTextEditor::_breakpoint_toggled));
-	code_editor->get_text_editor()->connect("caret_changed", callable_mp(this, &ScriptTextEditor::_on_caret_moved));
-	code_editor->connect("navigation_preview_ended", callable_mp(this, &ScriptTextEditor::_on_caret_moved));
-
-	connection_gutter = 1;
-	code_editor->get_text_editor()->add_gutter(connection_gutter);
-	code_editor->get_text_editor()->set_gutter_name(connection_gutter, "connection_gutter");
-	code_editor->get_text_editor()->set_gutter_draw(connection_gutter, false);
-	code_editor->get_text_editor()->set_gutter_overwritable(connection_gutter, true);
-	code_editor->get_text_editor()->set_gutter_type(connection_gutter, TextEdit::GUTTER_TYPE_ICON);
-
 	warnings_panel = memnew(RichTextLabel);
 	warnings_panel->set_custom_minimum_size(Size2(0, 100 * EDSCALE));
 	warnings_panel->set_h_size_flags(SIZE_EXPAND_FILL);
@@ -3077,6 +3023,8 @@ ScriptTextEditor::ScriptTextEditor() {
 	warnings_panel->set_context_menu_enabled(true);
 	warnings_panel->set_focus_mode(FOCUS_CLICK);
 	warnings_panel->hide();
+	editor_box->add_child(warnings_panel);
+	warnings_panel->connect("meta_clicked", callable_mp(this, &ScriptTextEditor::_warning_clicked));
 
 	errors_panel = memnew(RichTextLabel);
 	errors_panel->set_custom_minimum_size(Size2(0, 100 * EDSCALE));
@@ -3087,13 +3035,14 @@ ScriptTextEditor::ScriptTextEditor() {
 	errors_panel->set_focus_mode(FOCUS_CLICK);
 	errors_panel->hide();
 
+	editor_box->add_child(errors_panel);
+	errors_panel->connect("meta_clicked", callable_mp(this, &ScriptTextEditor::_error_clicked));
+
 	update_settings();
 
 	code_editor->get_text_editor()->set_symbol_lookup_on_click_enabled(true);
 	code_editor->get_text_editor()->set_symbol_tooltip_on_hover_enabled(true);
 	code_editor->get_text_editor()->set_context_menu_enabled(false);
-
-	context_menu = memnew(PopupMenu);
 
 	color_panel = memnew(PopupPanel);
 
@@ -3106,39 +3055,22 @@ ScriptTextEditor::ScriptTextEditor() {
 	add_syntax_highlighter(highlighter);
 	set_syntax_highlighter(highlighter);
 
-	inline_color_popup = memnew(PopupPanel);
-	add_child(inline_color_popup);
-
-	inline_color_picker = memnew(ColorPicker);
-	inline_color_picker->set_mouse_filter(MOUSE_FILTER_STOP);
-	inline_color_picker->set_deferred_mode(true);
-	inline_color_picker->set_hex_visible(false);
-	inline_color_picker->connect("color_changed", callable_mp(this, &ScriptTextEditor::_picker_color_changed));
-	inline_color_popup->add_child(inline_color_picker);
-
-	inline_color_options = memnew(OptionButton);
-	inline_color_options->set_h_size_flags(SIZE_FILL);
-	inline_color_options->set_text_overrun_behavior(TextServer::OVERRUN_TRIM_ELLIPSIS);
-	inline_color_options->set_fit_to_longest_item(false);
-	inline_color_options->connect("item_selected", callable_mp(this, &ScriptTextEditor::_update_color_text).unbind(1));
-	inline_color_picker->get_slider_container()->add_sibling(inline_color_options);
-
-	connection_info_dialog = memnew(ConnectionInfoDialog);
-
 	SET_DRAG_FORWARDING_GCD(code_editor->get_text_editor(), ScriptTextEditor);
+
+	add_child(editor_box);
+
+	add_child(color_panel);
+
+	color_picker = memnew(ColorPicker);
+	color_picker->set_deferred_mode(true);
+	color_picker->connect("color_changed", callable_mp(this, &ScriptTextEditor::_color_changed));
+	color_panel->connect("about_to_popup", callable_mp(EditorNode::get_singleton(), &EditorNode::setup_color_picker).bind(color_picker));
+
+	color_panel->add_child(color_picker);
 }
 
 ScriptTextEditor::~ScriptTextEditor() {
 	highlighters.clear();
-
-	if (!editor_enabled) {
-		memdelete(code_editor);
-		memdelete(warnings_panel);
-		memdelete(errors_panel);
-		memdelete(context_menu);
-		memdelete(color_panel);
-		memdelete(connection_info_dialog);
-	}
 }
 
 static ScriptEditorBase *create_editor(const Ref<Resource> &p_resource) {

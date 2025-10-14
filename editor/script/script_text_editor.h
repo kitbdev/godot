@@ -80,12 +80,12 @@ class ScriptTextEditor : public ScriptEditorBase {
 		EditMenusSTE();
 	};
 
+	VSplitContainer *editor_box = nullptr;
 	CodeTextEditor *code_editor = nullptr;
 	RichTextLabel *warnings_panel = nullptr;
 	RichTextLabel *errors_panel = nullptr;
 
 	Ref<Script> script;
-	Variant pending_state;
 	bool script_is_valid = false;
 	bool editor_enabled = false;
 
@@ -103,16 +103,8 @@ class ScriptTextEditor : public ScriptEditorBase {
 	int inline_color_line = -1;
 	int inline_color_start = -1;
 	int inline_color_end = -1;
-	PopupPanel *inline_color_popup = nullptr;
-	ColorPicker *inline_color_picker = nullptr;
-	OptionButton *inline_color_options = nullptr;
-	Ref<Texture2D> color_alpha_texture;
 
-	GotoLinePopup *goto_line_popup = nullptr;
-	ScriptEditorQuickOpen *quick_open = nullptr;
-	ConnectionInfoDialog *connection_info_dialog = nullptr;
-
-	int connection_gutter = -1;
+	int connection_gutter = 1;
 	void _gutter_clicked(int p_line, int p_gutter);
 	void _update_gutter_indexes();
 
@@ -196,8 +188,6 @@ class ScriptTextEditor : public ScriptEditorBase {
 		MODE_MAX
 	};
 
-	void _enable_code_editor();
-
 	struct DraggedExport {
 		ObjectID obj_id;
 		String variable_name;
@@ -234,7 +224,6 @@ protected:
 	void _inline_object_draw(const Dictionary &p_info, const Rect2 &p_rect);
 	void _inline_object_handle_click(const Dictionary &p_info, const Rect2 &p_rect);
 	String _picker_color_stringify(const Color &p_color, COLOR_MODE p_mode);
-	void _picker_color_changed(const Color &p_color);
 	void _update_color_constructor_options();
 	void _update_background_color();
 	void _update_color_text();
@@ -319,6 +308,8 @@ public:
 
 	Variant get_previous_state();
 	void store_previous_state();
+
+	void picker_color_changed();
 
 	ScriptTextEditor();
 	~ScriptTextEditor();

@@ -168,6 +168,7 @@ class ScriptEditorQuickOpen : public ConfirmationDialog {
 	LineEdit *search_box = nullptr;
 	Tree *search_options = nullptr;
 	String function;
+	CodeTextEditor *text_editor = nullptr;
 
 	void _update_search();
 
@@ -179,10 +180,9 @@ class ScriptEditorQuickOpen : public ConfirmationDialog {
 
 protected:
 	void _notification(int p_what);
-	static void _bind_methods();
 
 public:
-	void popup_dialog(const Vector<String> &p_functions, bool p_dontclear = false);
+	void popup_dialog(const Vector<String> &p_functions, CodeTextEditor *p_text_editor);
 	ScriptEditorQuickOpen();
 };
 
@@ -250,6 +250,10 @@ typedef ScriptEditorBase *(*CreateScriptEditorFunc)(const Ref<Resource> &p_resou
 class EditorScriptCodeCompletionCache;
 class FindInFilesContainer;
 class FindInFilesDialog;
+class GotoLinePopup;
+class ConnectionInfoDialog;
+class ColorPicker;
+class OptionButton;
 
 class ScriptEditor : public PanelContainer {
 	GDCLASS(ScriptEditor, PanelContainer);
@@ -355,6 +359,15 @@ class ScriptEditor : public PanelContainer {
 	ConfirmationDialog *erase_tab_confirm = nullptr;
 	ScriptCreateDialog *script_create_dialog = nullptr;
 	FindReplaceBar *find_replace_bar = nullptr;
+
+	PopupPanel *inline_color_popup = nullptr;
+	ColorPicker *inline_color_picker = nullptr;
+	OptionButton *inline_color_options = nullptr;
+	Ref<Texture2D> color_alpha_texture;
+
+	GotoLinePopup *goto_line_popup = nullptr;
+	ScriptEditorQuickOpen *quick_open = nullptr;
+	ConnectionInfoDialog *connection_info_dialog = nullptr;
 
 	float zoom_factor = 1.0f;
 
@@ -557,6 +570,8 @@ class ScriptEditor : public PanelContainer {
 
 	void _window_changed(bool p_visible);
 
+	void _picker_color_changed();
+
 	static void _open_script_request(const String &p_path);
 	void _close_builtin_scripts_from_scene(const String &p_scene);
 
@@ -616,6 +631,15 @@ public:
 	void trigger_live_script_reload(const String &p_script_path);
 
 	VSplitContainer *get_left_list_split() { return list_split; }
+
+	PopupPanel *get_inline_color_popup() const { return inline_color_popup; }
+	ColorPicker *get_inline_color_picker() const { return inline_color_picker; }
+	OptionButton *get_inline_color_options() const { return inline_color_options; }
+	Ref<Texture2D> get_color_alpha_texture();
+
+	GotoLinePopup *get_goto_line_popup() const { return goto_line_popup; }
+	ScriptEditorQuickOpen *get_quick_open() const { return quick_open; }
+	ConnectionInfoDialog *get_connection_info_dialog() const { return connection_info_dialog; }
 
 	void set_live_auto_reload_running_scripts(bool p_enabled);
 
